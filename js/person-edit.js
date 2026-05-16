@@ -6,6 +6,7 @@
 (function () {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
+  const autoEdit = params.get('edit') === '1';
 
   // Только для UUID-страниц (из бота)
   if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return;
@@ -14,9 +15,19 @@
   let originalData = null; // сохраняем данные для отката
 
   // Ждём загрузки страницы
-  window.addEventListener('load', () => {
-    setTimeout(initEditPanel, 500);
-  });
+  if (document.readyState === 'complete') {
+    setTimeout(() => {
+      initEditPanel();
+      if (autoEdit) setTimeout(() => enterEditMode(), 300);
+    }, 500);
+  } else {
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        initEditPanel();
+        if (autoEdit) setTimeout(() => enterEditMode(), 300);
+      }, 500);
+    });
+  }
 
   function initEditPanel() {
     const panel = document.createElement('div');
@@ -61,8 +72,8 @@
   }
 
   function cancelEdit() {
-    // Перезагружаем страницу чтобы откатить изменения
-    window.location.reload();
+    // Убираем ?edit=1 из URL и перезагружаем
+    window.location.href = `person.html?id=${id}`;
   }
 
   /* ── Собираем текущие данные со страницы ── */
@@ -74,11 +85,13 @@
     const datesEl = document.querySelector('.person-header__dates');
     const bioEl = document.querySelector('.person-bio__text');
     const photoEl = document.querySelector('.person-header__photo img');
+    const cityEl = document.querySelector('.person-header__city');
 
     data.name = nameEl?.textContent?.trim() || '';
     data.dates = datesEl?.textContent?.replace(/[—–]/g, '-').trim() || '';
     data.bio = bioEl?.textContent?.trim() || '';
     data.photo = photoEl?.src || '';
+    data.city = cityEl?.textContent?.trim().replace(/^◎\s*/, '') || '';
 
     // Блоки
     document.querySelectorAll('.bio-block').forEach(block => {
@@ -112,21 +125,73 @@
     const nameEl = document.querySelector('.person-header__name');
     if (nameEl) {
       const val = nameEl.textContent.trim();
-      nameEl.innerHTML = `<input class="edit-input" data-field="name" value="${escAttr(val)}"/>`;
+      const isPlaceholder = val === 'Новая страница' || !val;
+      nameEl.innerHTML = `<input class="edit-input" data-field="name" value="${isPlaceholder ? '' : escAttr(val)}" placeholder="Фамилия Имя Отчество"/>`;
     }
 
     // Hero dates
     const datesEl = document.querySelector('.person-header__dates');
     if (datesEl) {
       const val = datesEl.textContent.trim();
-      datesEl.innerHTML = `<input class="edit-input" data-field="dates" value="${escAttr(val)}"/>`;
+      const isPlaceholder = val === '—' || val === '——...' || val === '—...' || !val;
+      datesEl.innerHTML = `<input class="edit-input" data-field="dates" value="${isPlaceholder ? '' : escAttr(val)}" placeholder="01.01.1930 — 15.06.2000"/>`;
+    }
+
+    // Город — вставляем инпут (или создаём если города нет)
+    let cityEl = document.querySelector('.person-header__city');
+    const infoBlock = document.querySelector('.person-header__info');
+    if (!cityEl && infoBlock) {
+      cityEl = document.createElement('p');
+      cityEl.className = 'person-header__city';
+      const datesParent = document.querySelector('.person-header__dates');
+      const ageBadge = document.querySelector('.person-header__age-badge');
+      // Вставляем после плашки возраста или после дат
+      if (ageBadge) ageBadge.after(cityEl);
+      else if (datesParent) datesParent.after(cityEl);
+      else infoBlock.appendChild(cityEl);
+    }
+    if (cityEl) {
+      const val = cityEl.textContent.trim().replace(/^◎\s*/, '');
+      cityEl.innerHTML = `<input class="edit-input" data-field="city" placeholder="Город" value="${escAttr(val)}"/>`;
+      cityEl.style.cssText = 'display:block;';
+    }
+
+    // Пол — вставляем после города
+    const headerInfo = document.querySelector('.person-header__info');
+    if (headerInfo) {
+      const currentGender = headerInfo.dataset.gender || '';
+      const genderWrap = document.createElement('div');
+      genderWrap.className = 'edit-gender';
+      genderWrap.innerHTML = `
+        <label class="edit-gender__label">Пол:</label>
+        <div class="edit-gender__options">
+          <button type="button" class="edit-gender__btn ${currentGender === 'male' ? 'edit-gender__btn--active' : ''}" data-gender="male">♂ Мужской</button>
+          <button type="button" class="edit-gender__btn ${currentGender === 'female' ? 'edit-gender__btn--active' : ''}" data-gender="female">♀ Женский</button>
+        </div>
+      `;
+      // Вставляем после города
+      const cityParent = document.querySelector('.person-header__city');
+      if (cityParent) {
+        cityParent.after(genderWrap);
+      } else {
+        const datesParent = document.querySelector('.person-header__dates');
+        if (datesParent) datesParent.after(genderWrap);
+        else headerInfo.appendChild(genderWrap);
+      }
+
+      genderWrap.querySelectorAll('.edit-gender__btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          genderWrap.querySelectorAll('.edit-gender__btn').forEach(b => b.classList.remove('edit-gender__btn--active'));
+          btn.classList.add('edit-gender__btn--active');
+        });
+      });
     }
 
     // Bio text
     const bioEl = document.querySelector('.person-bio__text');
     if (bioEl) {
       const val = bioEl.textContent.trim();
-      bioEl.outerHTML = `<textarea class="edit-textarea" data-field="bio">${escHtml(val)}</textarea>`;
+      bioEl.outerHTML = `<textarea class="edit-textarea" data-field="bio" placeholder="Краткий текст о человеке — эпитафия, несколько тёплых слов...">${escHtml(val)}</textarea>`;
     }
 
     // Hero photo — кнопка загрузки
@@ -144,7 +209,19 @@
       const textEl = block.querySelector('.bio-block__text');
       if (textEl) {
         const val = textEl.innerText.trim();
-        textEl.innerHTML = `<textarea class="edit-textarea" data-block="${key}" data-field="text">${escHtml(val)}</textarea>`;
+        const BLOCK_HINTS = {
+          childhood: 'Расскажите о детстве и юности или удалите блок',
+          education: 'Расскажите об учёбе и становлении или удалите блок',
+          career:    'Расскажите о профессиональном пути или удалите блок',
+          family:    'Расскажите о семье и близких или удалите блок',
+          hobbies:   'Расскажите о хобби и увлечениях или удалите блок',
+          legacy:    'Расскажите, каким запомнился человек, или удалите блок',
+        };
+        const hint = BLOCK_HINTS[key] || 'Напишите текст или удалите блок';
+        // Если текст — это placeholder из autoSplit, очищаем
+        const isAutoText = val.includes('будет дополнен') || val.includes('ждут наполнения') || val.includes('будет добавлен') || val.includes('соберут близкие') || val.includes('в разработке') || val.includes('готовят слова');
+        const cleanVal = isAutoText ? '' : val;
+        textEl.innerHTML = `<textarea class="edit-textarea" data-block="${key}" data-field="text" placeholder="${hint}">${escHtml(cleanVal)}</textarea>`;
       }
 
       // Фото — кнопка загрузки (или замены)
@@ -433,6 +510,14 @@
     data.bio = bioInput?.value?.trim() || originalData.bio;
     data.photo = photoWrap?.dataset?.uploadedUrl || photoWrap?.querySelector('img')?.src || originalData.photo;
 
+    // Пол
+    const activeGenderBtn = document.querySelector('.edit-gender__btn--active');
+    data.gender = activeGenderBtn?.dataset?.gender || '';
+
+    // Город
+    const cityInput = document.querySelector('[data-field="city"]');
+    data.city = cityInput?.value?.trim() || '';
+
     // Блоки — собираем ВСЕ в порядке DOM (включая кастомные)
     const bioBlocksContainer = document.getElementById('bio-blocks-container');
     const allBlockElements = bioBlocksContainer ? bioBlocksContainer.querySelectorAll('.bio-block') : [];
@@ -491,8 +576,9 @@
       const json = await res.json();
 
       if (json.ok) {
-        // Перезагружаем чтобы показать обновлённые данные
-        window.location.reload();
+        // Убираем ?edit=1 из URL и перезагружаем
+        const cleanUrl = `person.html?id=${id}`;
+        window.location.href = cleanUrl;
       } else {
         alert('Ошибка сохранения: ' + (json.error || 'Неизвестная ошибка'));
         saveBtn.textContent = '💾 Сохранить';

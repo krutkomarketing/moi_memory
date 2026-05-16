@@ -148,18 +148,20 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 40px 0;
+  min-height: 200px;
 }
 
 .timeline__axis {
   position: absolute;
   top: 0; bottom: 0; left: 50%;
   transform: translateX(-50%);
-  width: 1px;
+  width: 2px;
   background: linear-gradient(to bottom,
     transparent 0%,
-    rgba(200,168,75,0.35) 8%,
-    rgba(200,168,75,0.35) 92%,
+    rgba(200,168,75,0.4) 5%,
+    rgba(200,168,75,0.4) 95%,
     transparent 100%);
+  z-index: 0;
 }
 
 /* ── TIMELINE ITEM ── */

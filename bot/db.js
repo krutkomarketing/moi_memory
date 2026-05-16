@@ -36,6 +36,7 @@ db.exec(`
     dates          TEXT NOT NULL,
     main_text      TEXT NOT NULL,
     main_photo_url TEXT,
+    gender         TEXT NOT NULL DEFAULT '',
     is_public      INTEGER NOT NULL DEFAULT 1,
     created_at     TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
@@ -82,6 +83,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_quotes_profile ON quotes(profile_id);
   CREATE INDEX IF NOT EXISTS idx_gallery_profile ON gallery_photos(profile_id, photo_order);
 `);
+
+/* ── MIGRATIONS ── */
+try {
+  db.exec("ALTER TABLE profiles ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
+} catch (_) { /* column already exists */ }
+try {
+  db.exec("ALTER TABLE profiles ADD COLUMN city TEXT NOT NULL DEFAULT ''");
+} catch (_) { /* column already exists */ }
 
 /* ── HELPERS ── */
 

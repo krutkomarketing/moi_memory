@@ -221,9 +221,13 @@
   function render(person, source) {
     document.title = `${person.name} — Память`;
 
-    // Если sections пусто — генерим автоматически
+    // Если sections пусто — генерим автоматически (только если есть bio)
     if (!person.sections || typeof person.sections !== 'object' || !Object.keys(person.sections).length) {
-      person.sections = autoSplitBioToSections(person);
+      if (person.bio && person.bio.trim()) {
+        person.sections = autoSplitBioToSections(person);
+      } else {
+        person.sections = {};
+      }
     }
 
     const bcName = document.getElementById('breadcrumb-name');
@@ -256,11 +260,12 @@
         <!-- HEADER -->
         <div class="person-header">
           <div class="person-header__photo">${photoHtml}</div>
-          <div class="person-header__info">
+          <div class="person-header__info" data-gender="${person.gender || ''}">
             <p class="person-header__eyebrow">Страница памяти</p>
             <h1 class="person-header__name">${person.name}</h1>
-            <p class="person-header__dates">${person.born}<span>—</span>${person.died || '...'}${age ? `<span class="person-header__age">${age} лет</span>` : ''}</p>
-            <p class="person-header__city">${person.city}</p>
+            <p class="person-header__dates">${person.born}<span>—</span>${person.died || '...'}</p>
+            ${age ? `<p class="person-header__age-badge">${age} лет</p>` : ''}
+            ${person.city ? `<p class="person-header__city">${person.city}</p>` : ''}
           </div>
         </div>
 
@@ -395,30 +400,14 @@
       });
     }
 
-    // Если фото нет — показываем 4 цветных слота-заглушки
+    // Если фото нет — скрываем галерею
     if (!photos.length) {
-      const SLOT_COLORS = [
-        { bg: 'linear-gradient(135deg, #2a1f3d, #4a3560)', label: 'Фото 1', icon: '📷' },
-        { bg: 'linear-gradient(135deg, #1f2a3d, #354a60)', label: 'Фото 2', icon: '🖼' },
-        { bg: 'linear-gradient(135deg, #1f3d2a, #356045)', label: 'Фото 3', icon: '📸' },
-        { bg: 'linear-gradient(135deg, #3d2a1f, #604535)', label: 'Фото 4', icon: '🎞' },
-      ];
-      SLOT_COLORS.forEach(slot => {
-        photos.push({ src: '', caption: slot.label, placeholder: true, bg: slot.bg, icon: slot.icon });
-      });
+      section.style.display = 'none';
+      return;
     }
 
     // Рендерим слайды (без клонов — виртуализация индексов)
     track.innerHTML = photos.map((p, i) => {
-      if (p.placeholder) {
-        return `
-          <div class="gallery-slide" data-index="${i}">
-            <div class="gallery-slot" style="background:${p.bg}">
-              <span class="gallery-slot__icon">${p.icon}</span>
-              <span class="gallery-slot__label">${p.caption}</span>
-            </div>
-          </div>`;
-      }
       return `
         <div class="gallery-slide" data-index="${i}">
           <img src="${p.src}" alt="${p.caption}" loading="lazy"/>

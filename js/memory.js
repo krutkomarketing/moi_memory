@@ -26,7 +26,8 @@
         <input type="search" id="memory-search-input" class="memory-search__input"
                placeholder="Поиск по имени или городу…" autocomplete="off"/>
         <button class="memory-search__clear" id="memory-search-clear" aria-label="Очистить" style="display:none">×</button>
-      </div>`;
+      </div>
+      <button class="memory-create-btn" id="memory-create-btn">+ Создать страницу</button>`;
     section.insertBefore(searchWrap, section.firstChild);
 
     const input    = document.getElementById('memory-search-input');
@@ -41,6 +42,39 @@
       input.value = ''; searchQuery = '';
       clearBtn.style.display = 'none';
       input.focus(); applyFilter();
+    });
+
+    // Кнопка "Создать страницу" — создаёт пустой профиль и открывает редактор
+    document.getElementById('memory-create-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('memory-create-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Создаю...';
+
+      try {
+        const base = window.location.port === '3000' ? '' : 'http://localhost:3000';
+        const res = await fetch(`${base}/api/profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: '',
+            dates: '',
+            main_text: '',
+          }),
+        });
+        const json = await res.json();
+
+        if (json.ok && json.data?.id) {
+          window.location.href = `person.html?id=${json.data.id}&edit=1`;
+        } else {
+          alert('Ошибка: ' + (json.error || 'Не удалось создать'));
+          btn.disabled = false;
+          btn.textContent = '+ Создать страницу';
+        }
+      } catch (err) {
+        alert('Сервер недоступен: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = '+ Создать страницу';
+      }
     });
   }
 
@@ -65,8 +99,8 @@
         <div class="person-card__photo">${photoEl(p)}</div>
         <div class="person-card__body">
           <h3 class="person-card__name">${p.name}</h3>
-          <p class="person-card__dates">${p.born} — ${p.died || '...'}${age ? `<span class="person-card__age">${age} л.</span>` : ''}</p>
-          <p class="person-card__city">${p.city}</p>
+          <p class="person-card__dates">${p.born} — ${p.died || '...'}${age ? ` <span class="person-card__age">${age} л.</span>` : ''}</p>
+          ${p.city ? `<p class="person-card__city">${p.city}</p>` : ''}
         </div>
       </a>`;
   }
@@ -137,7 +171,8 @@
       if (typeof API !== 'undefined') {
         const profilesRes = await API.get('/api/profiles');
         if (profilesRes?.data?.length) {
-          botProfiles = profilesRes.data;
+          // Фильтруем пустые/незаполненные профили
+          botProfiles = profilesRes.data.filter(p => p.name && p.name !== 'Новая страница');
         }
       }
     } catch (_) {}

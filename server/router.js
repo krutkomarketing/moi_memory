@@ -282,6 +282,50 @@ function lightCandle(req, res) {
   send(res, 200, { ok: true, count: row.count });
 }
 
+/* ── POST /api/profiles — создание нового профиля через сайт ── */
+async function createProfileFromSite(req, res) {
+  const botDb = getBotDb();
+  if (!botDb) {
+    return send(res, 500, { ok: false, error: 'Bot database not available' });
+  }
+
+  const body = await parseBody(req);
+  const fullName = (body.full_name || body.name || '').toString().trim().slice(0, 200);
+  const dates = (body.dates || '').toString().trim().slice(0, 100);
+  const mainText = (body.main_text || body.bio || '').toString().trim().slice(0, 1000);
+  const mainPhoto = (body.main_photo_url || body.photo || '').toString().trim();
+
+  // Для создания с сайта допускаем пустые поля — пользователь заполнит в редакторе
+  const safeName = fullName || '';
+  const safeDates = dates || '';
+
+  const profileId = randomUUID();
+
+  try {
+    botDb.exec('BEGIN');
+
+    // Создаём или находим "сайтового" пользователя (telegram_id = 'site_user')
+    let siteUser = botDb.prepare("SELECT id FROM users WHERE telegram_id = 'site_user'").get();
+    if (!siteUser) {
+      botDb.prepare("INSERT INTO users (telegram_id) VALUES ('site_user')").run();
+      siteUser = botDb.prepare("SELECT id FROM users WHERE telegram_id = 'site_user'").get();
+    }
+
+    botDb.prepare(`
+      INSERT INTO profiles (id, owner_id, full_name, dates, main_text, main_photo_url, is_public, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+    `).run(profileId, siteUser.id, safeName, safeDates, mainText, mainPhoto || null);
+
+    botDb.exec('COMMIT');
+
+    send(res, 201, { ok: true, data: { id: profileId, name: fullName, dates } });
+  } catch (err) {
+    try { botDb.exec('ROLLBACK'); } catch (_) {}
+    console.error('❌ Create profile error:', err);
+    send(res, 500, { ok: false, error: 'Failed to create profile: ' + err.message });
+  }
+}
+
 /* ── GET /api/profiles — список публичных профилей из бот-БД ── */
 function getProfilesList(req, res) {
   const botDb = getBotDb();
@@ -321,6 +365,10 @@ function getBotDb() {
   if (!_botDb) {
     const { DatabaseSync } = require('node:sqlite');
     _botDb = new DatabaseSync(botDbPath);
+    // Миграция: добавляем колонку gender если её нет
+    try { _botDb.exec("ALTER TABLE profiles ADD COLUMN gender TEXT NOT NULL DEFAULT ''"); } catch (_) {}
+    // Миграция: добавляем колонку city если её нет
+    try { _botDb.exec("ALTER TABLE profiles ADD COLUMN city TEXT NOT NULL DEFAULT ''"); } catch (_) {}
   }
   return _botDb;
 }
@@ -414,9 +462,10 @@ function getProfileFromBot(req, res, params) {
         name: profile.full_name,
         born: datesParts[0] || profile.dates,
         died: datesParts[1] || '',
-        city: '',
+        city: profile.city || '',
         bio: profile.main_text,
         photo: profile.main_photo_url || '',
+        gender: profile.gender || '',
         sections,
         quotes: quotes.map(q => ({ text: q.text, after: q.after_block })),
         media: allGallery,
@@ -470,14 +519,16 @@ async function updateProfileInBot(req, res, params) {
     const dates = (body.dates || profile.dates).toString().slice(0, 100);
     const mainText = (body.bio || body.main_text || profile.main_text).toString().slice(0, 1000);
     const mainPhoto = body.photo || body.main_photo_url || profile.main_photo_url;
+    const gender = (body.gender !== undefined ? body.gender : (profile.gender || '')).toString().slice(0, 10);
+    const city = (body.city !== undefined ? body.city : (profile.city || '')).toString().slice(0, 100);
 
     botDb.exec('BEGIN');
 
     // 1. Обновляем профиль
     botDb.prepare(`
-      UPDATE profiles SET full_name = ?, dates = ?, main_text = ?, main_photo_url = ?, updated_at = datetime('now')
+      UPDATE profiles SET full_name = ?, dates = ?, main_text = ?, main_photo_url = ?, gender = ?, city = ?, updated_at = datetime('now')
       WHERE id = ?
-    `).run(fullName, dates, mainText, mainPhoto || null, profileId);
+    `).run(fullName, dates, mainText, mainPhoto || null, gender, city, profileId);
 
     // 2. Обновляем блоки (удаляем старые, вставляем новые)
     // Поддерживаем два формата: sections (фиксированная схема) и orderedBlocks (произвольный порядок)
@@ -680,7 +731,8 @@ async function dispatch(req, res) {
     let p;
 
     /* ── /api/profiles — список публичных профилей из бот-БД ── */
-    if (method === 'GET' && pathname === '/api/profiles') return getProfilesList(req, res);
+    if (method === 'GET'  && pathname === '/api/profiles') return getProfilesList(req, res);
+    if (method === 'POST' && pathname === '/api/profiles') return await createProfileFromSite(req, res);
 
     /* ── /api/profiles/:id — данные из бот-БД (UUID страницы) ── */
     if ((p = matchRoute('/api/profiles/:id', pathname))) {

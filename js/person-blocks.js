@@ -33,6 +33,7 @@
 
     let blocks;
     if (data?.sections && typeof data.sections === 'object') {
+      // Сначала фиксированные блоки в правильном порядке
       blocks = BLOCK_SCHEMA
         .map(meta => {
           const sec = data.sections[meta.key];
@@ -47,6 +48,20 @@
           };
         })
         .filter(Boolean);
+
+      // Затем кастомные блоки (ключи начинаются с custom_)
+      Object.keys(data.sections).forEach(key => {
+        if (!key.startsWith('custom_')) return;
+        const sec = data.sections[key];
+        const text = (sec.text ?? '').trim();
+        if (!text) return;
+        blocks.push({
+          key,
+          title: sec.title || 'Без названия',
+          text,
+          image: sec.image || '',
+        });
+      });
     } else {
       const arr = Array.isArray(data?.blocks) ? data.blocks : [];
       blocks = arr
@@ -77,7 +92,7 @@
     });
 
     // Цитаты без привязки к блоку — вставляем в конец
-    quotes.filter(q => !q.after).forEach(q => {
+    quotes.filter(q => !q.after || !blocks.find(b => b.key === q.after)).forEach(q => {
       wrap.appendChild(renderQuote(q.text));
     });
 

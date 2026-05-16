@@ -1807,6 +1807,8 @@ section { position: relative; z-index: 1; }
   padding: 13px 0;
 }
 .memory-search__input::placeholder { color: rgba(201,191,168,0.35); font-style: italic; }
+.memory-search__input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.memory-search__input::-ms-clear { display: none; }
 
 .memory-search__clear {
   width: 36px; height: 36px;

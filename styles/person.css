@@ -1480,3 +1480,69 @@
   color: var(--cream-dim);
   font-family: var(--font-ui);
 }
+
+
+/* ── GENDER SELECTOR (edit mode) ── */
+.edit-gender {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-gender__label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--gold);
+  letter-spacing: 0.03em;
+}
+
+.edit-gender__options {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-gender__btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(200,168,75,0.25);
+  background: rgba(255,255,255,0.04);
+  color: var(--cream-dim);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-gender__btn:hover {
+  border-color: var(--gold);
+  color: var(--cream);
+  background: rgba(200,168,75,0.08);
+}
+
+.edit-gender__btn--active {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  border-color: var(--gold);
+  color: var(--black);
+  font-weight: 400;
+}
+
+.edit-gender__btn--active:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+}
+
+
+/* ── AGE BADGE ── */
+.person-header__age-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 14px;
+  background: rgba(200,168,75,0.1);
+  border: 1px solid rgba(200,168,75,0.3);
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+}
