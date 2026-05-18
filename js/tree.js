@@ -2,6 +2,7 @@
    FAMILY TREE — Braided SVG threads + clan colours
    Bottom = oldest, Top = youngest
    Click node → highlight lineage OR open person page
+   Click 2 nodes → draw animated connection between them
    ═══════════════════════════════════════════════ */
 
 (function () {
@@ -70,6 +71,10 @@
   /* flat id→person map */
   const personById = {};
   GENERATIONS.forEach(g => g.people.forEach(p => { personById[p.id] = p; }));
+
+  /* ── Если кастомное дерево — tree.js не рисует статику ── */
+  const _urlTree = new URLSearchParams(window.location.search).get('tree');
+  if (_urlTree && _urlTree !== 'default') return;
 
   /* ── DOM SETUP ── */
   const wrapper = document.getElementById('tree-wrapper');
@@ -219,8 +224,11 @@
     return paths;
   }
 
-  function createThread(d, color, width, delay) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  /* Кубический Безье — утилиты для плавных кривых снизу карточек */
+  function cubicB(p0,p1,p2,p3,t){const m=1-t;return m*m*m*p0+3*m*m*t*p1+3*m*t*t*p2+t*t*t*p3;}
+  function cubicBd(p0,p1,p2,p3,t){const m=1-t;return 3*(m*m*(p1-p0)+2*m*t*(p2-p1)+t*t*(p3-p2));}
+
+  function createThread(d, color, width, delay) {    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', d);
     path.setAttribute('stroke', color);
     path.setAttribute('stroke-width', width);
@@ -249,37 +257,51 @@
     let delay = 0.1;
 
     GENERATIONS.forEach((gen, gi) => {
-      /* Spouse connections */
+      /* Spouse connections — from BOTTOM of frames */
       gen.people.forEach(person => {
         if (person.spouseOf && person.id < person.spouseOf) {
           const a = nodeEls[person.id], b = nodeEls[person.spouseOf];
           if (!a || !b) return;
 
           const ca = getFrameCenter(a), cb = getFrameCenter(b);
-          const x1 = Math.min(ca.right, cb.right);
-          const x2 = Math.max(ca.left,  cb.left);
-          const y  = (ca.y + cb.y) / 2;
+          /* Берём низ карточки, небольшая дуга вниз */
+          const x1 = ca.x, y1 = ca.bottom;
+          const x2 = cb.x, y2 = cb.bottom;
+          const drop = 36;
 
           const colors = clanColors(person.clanId);
-          const strands = braidedPath(x1, y, x2, y, 4, 5);
-          const key = `spouse:${person.id}::${person.spouseOf}`;
-          threadEls[key] = [];
-          strands.forEach((d, si) => {
-            const path = createThread(d, colors[si % colors.length], 1.2, delay);
+          const steps  = 32;
+          for (let s = 0; s < 3; s++) {
+            const phase = (s / 3) * Math.PI * 2;
+            let d = `M ${x1} ${y1}`;
+            for (let i = 1; i <= steps; i++) {
+              const t  = i / steps;
+              const bx = cubicB(x1, x1, x2, x2, t);
+              const by = cubicB(y1, y1 + drop, y2 + drop, y2, t);
+              const tx = cubicBd(x1, x1, x2, x2, t);
+              const ty = cubicBd(y1, y1 + drop, y2 + drop, y2, t);
+              const tl = Math.hypot(tx, ty) || 1;
+              const nx = -ty / tl;
+              const wave = Math.sin(t * Math.PI * 4 + phase) * 3;
+              d += ` L ${(bx + nx * wave).toFixed(1)} ${(by + nx * wave * 0).toFixed(1)}`;
+            }
+            const path = createThread(d, colors[s % colors.length], 1.2, delay);
             path.dataset.kind = 'spouse';
             path.dataset.a    = person.id;
             path.dataset.b    = person.spouseOf;
             path.dataset.clan = person.clanId;
             svgEl.appendChild(path);
+            const key = `spouse:${person.id}::${person.spouseOf}`;
+            if (!threadEls[key]) threadEls[key] = [];
             threadEls[key].push(path);
-          });
+          }
           delay += 0.05;
         }
       });
 
       if (gi + 1 >= GENERATIONS.length) return;
 
-      /* Parent → child */
+      /* Parent → child — from BOTTOM of parent, to BOTTOM of child (arc down) */
       Object.entries(gen.childrenMap || {}).forEach(([parentId, childIds]) => {
         const parentEl = nodeEls[parentId];
         if (!parentEl) return;
@@ -291,8 +313,13 @@
           if (!childEl) return;
           const cc = getFrameCenter(childEl);
 
+          /* От низа родителя к низу ребёнка — дуга через пространство между рядами */
+          const x1 = cp.x, y1 = cp.bottom;
+          const x2 = cc.x, y2 = cc.bottom;
+          const midY = (y1 + y2) / 2 + 20;
+
           const colors = clanColors(parentClan);
-          const strands = braidedPath(cp.x, cp.top, cc.x, cc.bottom, 3, 4);
+          const strands = braidedPath(x1, y1, x2, y2, 3, 3);
           const key = `parent:${parentId}->${childId}`;
           threadEls[key] = [];
           strands.forEach((d, si) => {
@@ -386,11 +413,180 @@
     });
   }
 
-  /* ── CLICK: single tap = highlight, double tap = open page ── */
+  /* ── CONNECT MODE: click 2 cards → draw animated thread ── */
+  let connectMode  = false;
+  let connectFirst = null; // id of first selected node
+  const customConnections = []; // { a, b, type } — user-drawn connections
+
+  function enterConnectMode() {
+    connectMode  = true;
+    connectFirst = null;
+    wrapper.classList.add('connect-mode');
+    clearHighlight();
+    showConnectHint('Кликните на первую карточку…');
+  }
+  function exitConnectMode() {
+    connectMode  = false;
+    connectFirst = null;
+    wrapper.classList.remove('connect-mode');
+    Object.values(nodeEls).forEach(el => el.classList.remove('connect-selected'));
+    hideConnectHint();
+  }
+
+  function showConnectHint(msg) {
+    let h = document.getElementById('connect-hint');
+    if (!h) {
+      h = document.createElement('div');
+      h.id = 'connect-hint';
+      document.body.appendChild(h);
+    }
+    h.textContent = msg;
+    h.style.cssText = `
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+      background:rgba(12,12,12,0.92);border:1px solid rgba(200,168,75,0.4);
+      border-radius:30px;padding:10px 28px;
+      font-family:var(--font-body);font-size:14px;font-style:italic;
+      color:var(--gold-light,#e2c97e);z-index:9999;
+      backdrop-filter:blur(10px);box-shadow:0 8px 32px rgba(0,0,0,0.5);
+      animation:fadeInUp 0.3s ease;pointer-events:none;`;
+  }
+  function hideConnectHint() {
+    const h = document.getElementById('connect-hint');
+    if (h) h.remove();
+  }
+
+  /* Draw one animated braided thread between two nodes, snapping to BOTTOM of cards */
+  function drawAnimatedConnection(idA, idB, connType) {
+    const elA = nodeEls[idA], elB = nodeEls[idB];
+    if (!elA || !elB) return;
+
+    const cA = getFrameCenter(elA), cB = getFrameCenter(elB);
+
+    /* Точки — низ центра каждой карточки */
+    const x1 = cA.x, y1 = cA.bottom;
+    const x2 = cB.x, y2 = cB.bottom;
+
+    const personA    = personById[idA];
+    const isMarriage = connType === 'spouse';
+
+    /* U-образный спуск под карточки */
+    const drop = Math.min(Math.abs(y2 - y1) * 0.4 + 50, 130);
+    const cy1  = y1 + drop;
+    const cy2  = y2 + drop;
+
+    const colors = isMarriage
+      ? ['#e2c97e', '#c8a84b', '#e2c97ebb']
+      : clanColors(personA?.clanId || 'ivanov');
+
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.classList.add('custom-connection');
+    group.dataset.a = idA;
+    group.dataset.b = idB;
+
+    if (isMarriage) {
+      /* Три плетёные нити вдоль кривой */
+      const steps = 40;
+      for (let s = 0; s < 3; s++) {
+        const phase = (s / 3) * Math.PI * 2;
+        let d = `M ${x1} ${y1}`;
+        for (let i = 1; i <= steps; i++) {
+          const t  = i / steps;
+          const bx = cubicB(x1, x1, x2, x2, t);
+          const by = cubicB(y1, cy1, cy2, y2, t);
+          const tx = cubicBd(x1, x1, x2, x2, t);
+          const ty = cubicBd(y1, cy1, cy2, y2, t);
+          const tl = Math.hypot(tx, ty) || 1;
+          const nx = -ty / tl, ny = tx / tl;
+          const wave = Math.sin(t * Math.PI * 5 + phase) * 5;
+          d += ` L ${(bx + nx * wave).toFixed(1)} ${(by + ny * wave).toFixed(1)}`;
+        }
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', colors[s % colors.length]);
+        path.setAttribute('stroke-width', '1.8');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.classList.add('thread-path', 'thread-path--custom');
+        if (s === 0) path.style.filter = 'drop-shadow(0 0 4px rgba(226,201,126,0.5))';
+        group.appendChild(path);
+      }
+    } else {
+      /* Одна плавная кривая */
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`);
+      path.setAttribute('stroke', colors[0]);
+      path.setAttribute('stroke-width', '1.8');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-linecap', 'round');
+      path.classList.add('thread-path', 'thread-path--custom');
+      group.appendChild(path);
+    }
+
+    /* Бриллиант по центру дуги */
+    const mx = (x1 + x2) / 2;
+    const my = cubicB(y1, cy1, cy2, y2, 0.5);
+    const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const ds = 6;
+    diamond.setAttribute('d', `M ${mx} ${my-ds} L ${mx+ds} ${my} L ${mx} ${my+ds} L ${mx-ds} ${my} Z`);
+    diamond.setAttribute('fill', isMarriage ? '#e2c97e' : (CLANS[personA?.clanId]?.color || '#c8a84b'));
+    diamond.setAttribute('stroke', 'rgba(8,8,8,0.5)');
+    diamond.setAttribute('stroke-width', '1');
+    diamond.classList.add('thread-diamond');
+    diamond.style.opacity = '0';
+    group.appendChild(diamond);
+
+    svgEl.appendChild(group);
+
+    /* Анимация рисования */
+    requestAnimationFrame(() => {
+      group.querySelectorAll('.thread-path').forEach((p, i) => {
+        const len = p.getTotalLength ? p.getTotalLength() : 600;
+        p.setAttribute('stroke-dasharray', len);
+        p.setAttribute('stroke-dashoffset', len);
+        p.style.transition = `stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s`;
+        requestAnimationFrame(() => { p.style.strokeDashoffset = '0'; });
+      });
+      setTimeout(() => {
+        diamond.style.transition = 'opacity 0.5s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+        diamond.style.opacity    = '1';
+        diamond.style.transformOrigin = `${mx}px ${my}px`;
+        let sc = 1;
+        setInterval(() => { sc = sc === 1 ? 1.3 : 1; diamond.style.transform = `scale(${sc})`; }, 1600);
+      }, 1400);
+    });
+  }
+
+  /* Кубический Безье */
+  function cubicB(p0,p1,p2,p3,t) { const m=1-t; return m*m*m*p0+3*m*m*t*p1+3*m*t*t*p2+t*t*t*p3; }
+  function cubicBd(p0,p1,p2,p3,t){ const m=1-t; return 3*(m*m*(p1-p0)+2*m*t*(p2-p1)+t*t*(p3-p2)); }
+
+  /* ── CLICK: single tap = highlight or connect, double tap = open page ── */
   const clickTimers = {};
   Object.entries(nodeEls).forEach(([id, el]) => {
     el.addEventListener('click', e => {
       e.stopPropagation();
+
+      // CONNECT MODE
+      if (connectMode) {
+        if (!connectFirst) {
+          connectFirst = id;
+          el.classList.add('connect-selected');
+          showConnectHint('Теперь кликните на вторую карточку…');
+        } else if (connectFirst !== id) {
+          // Draw connection
+          const connType = prompt(
+            'Тип соединения:\n1 — Брачный союз\n2 — Родство\nВведите 1 или 2:',
+            '1'
+          );
+          const type = connType === '2' ? 'kin' : 'spouse';
+          customConnections.push({ a: connectFirst, b: id, type });
+          drawAnimatedConnection(connectFirst, id, type);
+          nodeEls[connectFirst].classList.remove('connect-selected');
+          exitConnectMode();
+        }
+        return;
+      }
+
       if (clickTimers[id]) {
         // double click → navigate
         clearTimeout(clickTimers[id]);
@@ -412,13 +608,291 @@
         if (person?.personPageId) window.location.href = `person.html?id=${person.personPageId}`;
       }
       if (e.key === ' ')      { e.preventDefault(); highlight(id); }
-      if (e.key === 'Escape') clearHighlight();
+      if (e.key === 'Escape') {
+        if (connectMode) exitConnectMode();
+        else clearHighlight();
+      }
     });
   });
 
   document.addEventListener('click', e => {
+    if (connectMode && !e.target.closest('.tree-node')) { exitConnectMode(); return; }
     if (!e.target.closest('.tree-node') && !e.target.closest('.clan-legend__item')) clearHighlight();
   });
+
+  /* ── CONNECT BUTTON ── */
+  const connectBtn = document.getElementById('tree-connect-btn');
+  if (connectBtn) {
+    /* Снять возможный дублирующийся listener */
+    const freshBtn = connectBtn.cloneNode(true);
+    connectBtn.replaceWith(freshBtn);
+    freshBtn.addEventListener('click', () => {
+      if (connectMode) exitConnectMode();
+      else enterConnectMode();
+    });
+  }
+
+  /* ── CREATE TREE BUTTON — handled by tree-edit.js ── */
+  /* tree-edit.js already handles #tree-create-btn with full modal */
+
+  function openCreateTreeModal() {
+    // Remove existing modal if any
+    const old = document.getElementById('create-tree-modal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'create-tree-modal';
+    modal.innerHTML = `
+      <div class="ctm-backdrop"></div>
+      <div class="ctm-panel">
+        <button class="ctm-close" title="Закрыть">✕</button>
+        <h2 class="ctm-title">Создать <em>новое древо</em></h2>
+        <p class="ctm-sub">Заполните данные первого предка — от него начнётся родословная</p>
+
+        <div class="ctm-photo-wrap">
+          <div class="ctm-photo-preview" id="ctm-photo-preview">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+              <circle cx="12" cy="7" r="4" fill="currentColor"/>
+              <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="currentColor"/>
+            </svg>
+          </div>
+          <label class="ctm-photo-label" for="ctm-photo-input">
+            📷 Прикрепить фото
+            <input type="file" id="ctm-photo-input" accept="image/*" style="display:none">
+          </label>
+        </div>
+
+        <form id="ctm-form">
+          <div class="ctm-grid">
+            <div class="ctm-field">
+              <label>Имя *</label>
+              <input type="text" name="firstName" placeholder="Иван" required class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Отчество</label>
+              <input type="text" name="middleName" placeholder="Петрович" class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Фамилия *</label>
+              <input type="text" name="lastName" placeholder="Иванов" required class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Статус в роде</label>
+              <select name="role" class="ctm-input ctm-select">
+                <option value="progenitor">Прародитель рода</option>
+                <option value="patriarch">Патриарх / Матриарх</option>
+                <option value="parent">Родитель</option>
+                <option value="grandparent">Дед / Бабушка</option>
+                <option value="greatgrandparent">Прапрадед / Прапрабабушка</option>
+              </select>
+            </div>
+            <div class="ctm-field">
+              <label>Год рождения</label>
+              <input type="number" name="birthYear" placeholder="1920" min="1800" max="2025" class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Год смерти</label>
+              <input type="number" name="deathYear" placeholder="1985 (если ушёл)" min="1800" max="2025" class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Город / Место жизни</label>
+              <input type="text" name="city" placeholder="Москва" class="ctm-input"/>
+            </div>
+            <div class="ctm-field">
+              <label>Семейное положение</label>
+              <select name="marital" class="ctm-input ctm-select">
+                <option value="">Не указано</option>
+                <option value="married">В браке</option>
+                <option value="single">Не замужем / Не женат</option>
+                <option value="widowed">Вдовец / Вдова</option>
+                <option value="divorced">Разведён(а)</option>
+              </select>
+            </div>
+            <div class="ctm-field">
+              <label>Пол</label>
+              <select name="gender" class="ctm-input ctm-select">
+                <option value="male">Мужской</option>
+                <option value="female">Женский</option>
+              </select>
+            </div>
+            <div class="ctm-field">
+              <label>Название древа</label>
+              <input type="text" name="treeName" placeholder="Род Ивановых" class="ctm-input"/>
+            </div>
+          </div>
+
+          <div class="ctm-field ctm-field--full">
+            <label>Краткое описание / Биография</label>
+            <textarea name="bio" placeholder="Немного о человеке…" class="ctm-input ctm-textarea" rows="3"></textarea>
+          </div>
+
+          <button type="submit" class="ctm-submit">
+            🌳 Создать древо
+          </button>
+        </form>
+      </div>`;
+
+    document.body.appendChild(modal);
+
+    // Photo preview
+    const photoInput   = modal.querySelector('#ctm-photo-input');
+    const photoPreview = modal.querySelector('#ctm-photo-preview');
+    photoInput.addEventListener('change', () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        photoPreview.innerHTML = `<img src="${ev.target.result}" alt="Фото" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Close
+    modal.querySelector('.ctm-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('.ctm-backdrop').addEventListener('click', () => modal.remove());
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
+    });
+
+    // Animate in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => modal.classList.add('ctm-visible'));
+    });
+
+    // Submit
+    modal.querySelector('#ctm-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const photoSrc = photoPreview.querySelector('img')?.src || null;
+
+      const data = {
+        firstName:  fd.get('firstName')?.trim(),
+        middleName: fd.get('middleName')?.trim(),
+        lastName:   fd.get('lastName')?.trim(),
+        role:       fd.get('role'),
+        birthYear:  fd.get('birthYear'),
+        deathYear:  fd.get('deathYear'),
+        city:       fd.get('city')?.trim(),
+        marital:    fd.get('marital'),
+        gender:     fd.get('gender'),
+        treeName:   fd.get('treeName')?.trim() || `Род ${fd.get('lastName') || ''}`,
+        bio:        fd.get('bio')?.trim(),
+        photo:      photoSrc,
+      };
+
+      if (!data.firstName || !data.lastName) return;
+
+      createNewTree(data);
+      modal.remove();
+    });
+  }
+
+  /* Build a new tree from the first person's data */
+  function createNewTree(data) {
+    const years = data.birthYear
+      ? `${data.birthYear}–${data.deathYear || ''}`
+      : '';
+
+    const roleLabels = {
+      progenitor:      'Прародитель рода',
+      patriarch:       data.gender === 'female' ? 'Матриарх' : 'Патриарх',
+      parent:          data.gender === 'female' ? 'Мать'     : 'Отец',
+      grandparent:     data.gender === 'female' ? 'Бабушка'  : 'Дед',
+      greatgrandparent:data.gender === 'female' ? 'Прапрабабушка' : 'Прапрадед',
+    };
+
+    // Save to localStorage
+    const treeId = 'tree_' + Date.now();
+    const newNode = {
+      id:       'n_' + Date.now(),
+      name:     `${data.lastName}\n${data.firstName}${data.middleName ? ' ' + data.middleName : ''}`,
+      years,
+      city:     data.city,
+      marital:  data.marital,
+      gender:   data.gender,
+      role:     roleLabels[data.role] || data.role,
+      bio:      data.bio,
+      photo:    data.photo,
+      clanId:   'ivanov',
+      ageClass: 'old',
+    };
+
+    try {
+      localStorage.setItem(`tree_nodes_${treeId}`, JSON.stringify([newNode]));
+      const allTrees = JSON.parse(localStorage.getItem('all_trees') || '[]');
+      allTrees.push({ id: treeId, name: data.treeName });
+      localStorage.setItem('all_trees', JSON.stringify(allTrees));
+    } catch {}
+
+    // Show success toast
+    const toast = document.createElement('div');
+    toast.innerHTML = `
+      <div style="
+        position:fixed;top:40px;left:50%;transform:translateX(-50%);
+        background:rgba(12,12,12,0.95);border:1px solid rgba(200,168,75,0.5);
+        border-radius:12px;padding:20px 36px;z-index:9999;
+        font-family:var(--font-body);font-size:15px;color:var(--gold-light,#e2c97e);
+        backdrop-filter:blur(16px);box-shadow:0 12px 40px rgba(0,0,0,0.6);
+        text-align:center;min-width:280px;animation:fadeInDown 0.4s ease;">
+        <div style="font-size:32px;margin-bottom:8px;">🌳</div>
+        <strong style="display:block;font-family:var(--font-display);font-size:18px;margin-bottom:6px;">
+          ${data.treeName}
+        </strong>
+        <span style="font-style:italic;color:rgba(201,191,168,0.7);font-size:13px;">
+          Первый предок добавлен — ${data.firstName} ${data.lastName}
+        </span>
+      </div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+
+    // Redraw with new card visible
+    const newPerson = { ...newNode, id: newNode.id, personPageId: null, spouseOf: null };
+    personById[newNode.id] = newPerson;
+
+    const row = document.createElement('div');
+    const clan = CLANS.ivanov;
+    const node = document.createElement('div');
+    node.className = 'tree-node tree-node--old tree-node--clan-ivanov tree-node--new-pulse';
+    node.dataset.id   = newNode.id;
+    node.dataset.clan = 'ivanov';
+    node.tabIndex     = 0;
+
+    const nameParts = newNode.name.split('\n');
+    const photoHtml = data.photo
+      ? `<img src="${data.photo}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+      : `<div class="tree-node__avatar">${personSVG}</div>`;
+
+    node.innerHTML = `
+      <div class="tree-node__frame" title="${nameParts.join(' ')}"
+           style="--clan-color:${clan.color};--clan-dim:${clan.colorDim}">
+        <span class="tree-node__clan-badge" title="${clan.name}">${clan.icon}</span>
+        <div class="tree-node__photo">${photoHtml}</div>
+      </div>
+      <div class="tree-node__info">
+        <div class="tree-node__name">${nameParts[0]}<br/>${nameParts[1] || ''}</div>
+        ${years ? `<div class="tree-node__years">${years}</div>` : ''}
+        <div class="tree-node__clan-name" style="color:${clan.color}">${newNode.role}</div>
+        ${data.city ? `<div class="tree-node__years">${data.city}</div>` : ''}
+      </div>`;
+
+    const firstRow = gensEl.querySelector('.gen-row');
+    if (firstRow) {
+      firstRow.insertBefore(node, firstRow.firstChild);
+    } else {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'gen-row';
+      rowDiv.appendChild(node);
+      gensEl.appendChild(rowDiv);
+    }
+
+    nodeEls[newNode.id] = node;
+    node.addEventListener('click', () => highlight(newNode.id));
+
+    setTimeout(() => {
+      node.classList.remove('tree-node--new-pulse');
+      drawThreads();
+    }, 2000);
+  }
 
   /* ── TOOLTIP on hover ── */
   const tooltip = document.createElement('div');

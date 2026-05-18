@@ -278,6 +278,19 @@
         <!-- BIO BLOCKS (зебра-вёрстка, 6 секций) -->
         <div id="bio-blocks-container"></div>
 
+        <!-- ЛИАНА ПАМЯТИ -->
+        <section class="vine-section" id="vine-section">
+          <h2 class="person-sec-title">Лиана памяти</h2>
+          <p class="vine-subtitle">Воспоминания близких, переплетённые временем</p>
+          <div class="vine-layout" id="vine-layout">
+            <div class="vine-rope-wrap" id="vine-rope-wrap">
+              <svg class="vine-rope-svg" id="vine-rope-svg" viewBox="0 0 40 1000" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+              </svg>
+            </div>
+            <div class="vine-cards" id="vine-cards"></div>
+          </div>
+        </section>
+
         <!-- ФОТОГАЛЕРЕЯ (карусель) -->
         <section class="gallery-section" id="gallery-section">
           <h2 class="person-sec-title">Фотогалерея</h2>
@@ -368,8 +381,241 @@
       window.PersonBlocks.render(bioContainer, { sections: person.sections, quotes: person.quotes });
     }
 
+    initVine(reviews, media);
     initGallery(media);
     initReviewForm(reviews, source);
+  }
+
+  /* ════════════════════════════════════════════
+     ЛИАНА ПАМЯТИ — тонкая нить + split-карточки
+     ════════════════════════════════════════════ */
+  function initVine(reviews, media) {
+    const layout  = document.getElementById('vine-layout');
+    const cardsEl = document.getElementById('vine-cards');
+    const ropeSvg = document.getElementById('vine-rope-svg');
+    if (!layout || !cardsEl || !ropeSvg) return;
+
+    const REVIEW_TYPE_LABELS = {
+      text:   '✦ Текст',
+      photo:  '📷 Фотография',
+      quote:  '❧ Цитата',
+      memory: '✿ Яркий момент',
+    };
+
+    /* Медиа-заглушки если нет реальных фото */
+    const defaultMedia = [
+      { kind: 'media', type: 'photo', label: 'Из семейного архива', caption: 'Фото из личного альбома' },
+      { kind: 'media', type: 'photo', label: 'Особый момент',       caption: 'Памятный день' },
+      { kind: 'media', type: 'video', caption: 'Видео-воспоминание', duration: '1:24' },
+    ];
+
+    const realMedia = media.filter(m => m && m.src && !String(m.src).startsWith('__placeholder'));
+    const mediaCards = (realMedia.length ? realMedia : defaultMedia).map(m => ({ kind: 'media', ...m }));
+    const reviewCards = reviews.map(r => ({ kind: 'review', ...r }));
+    const allCards = [...mediaCards, ...reviewCards];
+
+    /* ── Строим карточки ── */
+    function buildCard(item, idx) {
+      const side = idx % 2 === 0 ? 'left' : 'right';
+      let inner = '';
+
+      if (item.kind === 'media') {
+        if (item.type === 'video') {
+          inner = `
+            <div class="vine-card__split">
+              <div class="vine-card__split-media">
+                <div class="vine-card__media vine-card__media--video">
+                  <div class="vine-card__play">▶</div>
+                  <span class="vine-card__duration">${item.duration || '0:30'}</span>
+                </div>
+              </div>
+              <div class="vine-card__split-info">
+                <span class="vine-card__type-tag">видео</span>
+                <p class="vine-card__caption">${item.caption || 'Видео-воспоминание'}</p>
+              </div>
+            </div>`;
+        } else {
+          const isReal = item.src && !String(item.src).startsWith('__placeholder');
+          inner = `
+            <div class="vine-card__split">
+              <div class="vine-card__split-media">
+                <div class="vine-card__media vine-card__media--photo">
+                  ${isReal
+                    ? `<img src="${item.src}" alt="${item.caption || ''}" class="vine-card__img"/>`
+                    : `<span class="vine-card__photo-icon">🖼</span>
+                       <span class="vine-card__photo-label">${item.label || 'Фотография'}</span>`}
+                </div>
+              </div>
+              <div class="vine-card__split-info">
+                <span class="vine-card__type-tag">фото</span>
+                <p class="vine-card__caption">${item.caption || 'Фото-воспоминание'}</p>
+              </div>
+            </div>`;
+        }
+      } else {
+        /* Воспоминание */
+        const badge = item.reviewType && item.reviewType !== 'text'
+          ? `<span class="vine-card__type-badge">${REVIEW_TYPE_LABELS[item.reviewType] || ''}</span>`
+          : '';
+        if (item.photoDataUrl) {
+          /* С фото — split */
+          inner = `
+            <div class="vine-card__split">
+              <div class="vine-card__split-media">
+                <img src="${item.photoDataUrl}" alt="фото" class="vine-card__split-img"/>
+              </div>
+              <div class="vine-card__split-info">
+                ${badge}
+                <p class="vine-card__text">${item.text}</p>
+                <p class="vine-card__author">${item.author}</p>
+              </div>
+            </div>`;
+        } else {
+          /* Только текст */
+          inner = `
+            <div class="vine-card__text-only">
+              ${badge}
+              <p class="vine-card__text">${item.text}</p>
+              <p class="vine-card__author">${item.author}</p>
+            </div>`;
+        }
+      }
+
+      return `
+        <div class="vine-card vine-card--${side}" data-vine-idx="${idx}">
+          <div class="vine-card__inner">${inner}</div>
+          <div class="vine-card__connector vine-card__connector--${side}"></div>
+          <div class="vine-card__knot vine-card__knot--${side}"></div>
+        </div>`;
+    }
+
+    if (!allCards.length) {
+      cardsEl.innerHTML = `<p class="vine-empty">Воспоминания пока не добавлены. Будьте первым.</p>`;
+    } else {
+      cardsEl.innerHTML = allCards.map((c, i) => buildCard(c, i)).join('');
+    }
+
+    /* ── Строим тонкую золотую нить ── */
+    function buildThread() {
+      const cardH  = 280;
+      const totalH = Math.max(600, allCards.length * cardH + 200);
+      const cx     = 20;
+
+      ropeSvg.setAttribute('viewBox', `0 0 40 ${totalH}`);
+      ropeSvg.style.height = totalH + 'px';
+      layout.style.minHeight = totalH + 'px';
+
+      /* Плавная кривая Безье — лёгкие изгибы */
+      let path = `M ${cx} 0`;
+      const segs = Math.ceil(totalH / 80);
+      for (let i = 0; i < segs; i++) {
+        const y0 = i * 80;
+        const y1 = (i + 1) * 80;
+        const off = i % 2 === 0 ? 3 : -3;
+        path += ` C ${cx + off} ${y0 + 26}, ${cx - off} ${y0 + 54}, ${cx} ${y1}`;
+      }
+
+      /* Бриллиантовые узелки */
+      const knots = allCards.map((_, i) => {
+        const y = 80 + i * cardH;
+        return `
+          <g class="vine-knot" data-knot-idx="${i}" cursor="pointer">
+            <circle cx="${cx}" cy="${y}" r="10" fill="transparent"/>
+            <path d="M ${cx} ${y-5} L ${cx+4} ${y} L ${cx} ${y+5} L ${cx-4} ${y} Z"
+              class="vine-knot-diamond"
+              fill="url(#threadGlowGrad)" stroke="url(#threadGrad)" stroke-width="0.5"/>
+            <circle cx="${cx}" cy="${y}" r="1.5" fill="#fff" opacity="0.85"/>
+          </g>`;
+      }).join('');
+
+      ropeSvg.innerHTML = `
+        <defs>
+          <linearGradient id="threadGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#f5e6a3"/>
+            <stop offset="35%"  stop-color="#e2c97e" stop-opacity="0.9"/>
+            <stop offset="70%"  stop-color="#c8a84b" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#8a7035" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="threadGlowGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#fff9e6" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#c8a84b" stop-opacity="0.3"/>
+          </linearGradient>
+          <filter id="threadGlow" x="-200%" y="-5%" width="500%" height="110%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Якорь сверху -->
+        <line x1="${cx-6}" y1="12" x2="${cx+6}" y2="12" stroke="url(#threadGrad)" stroke-width="1" opacity="0.7"/>
+        <line x1="${cx}" y1="6" x2="${cx}" y2="18"   stroke="url(#threadGrad)" stroke-width="1" opacity="0.7"/>
+        <circle cx="${cx}" cy="12" r="2.5" fill="none" stroke="url(#threadGrad)" stroke-width="1" opacity="0.9"/>
+        <!-- Ореол нити -->
+        <path d="${path}" fill="none" stroke="rgba(200,168,75,0.12)" stroke-width="5" stroke-linecap="round"/>
+        <!-- Основная нить -->
+        <path d="${path}" fill="none" stroke="url(#threadGrad)" stroke-width="1.2"
+              stroke-linecap="round" filter="url(#threadGlow)"/>
+        <!-- Блик -->
+        <path d="${path}" fill="none" stroke="rgba(255,245,200,0.55)" stroke-width="0.4"
+              stroke-linecap="round" stroke-dasharray="3 9"/>
+        ${knots}
+        <!-- Якорь снизу -->
+        <path d="M ${cx-5} ${totalH-14} L ${cx+5} ${totalH-14} L ${cx} ${totalH-6} Z"
+          fill="none" stroke="url(#threadGrad)" stroke-width="1" opacity="0.55"/>`;
+
+      /* Позиционируем карточки */
+      cardsEl.querySelectorAll('.vine-card').forEach((el, i) => {
+        el.style.top = (80 + i * cardH - 80) + 'px';
+      });
+    }
+
+    buildThread();
+
+    /* Ресайз */
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(buildThread, 120);
+    });
+
+    /* Scroll-reveal */
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('vine-card--visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    cardsEl.querySelectorAll('.vine-card').forEach(c => io.observe(c));
+
+    /* Клик по нити/узелку — анимация */
+    document.getElementById('vine-rope-wrap')?.addEventListener('click', (e) => {
+      const knot = e.target.closest('.vine-knot');
+      if (knot) {
+        knot.classList.remove('vine-knot--squeeze');
+        void knot.offsetWidth;
+        knot.classList.add('vine-knot--squeeze');
+        knot.addEventListener('animationend', () => knot.classList.remove('vine-knot--squeeze'), { once: true });
+        return;
+      }
+      ropeSvg.classList.remove('vine-rope--squeeze');
+      void ropeSvg.offsetWidth;
+      ropeSvg.classList.add('vine-rope--squeeze');
+      ropeSvg.addEventListener('animationend', () => ropeSvg.classList.remove('vine-rope--squeeze'), { once: true });
+    });
+
+    /* Публичный метод — добавление новой карточки без перерендера */
+    window._vineAddCard = function(review) {
+      allCards.push({ kind: 'review', ...review });
+      const idx = allCards.length - 1;
+      cardsEl.insertAdjacentHTML('beforeend', buildCard({ kind: 'review', ...review }, idx));
+      buildThread();
+      const newEl = cardsEl.querySelector(`[data-vine-idx="${idx}"]`);
+      if (newEl) {
+        setTimeout(() => newEl.classList.add('vine-card--visible'), 50);
+        newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
   }
 
   /* ════════════════════════════════════════════

@@ -169,6 +169,7 @@ body.tree-page { overflow-x: hidden; }
   gap: 10px;
   position: relative;
   cursor: pointer;
+  z-index: 1;  /* above SVG threads (z-index:0) */
 }
 
 .tree-node__frame {
@@ -302,20 +303,45 @@ body.tree-page { overflow-x: hidden; }
 }
 .tree-legend__item {
   display: flex;
+  flex-direction: column;   /* clan name ABOVE the line */
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 300;
   letter-spacing: 0.06em;
   color: var(--cream-dim);
+  cursor: pointer;
+  transition: transform 0.25s;
 }
+.tree-legend__item:hover { transform: translateY(-2px); }
+
+/* Clan name label ABOVE the line */
+.tree-legend__clan-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--cream-dim);
+  transition: color 0.25s;
+}
+/* When item has a color attribute, use it */
+.tree-legend__item[data-new-tree] .tree-legend__clan-label,
+.tree-legend__item--new .tree-legend__clan-label {
+  color: inherit;
+}
+
 .tree-legend__line {
   display: block;
   width: 44px;
   height: 3px;
   border-radius: 2px;
+  transition: width 0.25s, box-shadow 0.25s;
 }
+.tree-legend__item:hover .tree-legend__line { width: 56px; }
 .tree-legend__line--wood   { background: linear-gradient(90deg, #7a5c30, #c8a84b, #7a5c30); }
 .tree-legend__line--braid  { background: repeating-linear-gradient(90deg, #c8a84b 0px, #c8a84b 4px, #8a7035 4px, #8a7035 8px); }
 
@@ -992,4 +1018,611 @@ body.tree-page { overflow-x: hidden; }
   font-size: 12px;
   color: var(--gold-dim);
   letter-spacing: 0.05em;
+}
+
+
+
+/* ═══════════════════════════════════════════════
+   LEGEND — интерактивные элементы соединения
+   ═══════════════════════════════════════════════ */
+
+.tree-legend__hint-connect {
+  width: 100%;
+  text-align: center;
+  font-family: var(--font-script);
+  font-size: 14px;
+  color: rgba(200,168,75,0.45);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+.tree-legend__item--connectable {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  transition: all 0.25s;
+}
+.tree-legend__item--connectable:hover {
+  border-color: rgba(200,168,75,0.4);
+  background: rgba(200,168,75,0.07);
+  transform: translateY(-1px);
+}
+.tree-legend__item--connectable[data-active-conn] {
+  border-color: var(--gold) !important;
+  background: rgba(200,168,75,0.18) !important;
+  box-shadow: 0 0 0 2px rgba(200,168,75,0.35);
+}
+
+/* Карточка, выбранная для соединения */
+.tree-node--conn-selected .tree-node__frame {
+  box-shadow: 0 0 0 3px rgba(200,168,75,0.9), 0 0 24px rgba(200,168,75,0.5) !important;
+  transform: translateY(-4px) scale(1.06) !important;
+}
+.tree-node--conn-selected .tree-node__name { color: var(--gold-light) !important; }
+
+/* SVG нити кастомных соединений */
+.tree-dynamic { position: relative; }
+.tree-dynamic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
+
+/* Корень ветви */
+.tree-node--branch-root .tree-node__frame::after {
+  content: '🌿';
+  position: absolute;
+  bottom: 4px; right: 4px;
+  font-size: 14px;
+  z-index: 5;
+}
+.tree-node--branch-root .tree-node__frame {
+  border-style: dashed;
+}
+
+/* Кнопка «Добавить ветвь» */
+.tree-edit-btn--new {
+  margin-left: 10px;
+  background: rgba(126,200,180,0.1);
+  border-color: rgba(126,200,180,0.3);
+  color: #7ec8b4;
+}
+.tree-edit-btn--new:hover {
+  background: rgba(126,200,180,0.18);
+  border-color: #7ec8b4;
+}
+
+/* Toast анимация */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+
+
+/* ── Кнопка «Создать дерево» ── */
+.tree-edit-btn--create {
+  margin-left: 10px;
+  background: rgba(200,168,75,0.12);
+  border: 1px solid rgba(200,168,75,0.45);
+  color: var(--gold-light);
+}
+.tree-edit-btn--create:hover {
+  background: rgba(200,168,75,0.22);
+  border-color: var(--gold);
+  box-shadow: 0 4px 20px rgba(200,168,75,0.2);
+}
+
+/* ── Анимация исчезновения при переходе к новому дереву ── */
+@keyframes treePageOut {
+  0%   { transform: scale(1)    translateY(0);    opacity: 1; }
+  100% { transform: scale(0.55) translateY(-60px); opacity: 0; }
+}
+.tree-page--leaving .tree-hero,
+.tree-page--leaving .clan-legend-wrap,
+.tree-page--leaving .tree-section,
+.tree-page--leaving .tree-legend {
+  animation: treePageOut 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.tree-page--leaving .tree-hero         { animation-delay: 0ms;   }
+.tree-page--leaving .clan-legend-wrap  { animation-delay: 40ms;  }
+.tree-page--leaving .tree-section      { animation-delay: 80ms;  }
+.tree-page--leaving .tree-legend       { animation-delay: 120ms; }
+
+/* ── Новое дерево появляется снизу ── */
+@keyframes treePageIn {
+  0%   { transform: scale(0.55) translateY(60px); opacity: 0; }
+  100% { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+.tree-page--entering .tree-hero,
+.tree-page--entering .clan-legend-wrap,
+.tree-page--entering .tree-section,
+.tree-page--entering .tree-legend {
+  animation: treePageIn 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Соединённые карточки — подсветка */
+.tree-node--conn-selected .tree-node__frame {
+  box-shadow: 0 0 0 3px rgba(200,168,75,0.95), 0 0 24px rgba(200,168,75,0.55) !important;
+  transform: translateY(-4px) scale(1.07) !important;
+}
+.tree-node--conn-selected .tree-node__name {
+  color: var(--gold-light) !important;
+}
+/* ═══════════════════════════════════════════════
+   TREE ACTIONS — connect + create buttons
+   ═══════════════════════════════════════════════ */
+
+.tree-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.tree-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--cream-dim);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(200,168,75,0.22);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  letter-spacing: 0.03em;
+}
+.tree-action-btn:hover {
+  border-color: rgba(200,168,75,0.5);
+  background: rgba(200,168,75,0.07);
+  color: var(--gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+}
+.tree-action-btn__icon { font-size: 16px; }
+
+.tree-action-btn--primary {
+  background: linear-gradient(135deg, rgba(138,112,53,0.3), rgba(200,168,75,0.2));
+  border-color: rgba(200,168,75,0.4);
+  color: var(--gold-light);
+}
+.tree-action-btn--primary:hover {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--black);
+  border-color: var(--gold);
+}
+
+.connect-btn--active {
+  background: rgba(200,168,75,0.15) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold-light) !important;
+  box-shadow: 0 0 20px rgba(200,168,75,0.3) !important;
+}
+
+/* Connect mode — nodes glow on hover */
+.connect-mode .tree-node:hover .tree-node__frame {
+  box-shadow: 0 0 0 3px var(--gold-light), 0 0 30px rgba(226,201,126,0.5);
+  cursor: crosshair;
+}
+.connect-mode .tree-wrapper::after {
+  content: 'Выберите первую карточку для соединения · Esc — отмена';
+  color: rgba(226,201,126,0.7);
+}
+
+.tree-node.connect-selected .tree-node__frame {
+  box-shadow: 0 0 0 3px var(--gold-light), 0 0 30px rgba(226,201,126,0.5) !important;
+}
+.tree-node.connect-selected .tree-node__frame::before {
+  box-shadow: 0 0 20px var(--gold-light);
+}
+
+/* Diamond midpoint on custom connection */
+.thread-diamond {
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Custom connection thread glow */
+.thread-path--custom {
+  filter: drop-shadow(0 0 3px rgba(200,168,75,0.4));
+}
+
+/* New node pulse on creation */
+@keyframes newNodePulse {
+  0%   { transform: scale(0.7); opacity: 0; }
+  50%  { transform: scale(1.08); }
+  70%  { transform: scale(0.97); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.tree-node--new-pulse {
+  animation: newNodePulse 0.9s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.tree-node--new-pulse .tree-node__frame {
+  box-shadow: 0 0 0 2px var(--gold-light), 0 0 40px rgba(226,201,126,0.5) !important;
+  animation: newFrameGlow 2s ease infinite alternate;
+}
+@keyframes newFrameGlow {
+  from { box-shadow: 0 0 0 2px var(--gold-light), 0 0 20px rgba(226,201,126,0.3); }
+  to   { box-shadow: 0 0 0 2px var(--gold-light), 0 0 50px rgba(226,201,126,0.65); }
+}
+
+/* ── HINT ANIMATION ── */
+@keyframes fadeInUp {
+  from { opacity:0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes fadeInDown {
+  from { opacity:0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════
+   CREATE TREE MODAL
+   ═══════════════════════════════════════════════ */
+#create-tree-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ctm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4,4,4,0.85);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#create-tree-modal.ctm-visible .ctm-backdrop { opacity: 1; }
+
+.ctm-panel {
+  position: relative;
+  background: linear-gradient(160deg, #121212 0%, #0c0c0c 100%);
+  border: 1px solid rgba(200,168,75,0.25);
+  border-radius: 14px;
+  padding: 44px 44px 36px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,168,75,0.08);
+  transform: translateY(28px) scale(0.97);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.34,1.2,0.64,1), opacity 0.35s ease;
+}
+#create-tree-modal.ctm-visible .ctm-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Scrollbar */
+.ctm-panel::-webkit-scrollbar { width: 4px; }
+.ctm-panel::-webkit-scrollbar-thumb { background: rgba(200,168,75,0.25); border-radius: 4px; }
+
+.ctm-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(200,168,75,0.2);
+  background: transparent;
+  color: var(--cream-dim);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s;
+}
+.ctm-close:hover {
+  background: rgba(200,80,80,0.15);
+  border-color: rgba(200,80,80,0.4);
+  color: #e08080;
+}
+
+.ctm-title {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 400;
+  color: var(--cream);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.ctm-title em { font-style: italic; color: var(--gold-light); }
+
+.ctm-sub {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--cream-dim);
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+/* Photo upload area */
+.ctm-photo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.ctm-photo-preview {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: rgba(200,168,75,0.08);
+  border: 2px dashed rgba(200,168,75,0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(200,168,75,0.4);
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.ctm-photo-label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--gold-dim);
+  cursor: pointer;
+  padding: 6px 16px;
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 20px;
+  transition: all 0.3s;
+  user-select: none;
+}
+.ctm-photo-label:hover {
+  border-color: rgba(200,168,75,0.5);
+  color: var(--gold-light);
+  background: rgba(200,168,75,0.06);
+}
+
+/* Form grid */
+.ctm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+  margin-bottom: 14px;
+}
+@media (max-width: 560px) { .ctm-grid { grid-template-columns: 1fr; } }
+
+.ctm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ctm-field--full { grid-column: 1 / -1; margin-bottom: 14px; }
+
+.ctm-field label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+
+.ctm-input {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(200,168,75,0.18);
+  border-radius: 6px;
+  padding: 11px 14px;
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 300;
+  transition: border-color 0.3s, background 0.3s;
+  width: 100%;
+}
+.ctm-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 3px rgba(200,168,75,0.1);
+}
+.ctm-input::placeholder { color: rgba(201,191,168,0.3); font-style: italic; }
+
+.ctm-select { cursor: pointer; appearance: none; }
+.ctm-textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.ctm-submit {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 15px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--black);
+  cursor: pointer;
+  font-weight: 400;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.ctm-submit:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  transform: translateY(-3px);
+  box-shadow: 0 10px 32px rgba(200,168,75,0.4);
+}
+.ctm-submit:active { transform: translateY(-1px); }
+
+
+/* ═══════════════════════════════════════════════
+   CONNECT TIP + LEGEND ENHANCEMENTS
+   ═══════════════════════════════════════════════ */
+
+/* Легенда — плавный переход при активации */
+.tree-legend {
+  transition: box-shadow 0.5s ease, background 0.5s ease;
+  border-radius: 12px;
+  padding: 16px 32px;
+}
+
+/* Активная подсветка легенды при клике «Соединить карточки» */
+.tree-legend--active {
+  box-shadow: 0 0 0 2px rgba(200,168,75,0.55), 0 0 40px rgba(200,168,75,0.18) !important;
+  background: rgba(200,168,75,0.06) !important;
+  animation: legendPulse 1s ease 2;
+}
+@keyframes legendPulse {
+  0%   { box-shadow: 0 0 0 2px rgba(200,168,75,0.55), 0 0 20px rgba(200,168,75,0.1); }
+  50%  { box-shadow: 0 0 0 3px rgba(200,168,75,0.85), 0 0 48px rgba(200,168,75,0.35); }
+  100% { box-shadow: 0 0 0 2px rgba(200,168,75,0.55), 0 0 20px rgba(200,168,75,0.1); }
+}
+
+/* Новый элемент легенды при создании дерева */
+.tree-legend__item--new {
+  border: 1px solid rgba(200,168,75,0.3);
+  border-radius: 8px;
+  padding: 4px 14px;
+  background: rgba(200,168,75,0.05);
+}
+.tree-legend__new-badge {
+  font-size: 9px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(200,168,75,0.18);
+  border: 1px solid rgba(200,168,75,0.3);
+  color: var(--gold-light);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Кнопка «Соединить карточки» — активная */
+#tree-connect-btn {
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+#tree-connect-btn:hover {
+  border-color: rgba(200,168,75,0.5);
+  color: var(--gold-light);
+  background: rgba(200,168,75,0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+#tree-connect-btn:active {
+  transform: scale(0.97);
+}
+
+/* Подсказка-инструкция */
+#connect-tip {
+  padding: 0 32px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 10;
+}
+.connect-tip__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(12,12,12,0.97), rgba(18,15,6,0.97));
+  border: 1px solid rgba(200,168,75,0.35);
+  border-radius: 14px;
+  padding: 20px 24px;
+  max-width: 720px;
+  margin: 0 auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(200,168,75,0.07);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+  transition: opacity 0.45s cubic-bezier(0.4,0,0.2,1),
+              transform 0.45s cubic-bezier(0.34,1.2,0.64,1);
+}
+#connect-tip.connect-tip--visible .connect-tip__inner {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Верхняя золотая полоска */
+.connect-tip__inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,168,75,0.5), transparent);
+  border-radius: 1px;
+}
+
+.connect-tip__icon {
+  font-size: 30px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+  filter: drop-shadow(0 0 10px rgba(200,168,75,0.5));
+}
+
+.connect-tip__inner strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--gold-light);
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
+
+.connect-tip__inner ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: ctip;
+}
+.connect-tip__inner ol li {
+  counter-increment: ctip;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--cream);
+  line-height: 1.5;
+  padding: 4px 0;
+}
+.connect-tip__inner ol li::before {
+  content: counter(ctip);
+  min-width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(200,168,75,0.18);
+  border: 1px solid rgba(200,168,75,0.38);
+  color: var(--gold-light);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.connect-tip__close {
+  margin-left: auto;
+  align-self: flex-start;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  color: var(--cream-dim);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  line-height: 1;
+}
+.connect-tip__close:hover {
+  background: rgba(200,80,80,0.15);
+  border-color: rgba(200,80,80,0.4);
+  color: #e08080;
 }

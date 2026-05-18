@@ -42,6 +42,9 @@
 
   /* ── LOAD CUSTOM EVENTS ── */
   const STORAGE_KEY = 'memory_custom_events';
+  const ACTIVE_TREE_KEY = 'active_tree_id';   /* ← key used by tree-edit.js */
+  const ALL_TREES_KEY   = 'all_trees';
+
   function loadCustom() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
     catch { return []; }
@@ -50,11 +53,76 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch {}
   }
 
+  /* ── GET ACTIVE TREE ── */
+  function getActiveTreeId() {
+    /* tree-edit.js uses URL param ?tree=xxx as current tree id */
+    const urlTree = new URLSearchParams(window.location.search).get('tree');
+    if (urlTree && urlTree !== 'default') return urlTree;
+    /* fallback: localStorage active_tree_id */
+    return localStorage.getItem(ACTIVE_TREE_KEY) || null;
+  }
+
+  function getActivTreeMeta() {
+    try {
+      const id = getActiveTreeId();
+      if (!id) return null;
+      const trees = JSON.parse(localStorage.getItem(ALL_TREES_KEY) || '[]');
+      /* all_trees may be array of strings (old format) or array of objects */
+      if (trees.length && typeof trees[0] === 'object') {
+        return trees.find(t => t.id === id) || null;
+      }
+      return { id, name: id, color: '#c8a84b' };
+    } catch { return null; }
+  }
+
+  /* ── LOAD TREE NODES FROM ACTIVE TREE ONLY ── */
+  function loadActiveTreeNodes() {
+    const treeId = getActiveTreeId();
+    if (!treeId) return [];
+    try {
+      return JSON.parse(localStorage.getItem(`tree_nodes_${treeId}`) || '[]');
+    } catch { return []; }
+  }
+
+  /* Convert tree nodes → timeline events */
+  function treeNodesToEvents(nodes, treeMeta) {
+    const events = [];
+    const treeName  = treeMeta ? (treeMeta.name || treeMeta.id) : '';
+    const treeColor = treeMeta ? (treeMeta.color || '#c8a84b') : '#c8a84b';
+    const treeId    = treeMeta ? treeMeta.id : null;
+
+    nodes.forEach(node => {
+      const name  = node.full_name || node.fullName || node.name || '';
+      const years = node.years || '';
+      if (!years) return;
+      const mBoth = years.match(/(\d{4})[^\d]+(\d{4})/);
+      const mBorn = years.match(/^(\d{4})/);
+      const mDied = years.match(/(\d{4})\s*$/);
+
+      const born = mBoth ? parseInt(mBoth[1]) : (mBorn ? parseInt(mBorn[1]) : null);
+      const died = mBoth ? parseInt(mBoth[2]) : (born && mDied && parseInt(mDied[1]) !== born ? parseInt(mDied[1]) : null);
+
+      if (born) events.push({
+        year: born, type: 'birth',
+        title: 'Родился / Родилась', subtitle: name,
+        city: node.city || '', age: null,
+        _fromTree: true, treeId, treeName, treeColor,
+      });
+      if (died) events.push({
+        year: died, type: 'death',
+        title: 'Ушёл из жизни / Ушла из жизни', subtitle: name,
+        city: node.city || '', age: died - born,
+        _fromTree: true, treeId, treeName, treeColor,
+      });
+    });
+    return events;
+  }
+
   /* ── BUILD EVENT LIST ── */
   function buildEvents() {
     const events = [];
 
-    /* From PEOPLE */
+    /* From PEOPLE (static data.js) */
     (typeof PEOPLE !== 'undefined' ? PEOPLE : []).forEach(p => {
       const by = parseYear(p.born), dy = parseYear(p.died);
       const age = lifeYears(p.born, p.died);
@@ -74,6 +142,11 @@
       });
     });
 
+    /* From ACTIVE tree only (not all trees) */
+    const treeMeta  = getActivTreeMeta();
+    const treeNodes = loadActiveTreeNodes();
+    treeNodesToEvents(treeNodes, treeMeta).forEach(e => events.push(e));
+
     /* Historical */
     HISTORY.forEach(h => events.push({
       year: h.year, type: 'history',
@@ -83,8 +156,8 @@
       icon: h.icon,
     }));
 
-    /* Custom */
-    loadCustom().forEach(c => events.push({ ...c, type: c.type || 'custom' }));
+    /* Custom (non-tree) */
+    loadCustom().filter(c => !c._fromTree).forEach(c => events.push({ ...c, type: c.type || 'custom' }));
 
     events.sort((a, b) => a.year - b.year);
     return events;
@@ -117,6 +190,11 @@
       : '';
     const histClass = e.type === 'history' ? ' timeline__card--history' : '';
 
+    /* Tree tag for events from active tree */
+    const treeTag = e._fromTree && e.treeName
+      ? `<span style="font-family:var(--font-ui);font-size:10px;letter-spacing:0.1em;color:${e.treeColor || '#c8a84b'};opacity:0.85;">${e.treeName}</span>`
+      : '';
+
     return `
       <article class="timeline__item timeline__item--${side} timeline__item--${e.type}"
                data-type="${e.type}" data-year="${e.year}">
@@ -131,10 +209,163 @@
           <div class="timeline__meta">
             ${cityHtml}
             ${ageTag}
+            ${treeTag}
           </div>
           ${personLink}
         </div>
       </article>`;
+  }
+
+  /* ── STAT FACTS ── */
+  function getStatFact(key, value) {
+    if (value === '—' || value === 0) return null;
+    const n = parseInt(value, 10);
+
+    const facts = {
+      births: [
+        `${value} ${declension(n, ['рождение', 'рождения', 'рождений'])} в этой летописи — каждое из них начало целой судьбы, полной надежд и открытий.`,
+        `Число ${value} — столько раз жизнь побеждала в этом роду. Демографы отмечают: средняя семья XIX века насчитывала 5–7 детей.`,
+        `${value} ${declension(n, ['новая жизнь', 'новые жизни', 'новых жизней'])} зафиксировано в летописи. Каждое рождение — это новая ветвь на древе рода.`,
+      ],
+      deaths: [
+        `${value} ${declension(n, ['уход', 'ухода', 'уходов'])} отмечено в летописи. Память о каждом — это нить, которая связывает поколения.`,
+        `Число ${value} напоминает нам: смерть — не конец истории, а её переход. Именно ради сохранения этих ${value} историй и создан сайт.`,
+        `${value} ${declension(n, ['человек ушёл', 'человека ушли', 'человек ушли'])} из жизни, но остались в памяти тех, кто помнит.`,
+      ],
+      avgAge: (() => {
+        if (isNaN(n)) return [];
+        const era = n < 50 ? 'В XIX — начале XX века средняя продолжительность жизни в России составляла около 35–40 лет.' :
+                    n < 65 ? 'Средняя продолжительность жизни в СССР к 1960-м годам достигла 70 лет — рекорд для страны.' :
+                    'По данным ВОЗ, средняя продолжительность жизни в мире сегодня составляет около 73 лет.';
+        return [
+          `Средний возраст ${value} ${declension(n, ['год', 'года', 'лет'])} в этой летописи. ${era}`,
+          `${value} лет — средний возраст людей в этой летописи. Учёные считают, что каждое последующее поколение живёт в среднем на 2–3 года дольше предыдущего.`,
+          `Средний возраст ${value} лет говорит о том, что поколения этого рода жили ${n >= 65 ? 'долго и достойно' : 'в непростое историческое время'}.`,
+        ];
+      })(),
+      maxAge: (() => {
+        if (isNaN(n)) return [];
+        const who = n >= 90 ? 'долгожителей — людей старше 90 лет — в мире насчитывается около 450 тысяч' :
+                    n >= 80 ? 'люди старше 80 лет составляют около 5% населения развитых стран' :
+                    n >= 74 ? 'ВОЗ относит людей от 60 до 74 лет к пожилому возрасту, а с 74 лет начинается период настоящей старости' :
+                    'этот возраст соответствует периоду зрелости по классификации ВОЗ';
+        return [
+          `${value} ${declension(n, ['год', 'года', 'лет'])} — максимальный возраст в летописи. По данным ВОЗ, ${who}.`,
+          `${value} лет прожил самый долгий из людей в этой летописи. Наука геронтология изучает, почему некоторые люди живут значительно дольше среднего — роль играют гены, образ жизни и эпоха.`,
+          `Максимальный возраст ${value} ${declension(n, ['год', 'года', 'лет'])} в роду. Долголетие часто передаётся по наследству: если прародители дожили до ${n} лет, их потомки имеют повышенные шансы на долгую жизнь.`,
+        ];
+      })(),
+      span: (() => {
+        if (isNaN(n) || n === 0) return [];
+        const eras = n > 150 ? 'охватывает несколько исторических эпох — от царской России до наших дней' :
+                     n > 100 ? 'перекрывает весь XX век с его революциями, войнами и переменами' :
+                     n > 50  ? 'включает несколько десятилетий истории страны' :
+                     'фиксирует события одного-двух поколений';
+        return [
+          `${value} ${declension(n, ['год', 'года', 'лет'])} охвата летописи — она ${eras}. За каждым годом — живые судьбы.`,
+          `Летопись охватывает ${value} лет. Историки говорят: чтобы понять человека, нужно знать три поколения его предков. Эта летопись хранит куда больше.`,
+          `${value} лет истории рода — это примерно ${Math.round(n / 25)} ${declension(Math.round(n / 25), ['поколение', 'поколения', 'поколений'])}. Каждое поколение живёт около 25 лет.`,
+        ];
+      })(),
+      histEv: [
+        `${value} ${declension(n, ['событие истории', 'события истории', 'событий истории'])} России вплетено в летопись рода. История страны и история семьи — всегда неразрывны.`,
+        `${value} исторических событий страны отражены рядом с семейными датами. Войны, революции, полёты в космос — всё это было фоном чьей-то жизни.`,
+        `Число ${value} — столько исторических вех России соседствует в летописи с личными датами. Большая история всегда складывается из маленьких.`,
+      ],
+      custom: [
+        `${value} ${declension(n, ['личное событие добавлено', 'личных события добавлено', 'личных событий добавлено'])} в летопись. Именно такие детали делают историю семьи живой и неповторимой.`,
+        `${value} ${declension(n, ['запись', 'записи', 'записей'])} оставили хранители этой памяти. Каждая — маленький фрагмент большой мозаики.`,
+        `${value} собственных события в летописи. Антропологи считают: семейные истории, записанные очевидцами, ценнее любых архивных документов.`,
+      ],
+    };
+
+    const list = facts[key];
+    if (!list || !list.length) return null;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function declension(n, forms) {
+    const abs = Math.abs(n) % 100;
+    const rem = abs % 10;
+    if (abs > 10 && abs < 20) return forms[2];
+    if (rem > 1 && rem < 5)   return forms[1];
+    if (rem === 1)             return forms[0];
+    return forms[2];
+  }
+
+  /* ── FACT POPUP ── */
+  let factPopupTimer = null;
+
+  function showFactPopup(key, value, anchorEl) {
+    const fact = getStatFact(key, value);
+    if (!fact) return;
+
+    // Remove existing
+    const old = document.getElementById('tl-fact-popup');
+    if (old) old.remove();
+    clearTimeout(factPopupTimer);
+
+    const popup = document.createElement('div');
+    popup.id = 'tl-fact-popup';
+
+    const icons = { births:'✿', deaths:'✦', avgAge:'⏳', maxAge:'🕰', span:'📜', histEv:'❧', custom:'★' };
+    const labels = { births:'Рождений', deaths:'Уходов', avgAge:'Средний возраст', maxAge:'Макс. возраст', span:'Лет охвата', histEv:'Событий истории', custom:'Своих событий' };
+
+    popup.innerHTML = `
+      <div class="tl-fact-popup__inner">
+        <button class="tl-fact-popup__close" title="Закрыть">✕</button>
+        <div class="tl-fact-popup__header">
+          <span class="tl-fact-popup__icon">${icons[key] || '◆'}</span>
+          <div>
+            <div class="tl-fact-popup__num">${value}</div>
+            <div class="tl-fact-popup__label">${labels[key] || ''}</div>
+          </div>
+        </div>
+        <p class="tl-fact-popup__text">${fact}</p>
+        <div class="tl-fact-popup__footer">Факт из летописи</div>
+      </div>`;
+
+    document.body.appendChild(popup);
+
+    // Position near the clicked stat
+    const rect = anchorEl.getBoundingClientRect();
+    const popupEl = popup.querySelector('.tl-fact-popup__inner');
+
+    // Horizontal: center over the stat, but keep in viewport
+    let left = rect.left + rect.width / 2 - 160;
+    left = Math.max(12, Math.min(left, window.innerWidth - 332));
+    let top = rect.bottom + 12;
+    if (top + 200 > window.innerHeight) top = rect.top - 220;
+
+    popup.style.cssText = `
+      position:fixed;z-index:9000;
+      left:${left}px;top:${top}px;
+      pointer-events:auto;`;
+
+    // Animate in
+    requestAnimationFrame(() => popup.classList.add('tl-fact-popup--visible'));
+
+    // Close handlers
+    popup.querySelector('.tl-fact-popup__close').addEventListener('click', () => closeFactPopup(popup));
+
+    factPopupTimer = setTimeout(() => closeFactPopup(popup), 8000);
+
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function outsideClose(e) {
+        if (!popup.contains(e.target) && e.target !== anchorEl) {
+          closeFactPopup(popup);
+          document.removeEventListener('click', outsideClose);
+        }
+      });
+    }, 100);
+  }
+
+  function closeFactPopup(popup) {
+    if (!popup || !popup.parentNode) return;
+    popup.classList.remove('tl-fact-popup--visible');
+    setTimeout(() => popup.remove(), 350);
+    clearTimeout(factPopupTimer);
   }
 
   /* ── STATS BAR ── */
@@ -152,15 +383,35 @@
       ? events[events.length-1].year - events[0].year
       : 0;
 
+    /* Active tree label */
+    const treeMeta  = getActivTreeMeta();
+    const treeLabel = treeMeta
+      ? `<div style="text-align:center;margin-bottom:8px;font-family:var(--font-ui);font-size:11px;letter-spacing:0.1em;">
+           <span style="color:${treeMeta.color || '#c8a84b'};">● ${treeMeta.name || treeMeta.id}</span>
+         </div>`
+      : '';
+
+    const stats = [
+      { key: 'births',  val: births,  label: 'рождений' },
+      { key: 'deaths',  val: deaths,  label: 'уходов' },
+      { key: 'avgAge',  val: avgAge,  label: 'средний возраст' },
+      { key: 'maxAge',  val: maxAge,  label: 'макс. возраст' },
+      { key: 'span',    val: span,    label: 'лет охвата' },
+      { key: 'histEv',  val: histEv,  label: 'событий истории' },
+      { key: 'custom',  val: custom,  label: 'свои события' },
+    ];
+
+    const hasFact = key => getStatFact(key, stats.find(s => s.key === key)?.val) !== null;
+
     return `
       <div class="tl-stats">
-        <div class="tl-stat"><span>${births}</span><small>рождений</small></div>
-        <div class="tl-stat"><span>${deaths}</span><small>уходов</small></div>
-        <div class="tl-stat"><span>${avgAge}</span><small>средний возраст</small></div>
-        <div class="tl-stat"><span>${maxAge}</span><small>макс. возраст</small></div>
-        <div class="tl-stat"><span>${span}</span><small>лет охвата</small></div>
-        <div class="tl-stat"><span>${histEv}</span><small>событий истории</small></div>
-        <div class="tl-stat"><span>${custom}</span><small>свои события</small></div>
+        ${treeLabel}
+        ${stats.map(s => `
+          <div class="tl-stat ${hasFact(s.key) ? 'tl-stat--clickable' : ''}" data-stat-key="${s.key}" data-stat-val="${s.val}" title="${hasFact(s.key) ? 'Нажмите — интересный факт' : ''}">
+            <span>${s.val}</span>
+            <small>${s.label}</small>
+            ${hasFact(s.key) ? '<i class="tl-stat__hint">?</i>' : ''}
+          </div>`).join('')}
       </div>`;
   }
 
@@ -185,6 +436,13 @@
       wrap.parentElement.insertBefore(statsEl, wrap);
     }
     statsEl.innerHTML = buildStats(allEvents);
+
+    /* Attach fact popup clicks */
+    statsEl.querySelectorAll('.tl-stat--clickable').forEach(el => {
+      el.addEventListener('click', () => {
+        showFactPopup(el.dataset.statKey, el.dataset.statVal, el);
+      });
+    });
 
     /* Build / update filters */
     let filtersEl = document.getElementById('tl-filters');

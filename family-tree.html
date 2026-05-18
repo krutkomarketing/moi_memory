@@ -48,7 +48,9 @@
       <!-- injected by tree.js -->
     </div>
     <button class="tree-edit-btn" id="tree-edit-btn">✏️ Редактировать дерево</button>
-    <button class="tree-edit-btn tree-edit-btn--new" id="tree-new-btn">+ Новое древо</button>
+    <button class="tree-edit-btn tree-edit-btn--new" id="tree-new-btn">🌿 Добавить ветвь</button>
+    <button class="tree-edit-btn tree-edit-btn--create" id="tree-create-btn">🌳 Создать дерево</button>
+    <button class="tree-action-btn" id="tree-connect-btn">🔗 Соединить карточки</button>
   </div>
 
   <!-- TREE CONTAINER -->
@@ -62,27 +64,28 @@
     </div>
   </section>
 
-  <!-- LEGEND -->
-  <div class="tree-legend">
-    <div class="tree-legend__item">
+  <!-- LEGEND — кликабельные типы линий для соединения карточек -->
+  <div class="tree-legend" id="tree-legend">
+    <p class="tree-legend__hint-connect">Нажмите на тип линии → выберите 2 карточки → они соединятся</p>
+    <div class="tree-legend__item tree-legend__item--connectable" title="Нажмите, затем выберите 2 карточки">
+      <span class="tree-legend__clan-label" style="color:rgba(200,168,75,0.7);">Родство</span>
       <span class="tree-legend__line tree-legend__line--wood"></span>
-      <span>Прямая линия</span>
     </div>
-    <div class="tree-legend__item">
+    <div class="tree-legend__item tree-legend__item--connectable" title="Нажмите, затем выберите 2 карточки">
+      <span class="tree-legend__clan-label" style="color:rgba(226,201,126,0.7);">Брачный союз 💍</span>
       <span class="tree-legend__line tree-legend__line--braid"></span>
-      <span>Брачный союз</span>
     </div>
     <div class="tree-legend__item">
+      <span class="tree-legend__clan-label" style="color:#7ec8b4;">Род Смирновых</span>
       <span class="tree-legend__line" style="background:linear-gradient(90deg,#7ec8b4,#2e6b5e)"></span>
-      <span>Род Смирновых</span>
     </div>
     <div class="tree-legend__item">
+      <span class="tree-legend__clan-label" style="color:#c8a84b;">Род Ивановых</span>
       <span class="tree-legend__line" style="background:linear-gradient(90deg,#c8a84b,#6b5a22)"></span>
-      <span>Род Ивановых</span>
     </div>
     <div class="tree-legend__item">
+      <span class="tree-legend__clan-label" style="color:#c87e7e;">Род Козловых</span>
       <span class="tree-legend__line" style="background:linear-gradient(90deg,#c87e7e,#6b2e2e)"></span>
-      <span>Род Козловых</span>
     </div>
   </div>
 
@@ -108,6 +111,13 @@
     </div>
   </footer>
 
+  <script>
+    /* Если переходим к новому дереву — анимация появления */
+    if (new URLSearchParams(location.search).get('tree')) {
+      document.body.classList.add('tree-page--entering');
+      setTimeout(() => document.body.classList.remove('tree-page--entering'), 800);
+    }
+  </script>
   <script src="js/particles.js"></script>
   <script src="js/favicon.js"></script>
   <script src="js/api.js"></script>

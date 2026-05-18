@@ -391,14 +391,13 @@
   opacity: 0.7;
 }
 
-/* ── Общий контейнер ── */
 .vine-layout {
   position: relative;
   width: 100%;
   min-height: 600px;
 }
 
-/* ── SVG-нить — по центру ── */
+/* ── Нить по центру ── */
 .vine-rope-wrap {
   position: absolute;
   left: 50%;
@@ -414,11 +413,11 @@
   display: block;
 }
 
-/* Анимация сжатия всего каната */
+/* Сжатие нити при клике */
 @keyframes ropeSqueeze {
   0%   { transform: scaleX(1); filter: brightness(1); }
-  30%  { transform: scaleX(0.5) scaleY(1.02); filter: brightness(1.8); }
-  60%  { transform: scaleX(1.15) scaleY(0.99); filter: brightness(1.3); }
+  30%  { transform: scaleX(0.5) scaleY(1.02); filter: brightness(2); }
+  60%  { transform: scaleX(1.2) scaleY(0.99); filter: brightness(1.4); }
   100% { transform: scaleX(1); filter: brightness(1); }
 }
 .vine-rope--squeeze {
@@ -434,16 +433,15 @@
   filter: drop-shadow(0 0 3px rgba(200,168,75,0.5));
 }
 .vine-knot:hover .vine-knot-diamond {
-  transform: scale(1.4) rotate(15deg);
-  filter: drop-shadow(0 0 6px rgba(255,240,180,0.8));
+  transform: scale(1.5) rotate(20deg);
+  filter: drop-shadow(0 0 8px rgba(255,240,180,0.9));
 }
 
-/* Анимация клика по узелку */
 @keyframes knotSqueeze {
-  0%   { transform: scale(1) rotate(0deg);   }
-  25%  { transform: scale(1.8) rotate(45deg); }
-  60%  { transform: scale(0.7) rotate(-15deg);}
-  100% { transform: scale(1) rotate(0deg);   }
+  0%   { transform: scale(1) rotate(0deg);    }
+  25%  { transform: scale(2) rotate(45deg);   }
+  60%  { transform: scale(0.6) rotate(-20deg);}
+  100% { transform: scale(1) rotate(0deg);    }
 }
 .vine-knot--squeeze .vine-knot-diamond {
   animation: knotSqueeze 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -453,54 +451,31 @@
 .vine-cards {
   position: relative;
   width: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .vine-card {
   position: absolute;
-  width: calc(50% - 44px); /* шире — больше места */
+  width: calc(50% - 44px);
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
               transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.vine-card--visible { opacity: 1; transform: translateY(0); }
 
-.vine-card--visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+.vine-card--left  { right: calc(50% + 20px); text-align: left; }
+.vine-card--right { left:  calc(50% + 20px); text-align: left; }
 
-/* Карточки — левая сторона */
-.vine-card--left {
-  right: calc(50% + 20px);
-  text-align: left;
-}
-
-/* Карточки — правая сторона */
-.vine-card--right {
-  left: calc(50% + 20px);
-  text-align: left;
-}
-
-/* Горизонтальный коннектор */
+/* Коннектор и точка */
 .vine-card__connector {
   position: absolute;
   top: 54px;
   height: 1px;
   width: 20px;
-  background: linear-gradient(90deg, rgba(200,168,75,0.6), transparent);
 }
-.vine-card__connector--left {
-  right: -20px;
-  background: linear-gradient(90deg, transparent, rgba(200,168,75,0.6));
-}
-.vine-card__connector--right {
-  left: -20px;
-  background: linear-gradient(90deg, rgba(200,168,75,0.6), transparent);
-}
+.vine-card__connector--left  { right: -20px; background: linear-gradient(90deg, transparent, rgba(200,168,75,0.6)); }
+.vine-card__connector--right { left:  -20px; background: linear-gradient(90deg, rgba(200,168,75,0.6), transparent); }
 
-/* Точка крепления */
 .vine-card__knot {
   position: absolute;
   top: 48px;
@@ -511,13 +486,11 @@
   box-shadow: 0 0 6px rgba(200,168,75,0.6);
 }
 .vine-card__knot--left  { right: -23px; }
-.vine-card__knot--right { left: -23px; }
+.vine-card__knot--right { left:  -23px; }
 
-/* Внутреннее содержимое */
+/* Внутри карточки */
 .vine-card__inner {
-  background: linear-gradient(145deg,
-    rgba(255,255,255,0.035) 0%,
-    rgba(200,168,75,0.045) 100%);
+  background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(200,168,75,0.04));
   border: 1px solid rgba(200,168,75,0.18);
   border-radius: 10px;
   padding: 0;
@@ -530,9 +503,7 @@
   transform: translateY(-3px);
 }
 
-/* ════════════════════════
-   SPLIT LAYOUT — фото + инфо
-   ════════════════════════ */
+/* ── Split-layout: фото слева + инфо справа ── */
 .vine-card__split {
   display: flex;
   align-items: stretch;
@@ -542,8 +513,8 @@
 .vine-card__split-media {
   flex: 0 0 45%;
   max-width: 45%;
-  position: relative;
   overflow: hidden;
+  position: relative;
 }
 
 .vine-card__split-info {
@@ -556,16 +527,7 @@
   border-left: 1px solid rgba(200,168,75,0.1);
 }
 
-/* Фото занимает весь блок слева */
-.vine-card__split .vine-card__media--photo {
-  width: 100%;
-  height: 100%;
-  min-height: 160px;
-  aspect-ratio: unset;
-  border-radius: 0;
-  border: none;
-}
-
+.vine-card__split .vine-card__media--photo,
 .vine-card__split .vine-card__media--video {
   width: 100%;
   height: 100%;
@@ -592,7 +554,7 @@
   opacity: 0.8;
 }
 
-/* Текст на всю ширину (без фото) */
+/* Текст без фото */
 .vine-card__text-only {
   padding: 20px 22px 18px;
   display: flex;
@@ -600,7 +562,7 @@
   gap: 10px;
 }
 
-/* ── Медиа внутри карточки ── */
+/* Медиа-блок */
 .vine-card__media {
   width: 100%;
   overflow: hidden;
@@ -612,10 +574,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg,
-    rgba(200,168,75,0.06) 0%,
-    rgba(200,168,75,0.1) 100%);
-  border: 1px solid rgba(200,168,75,0.12);
+  background: linear-gradient(135deg, rgba(200,168,75,0.06), rgba(200,168,75,0.1));
   color: var(--gold-dim);
 }
 .vine-card__media--video {
@@ -626,7 +585,6 @@
   justify-content: center;
   gap: 10px;
   background: linear-gradient(135deg, rgba(80,60,20,0.2), rgba(8,8,8,0.85));
-  border: 1px solid rgba(200,168,75,0.14);
   position: relative;
   overflow: hidden;
 }
@@ -634,20 +592,10 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(200,168,75,0.02) 0px,
-    rgba(200,168,75,0.02) 1px,
-    transparent 1px,
-    transparent 4px);
+  background: repeating-linear-gradient(0deg, rgba(200,168,75,0.02) 0px, rgba(200,168,75,0.02) 1px, transparent 1px, transparent 4px);
 }
 
-.vine-card__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+.vine-card__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .vine-card__photo-icon { font-size: 26px; opacity: 0.45; }
 .vine-card__photo-label {
   font-family: var(--font-ui);
@@ -664,13 +612,9 @@
   border-radius: 50%;
   background: rgba(200,168,75,0.2);
   border: 1.5px solid rgba(200,168,75,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: var(--gold-light);
-  position: relative;
-  z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--gold-light);
+  position: relative; z-index: 1;
   transition: background 0.3s, transform 0.3s;
 }
 .vine-card__inner:hover .vine-card__play {
@@ -682,8 +626,7 @@
   font-size: 10px;
   letter-spacing: 0.1em;
   color: var(--gold-dim);
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
 }
 
 .vine-card__caption {
@@ -695,7 +638,7 @@
   line-height: 1.5;
 }
 
-/* ── Текстовые карточки (воспоминания) ── */
+/* Текстовые поля */
 .vine-card__type-badge {
   display: inline-block;
   font-family: var(--font-ui);
@@ -720,7 +663,6 @@
 }
 .vine-card__text::before { content: '"'; color: var(--gold-dim); }
 .vine-card__text::after  { content: '"'; color: var(--gold-dim); }
-
 .vine-card__author {
   font-family: var(--font-script);
   font-size: 17px;
@@ -730,7 +672,7 @@
 }
 .vine-card__author::before { content: '— '; color: var(--gold-dim); }
 
-/* ── Пустое состояние ── */
+/* Пусто */
 .vine-empty {
   text-align: center;
   font-family: var(--font-body);
@@ -743,23 +685,10 @@
 /* ── Mobile ── */
 @media (max-width: 700px) {
   .vine-rope-wrap { display: none; }
-  .vine-cards {
-    position: static;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 0 8px;
-  }
-  .vine-card {
-    position: static;
-    width: 100%;
-    text-align: left;
-    opacity: 1;
-    transform: none;
-  }
+  .vine-cards { position: static; display: flex; flex-direction: column; gap: 16px; padding: 0 8px; }
+  .vine-card { position: static; width: 100%; text-align: left; opacity: 1; transform: none; }
   .vine-card--visible { opacity: 1; transform: none; }
-  .vine-card__connector,
-  .vine-card__knot { display: none; }
+  .vine-card__connector, .vine-card__knot { display: none; }
   .vine-layout { min-height: unset; }
   .vine-card__split { flex-direction: column; }
   .vine-card__split-media { flex: unset; max-width: 100%; }
@@ -770,7 +699,6 @@
 
 @media (max-width: 960px) and (min-width: 701px) {
   .vine-card { width: calc(50% - 34px); }
-  .person-page { max-width: 100%; padding-left: 20px; padding-right: 20px; }
 }
 
 
