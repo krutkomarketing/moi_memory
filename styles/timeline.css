@@ -442,6 +442,10 @@
 .tl-input::placeholder { color: rgba(201,191,168,0.35); font-style: italic; }
 .tl-input--icon { width: 80px; text-align: center; font-size: 20px; padding: 8px; }
 select.tl-input { cursor: pointer; appearance: none; }
+select.tl-input option {
+  background-color: #1a1a1a !important;
+  color: #f5f0e8 !important;
+}
 
 .tl-submit {
   display: block;

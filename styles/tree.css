@@ -600,6 +600,10 @@ body.tree-page { overflow-x: hidden; }
   outline: none;
   box-sizing: border-box;
 }
+.tree-modal__field select option {
+  background-color: #1a1a1a !important;
+  color: #f5f0e8 !important;
+}
 .tree-modal__field input:focus,
 .tree-modal__field select:focus {
   border-color: var(--gold);
@@ -786,6 +790,10 @@ body.tree-page { overflow-x: hidden; }
   font-family: var(--font-body);
   font-size: 14px;
   outline: none;
+}
+.tree-switcher__select option {
+  background-color: #1a1a1a !important;
+  color: #f5f0e8 !important;
 }
 .tree-switcher__select:focus { border-color: var(--gold); }
 
@@ -1429,6 +1437,10 @@ body.tree-page { overflow-x: hidden; }
 .ctm-input::placeholder { color: rgba(201,191,168,0.3); font-style: italic; }
 
 .ctm-select { cursor: pointer; appearance: none; }
+.ctm-select option {
+  background-color: #1a1a1a !important;
+  color: #f5f0e8 !important;
+}
 .ctm-textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 .ctm-submit {

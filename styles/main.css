@@ -2063,3 +2063,23 @@ body.page-leaving { opacity: 0; pointer-events: none; }
   letter-spacing: 0.08em;
   color: rgba(201,191,168,0.35);
 }
+
+/* ═══════════════════════════════════════════════
+   GLOBAL SELECT & OPTION DARK MODE STYLING
+   ═══════════════════════════════════════════════ */
+select option {
+  background-color: #1a1a1a !important;
+  color: #f5f0e8 !important;
+  padding: 8px;
+}
+
+select option:checked {
+  background-color: var(--gold, #c8a84b) !important;
+  color: #121212 !important;
+}
+
+select option:hover {
+  background-color: rgba(200, 168, 75, 0.2) !important;
+  color: var(--gold-light, #e2c97e) !important;
+}
+
