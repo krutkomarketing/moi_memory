@@ -41,7 +41,7 @@
 
   function toggleEdit() {
     if (!isEditing) {
-      enterEditMode();
+      window.location.href = `person.html?id=${id}&edit=1`;
     } else {
       exitEditMode();
     }
