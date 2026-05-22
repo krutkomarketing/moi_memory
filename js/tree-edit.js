@@ -34,6 +34,7 @@
   let isEditMode = false;
   let allNodes   = [];
   let clansCache = {};
+  let activeDynamicClan = null;
 
   /* ── HISTORY IS HANDLED EXCLUSIVELY VIA PERSONAL EVENTS ── */
 
@@ -580,7 +581,67 @@
         p.classList.remove('thread-path--active', 'thread-path--dim');
       });
     }
+    if (activeDynamicClan) {
+      filterDynamicByClan(activeDynamicClan);
+    }
   }
+
+  function filterDynamicByClan(clanId) {
+    activeDynamicClan = clanId;
+    
+    highlightedDynamicId = null;
+    const container = document.getElementById('tree-dynamic');
+    if (container) {
+      container.classList.remove('has-highlight');
+      container.querySelectorAll('.tree-node').forEach(el => {
+        el.classList.remove('tree-node--active', 'tree-node--ancestor', 'tree-node--descendant', 'tree-node--dim');
+      });
+      const svg = container.querySelector('.tree-dynamic-svg');
+      if (svg) {
+        svg.querySelectorAll('path').forEach(p => {
+          p.classList.remove('thread-path--active', 'thread-path--dim');
+        });
+      }
+    }
+    
+    document.querySelectorAll('#tree-clan-legend .clan-legend__item').forEach(el => {
+      el.classList.toggle('clan-legend__item--active', el.dataset.clan === clanId && clanId !== null);
+    });
+
+    if (!container) return;
+
+    container.querySelectorAll('.tree-node').forEach(el => {
+      const nid = el.dataset.id;
+      const node = allNodes.find(n => n.id === nid);
+      const nodeClanId = node ? (node.clan_id || node.clanId) : null;
+      if (!clanId || nodeClanId === clanId) {
+        el.classList.remove('tree-node--clan-dim');
+      } else {
+        el.classList.add('tree-node--clan-dim');
+      }
+    });
+
+    const svg = container.querySelector('.tree-dynamic-svg');
+    if (svg) {
+      svg.querySelectorAll('path').forEach(p => {
+        const clanA = p.dataset.clan || p.getAttribute('data-clan');
+        if (!clanId || clanA === clanId) {
+          p.classList.remove('thread-path--clan-dim');
+        } else {
+          p.classList.add('thread-path--clan-dim');
+        }
+      });
+    }
+  }
+
+  document.addEventListener('click', e => {
+    if (currentTreeId === 'default') return;
+    if (!e.target.closest('#tree-dynamic .tree-node') && !e.target.closest('.clan-legend__item') && !e.target.closest('.tree-modal') && !e.target.closest('.tree-toolbar')) {
+      if (activeDynamicClan) {
+        filterDynamicByClan(null);
+      }
+    }
+  });
 
   /* ── localStorage helpers ── */
   const NODES_KEY = () => `tree_nodes_${currentTreeId}`;
@@ -1220,14 +1281,17 @@
     if (sw) sw.style.display = 'none';
     const sl = document.getElementById('tree-clan-legend');
     if (sl) sl.innerHTML = '';
-    loadAndRenderClans();
-
     const dc = document.createElement('div');
     dc.className = 'tree-dynamic'; dc.id = 'tree-dynamic';
     document.querySelector('.tree-section')?.appendChild(dc);
 
-    syncConnectionsFromDb().then(() => {
-      loadNodes().then(() => { renderDynamicTree(dc); initLegendConnections(); });
+    Promise.all([
+      loadAndRenderClans(),
+      syncConnectionsFromDb(),
+      loadNodes()
+    ]).then(() => {
+      renderDynamicTree(dc);
+      initLegendConnections();
     });
   } else {
     /* Default дерево — статическое, но соединения тоже работают */
@@ -1285,10 +1349,19 @@
       clansCache = {};
       j.data.forEach(c => { clansCache[c.id] = c; });
       legend.innerHTML = j.data.map(c => `
-        <div class="clan-legend__item" data-clan="${c.id}" style="--clan-color:${c.color}">
+        <div class="clan-legend__item${activeDynamicClan === c.id ? ' clan-legend__item--active' : ''}" data-clan="${c.id}" style="--clan-color:${c.color}">
           <span class="clan-legend__badge" style="background:${c.color};box-shadow:0 0 10px ${c.color}44;">${c.icon}</span>
           <div class="clan-legend__text"><strong>${c.name}</strong><span>${c.description || ''}</span></div>
         </div>`).join('');
+
+      legend.querySelectorAll('.clan-legend__item').forEach(item => {
+        item.addEventListener('click', () => {
+          const cid = item.dataset.clan;
+          if (cid) {
+            filterDynamicByClan(cid === activeDynamicClan ? null : cid);
+          }
+        });
+      });
     } catch (_) {}
     addClanButton();
   }
@@ -1392,13 +1465,27 @@
         const photo  = node.photo_url || node.photoUrl || '';
         const linked = node.linked_profile_id || node.linkedProfileId || '';
         const branch = node.isBranchRoot ? ' tree-node--branch-root' : '';
+
+        const clanId = node.clan_id || node.clanId;
+        let clan = null;
+        if (clanId) {
+          if (typeof CLANS !== 'undefined' && CLANS[clanId]) {
+            clan = CLANS[clanId];
+          } else if (clansCache[clanId]) {
+            clan = clansCache[clanId];
+          }
+        }
+        const color = clan ? clan.color : '#c8a84b';
+        const colorDim = clan ? (clan.colorDim || clan.color + '33') : '#6b5a22';
+
         html += `
-          <div class="tree-node tree-node--young${branch}" data-id="${node.id}">
+          <div class="tree-node tree-node--young${branch}${activeDynamicClan && activeDynamicClan !== clanId ? ' tree-node--clan-dim' : ''}" data-id="${node.id}" data-clan="${clanId || ''}">
             ${isEditMode ? `<div class="tree-node-controls">
               <button class="tree-node-ctrl" data-action="edit" data-id="${node.id}" title="Редактировать">✏️</button>
               <button class="tree-node-ctrl tree-node-ctrl--del" data-action="delete" data-id="${node.id}" title="Удалить">🗑</button>
             </div>` : ''}
-            <div class="tree-node__frame" style="--clan-color:#c8a84b">
+            <div class="tree-node__frame" style="--clan-color:${color}; --clan-dim:${colorDim}">
+              ${clan ? `<span class="tree-node__clan-badge" title="${clan.name}">${clan.icon}</span>` : ''}
               <div class="tree-node__photo">
                 ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;"/>` : `<div class="tree-node__avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8"/></svg></div>`}
               </div>
@@ -1406,6 +1493,7 @@
             <div class="tree-node__info">
               <div class="tree-node__name">${name || 'Без имени'}</div>
               <div class="tree-node__years">${node.years || ''}</div>
+              ${clan ? `<div class="tree-node__clan-name" style="color:${color}">${clan.name}</div>` : ''}
               ${node.description ? `<div class="tree-node__desc">${node.description}</div>` : ''}
               ${linked ? `<a href="person.html?id=${linked}" class="tree-node__link">Страница памяти →</a>` : ''}
             </div>
@@ -1506,6 +1594,17 @@
     svg.innerHTML = '';
     const cr = container.getBoundingClientRect();
 
+    const getClanColorOfNode = (node) => {
+      if (!node) return '#c8a84b';
+      const clanId = node.clan_id || node.clanId;
+      let clan = null;
+      if (clanId) {
+        if (typeof CLANS !== 'undefined' && CLANS[clanId]) clan = CLANS[clanId];
+        else if (clansCache[clanId]) clan = clansCache[clanId];
+      }
+      return clan ? clan.color : '#c8a84b';
+    };
+
     connections.forEach(conn => {
       const elA = container.querySelector(`[data-id="${conn.a}"]`);
       const elB = container.querySelector(`[data-id="${conn.b}"]`);
@@ -1526,9 +1625,18 @@
       const cy1  = y1 + drop;
       const cy2  = y2 + drop;
 
+      const nodeA = allNodes.find(n => n.id === conn.a);
+      const nodeB = allNodes.find(n => n.id === conn.b);
+      const clanIdA = nodeA ? (nodeA.clan_id || nodeA.clanId) : '';
+      const clanIdB = nodeB ? (nodeB.clan_id || nodeB.clanId) : '';
+
       if (conn.type === 'marriage') {
         /* Плетёная нить из 3 полос */
-        const colors = ['#e2c97e', '#8a7035', '#c8a84b'];
+        const mainColor = getClanColorOfNode(nodeA);
+        let colors = [mainColor + 'dd', mainColor + '66', mainColor];
+        if (mainColor === '#c8a84b') {
+          colors = ['#e2c97e', '#8a7035', '#c8a84b'];
+        }
         const len    = Math.hypot(x2 - x1, y2 - y1 + drop * 2) || 1;
         const steps  = Math.max(24, Math.floor(len / 5));
         for (let s = 0; s < 3; s++) {
@@ -1554,7 +1662,10 @@
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke-linecap', 'round');
           path.setAttribute('opacity', '0.9');
-          path.style.filter = 'drop-shadow(0 0 3px rgba(226,201,126,0.35))';
+          path.style.filter = 'drop-shadow(0 0 3px ' + colors[s] + '55)';
+          path.setAttribute('data-clan', clanIdA || clanIdB || '');
+          path.setAttribute('data-a', conn.a);
+          path.setAttribute('data-b', conn.b);
           animateDraw(path);
           svg.appendChild(path);
         }
@@ -1563,7 +1674,7 @@
         const ds = 6;
         const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         diamond.setAttribute('d', `M ${mx} ${my-ds} L ${mx+ds} ${my} L ${mx} ${my+ds} L ${mx-ds} ${my} Z`);
-        diamond.setAttribute('fill', '#e2c97e');
+        diamond.setAttribute('fill', mainColor);
         diamond.setAttribute('stroke', 'rgba(8,8,8,0.5)');
         diamond.setAttribute('stroke-width', '1');
         diamond.style.opacity = '0';
@@ -1571,8 +1682,28 @@
         svg.appendChild(diamond);
         requestAnimationFrame(() => requestAnimationFrame(() => { diamond.style.opacity = '1'; }));
       } else {
-        /* Родство / прямая — плавная кривая с цветом из легенды */
-        const color = conn.color || (conn.type === 'parent' ? '#c8a84b' : '#7ec8b4');
+        /* Родство / прямая — плавная кривая с цветом родительского рода */
+        const genA = nodeA ? (nodeA.generation || 0) : 0;
+        const genB = nodeB ? (nodeB.generation || 0) : 0;
+        const parentNode = genA <= genB ? nodeA : nodeB;
+        const childNode = genA <= genB ? nodeB : nodeA;
+
+        let parentClanColor = getClanColorOfNode(parentNode);
+        let parentClanId = parentNode ? (parentNode.clan_id || parentNode.clanId) : '';
+
+        // Fallback to child's clan if parent has no clan assigned
+        if ((!parentClanId || parentClanColor === '#c8a84b') && childNode) {
+          const childClanId = childNode.clan_id || childNode.clanId;
+          if (childClanId) {
+            const childClanColor = getClanColorOfNode(childNode);
+            if (childClanColor !== '#c8a84b') {
+              parentClanColor = childClanColor;
+              parentClanId = childClanId;
+            }
+          }
+        }
+
+        const color = parentClanColor;
         const path  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${cy1}, ${x2} ${cy2}, ${x2} ${y2}`);
         path.setAttribute('stroke', color);
@@ -1580,6 +1711,9 @@
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('opacity', '0.85');
+        path.setAttribute('data-clan', parentClanId);
+        path.setAttribute('data-a', conn.a);
+        path.setAttribute('data-b', conn.b);
         animateDraw(path);
         svg.appendChild(path);
       }
@@ -1752,6 +1886,7 @@
 
   /* Перезагрузка дерева без выхода из edit mode */
   async function reloadTreeInPlace() {
+    await loadAndRenderClans();
     await loadNodes();
     const dc = document.getElementById('tree-dynamic');
     if (dc) {
@@ -1831,7 +1966,12 @@
       showCustomPrompt('Название рода', 'Например: Род Ивановых', (name) => {
         const color = '#' + Math.floor(Math.random()*0xFFFFFF).toString(16).padStart(6,'0');
         fetch(`${BASE}/api/family-clans`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name, color, treeId: currentTreeId}) })
-          .then(r => r.json()).then(j => { if (j.ok) loadClansIntoSelect(j.data.id); });
+          .then(r => r.json()).then(async j => {
+            if (j.ok) {
+              await loadAndRenderClans();
+              loadClansIntoSelect(j.data.id);
+            }
+          });
       });
     });
 
