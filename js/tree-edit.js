@@ -733,6 +733,28 @@
     });
   })();
 
+  /* ── КНОПКА «УБРАТЬ СВЯЗЬ» ── */
+  (function initDisconnectBtn() {
+    const btn = document.getElementById('tree-disconnect-btn');
+    if (!btn) return;
+    const fresh = btn.cloneNode(true);
+    btn.replaceWith(fresh);
+
+    fresh.addEventListener('click', () => {
+      if (connectionMode === 'disconnect') {
+        cancelConnectionMode();
+        return;
+      }
+      cancelConnectionMode();
+      connectionMode  = 'disconnect';
+      connectionStep  = 0;
+      connectionNodeA = null;
+      fresh.style.background = 'rgba(239,68,68,0.18)';
+      fresh.style.boxShadow  = '0 0 0 2px rgba(239,68,68,0.6)';
+      showConnectionToast('disconnect');
+    });
+  })();
+
   /* ════════════════════════════════════════════
      МОДАЛКА «СОЗДАТЬ ДЕРЕВО»
      ════════════════════════════════════════════ */
@@ -1107,17 +1129,36 @@
       el.style.background = ''; el.style.boxShadow = ''; delete el.dataset.activeConn;
     });
     document.querySelectorAll('.tree-node--conn-selected').forEach(el => el.classList.remove('tree-node--conn-selected'));
+    document.querySelectorAll('.tree-node--disconn-selected').forEach(el => el.classList.remove('tree-node--disconn-selected'));
     document.getElementById('conn-toast')?.remove();
+    const disBtn = document.getElementById('tree-disconnect-btn');
+    if (disBtn) { disBtn.style.background = ''; disBtn.style.boxShadow = ''; }
   }
 
   function showConnectionToast(type) {
     document.getElementById('conn-toast')?.remove();
-    const labels = { marriage: 'Брачный союз 💍', parent: 'Родство 🧬', line: 'Прямая линия →' };
+    const labels = { marriage: 'Брачный союз 💍', parent: 'Родство 🧬', line: 'Прямая линия →', disconnect: 'Удаление связи 🔓' };
     const t = document.createElement('div');
     t.id = 'conn-toast';
     t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(8,8,8,0.95);border:1px solid rgba(200,168,75,0.5);border-radius:30px;padding:12px 24px;font-family:var(--font-body);font-size:14px;color:var(--gold-light);z-index:9999;display:flex;align-items:center;gap:12px;backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,0.7);animation:toastIn 0.3s ease;pointer-events:auto;';
-    t.innerHTML = `<span id="conn-toast-msg">${labels[type]} — кликните на первую карточку</span><button onclick="document.getElementById('conn-toast')?.remove()" style="background:none;border:none;color:var(--cream-dim);font-size:18px;cursor:pointer;margin-left:8px;line-height:1;">×</button>`;
+    if (type === 'disconnect') {
+      t.style.borderColor = 'rgba(239,68,68,0.5)';
+      t.style.color = '#ff9e9e';
+      t.innerHTML = `<span id="conn-toast-msg">${labels[type]} — кликните на первую карточку</span><button onclick="document.getElementById('conn-toast')?.remove()" style="background:none;border:none;color:#ffcccc;font-size:18px;cursor:pointer;margin-left:8px;line-height:1;">×</button>`;
+    } else {
+      t.innerHTML = `<span id="conn-toast-msg">${labels[type]} — кликните на первую карточку</span><button onclick="document.getElementById('conn-toast')?.remove()" style="background:none;border:none;color:var(--cream-dim);font-size:18px;cursor:pointer;margin-left:8px;line-height:1;">×</button>`;
+    }
     document.body.appendChild(t);
+  }
+
+  function showSuccessToast(msg) {
+    document.getElementById('conn-toast')?.remove();
+    const t = document.createElement('div');
+    t.id = 'conn-toast';
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(8,8,8,0.95);border:1px solid #7ec8b4;border-radius:30px;padding:12px 24px;font-family:var(--font-body);font-size:14px;color:#7ec8b4;z-index:9999;display:flex;align-items:center;gap:12px;backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,0.7);animation:toastIn 0.3s ease;pointer-events:auto;';
+    t.innerHTML = `<span>✓ ${msg}</span><button onclick="document.getElementById('conn-toast')?.remove()" style="background:none;border:none;color:#ccffee;font-size:18px;cursor:pointer;margin-left:8px;line-height:1;">×</button>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
   }
 
   function showErrorToast(msg) {
@@ -1134,12 +1175,40 @@
   function updateConnectionToast(step) {
     const msg = document.getElementById('conn-toast-msg');
     if (!msg) return;
-    msg.textContent = step === 1 ? 'Теперь кликните на вторую карточку' : '✓ Соединение установлено!';
+    if (connectionMode === 'disconnect') {
+      msg.textContent = step === 1 ? 'Теперь кликните на вторую карточку для удаления связи' : '✓ Связь удалена!';
+    } else {
+      msg.textContent = step === 1 ? 'Теперь кликните на вторую карточку' : '✓ Соединение установлено!';
+    }
   }
 
-  /* ── Клик по карточке для соединения ── */
+  /* ── Клик по карточке для соединения / разъединения ── */
   function handleNodeConnectionClick(nodeEl, nodeId) {
     if (!connectionMode) return false;
+    
+    if (connectionMode === 'disconnect') {
+      if (connectionStep === 0) {
+        connectionNodeA = nodeId; connectionStep = 1;
+        nodeEl.classList.add('tree-node--disconn-selected');
+        updateConnectionToast(1);
+        return true;
+      }
+      if (connectionStep === 1) {
+        if (nodeId === connectionNodeA) {
+          nodeEl.classList.remove('tree-node--disconn-selected');
+          connectionNodeA = null; connectionStep = 0;
+          const msg = document.getElementById('conn-toast-msg');
+          if (msg) msg.textContent = 'Удаление связи 🔓 — кликните на первую карточку';
+          return true;
+        }
+        nodeEl.classList.add('tree-node--disconn-selected');
+        updateConnectionToast(2);
+        disconnectNodes(connectionNodeA, nodeId);
+        setTimeout(() => cancelConnectionMode(), 1400);
+        return true;
+      }
+    }
+
     if (connectionStep === 0) {
       connectionNodeA = nodeId; connectionStep = 1;
       nodeEl.classList.add('tree-node--conn-selected');
@@ -1218,6 +1287,125 @@
       if (tw) drawCustomConnections(tw, conns);
     }
     syncTimelineAndStats();
+  }
+
+  /* ── Helpers для чтения/записи родственных отношений узлов ── */
+  function getParentIds(node) {
+    let pids = [];
+    try {
+      if (node.parent_ids) pids = typeof node.parent_ids === 'string' ? JSON.parse(node.parent_ids) : node.parent_ids;
+      else if (node.parentIds) pids = typeof node.parentIds === 'string' ? JSON.parse(node.parentIds) : node.parentIds;
+    } catch (_) {}
+    return Array.isArray(pids) ? pids : [];
+  }
+
+  function setParentIds(node, array) {
+    if (node.hasOwnProperty('parent_ids') || node.parent_ids === undefined) {
+      node.parent_ids = array;
+    }
+    if (node.hasOwnProperty('parentIds') || node.parentIds === undefined) {
+      node.parentIds = array;
+    }
+  }
+
+  async function saveNodeUpdates(node) {
+    const isLocal = node.id && node.id.toString().startsWith('local-');
+    const data = {
+      fullName: node.full_name || node.fullName || '',
+      years: node.years || '',
+      clanId: node.clan_id || node.clanId || '',
+      ageClass: node.age_class || node.ageClass || 'young',
+      generation: node.generation ?? 3,
+      spouseId: node.spouse_id || node.spouseId || null,
+      parentIds: node.parent_ids || node.parentIds || [],
+      linkedProfileId: node.linked_profile_id || node.linkedProfileId || null,
+      photoUrl: node.photo_url || node.photoUrl || '',
+      description: node.description || ''
+    };
+
+    const arr = getLocalNodes();
+    const idx = arr.findIndex(n => n.id === node.id);
+    if (idx !== -1) {
+      arr[idx] = { ...arr[idx], ...data };
+      saveLocalNodes(arr);
+    }
+    const ai = allNodes.findIndex(n => n.id === node.id);
+    if (ai !== -1) {
+      allNodes[ai] = { ...allNodes[ai], ...data };
+    }
+
+    if (!isLocal) {
+      try {
+        await fetch(`${BASE}/api/family-nodes/${node.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (_) {}
+    }
+  }
+
+  /* ── Разорвать и удалить соединение ── */
+  async function disconnectNodes(idA, idB) {
+    let disconnected = false;
+
+    // 1. Сначала ищем и удаляем кастомное соединение в базе/localStorage
+    const conns = getLocalConnections();
+    const foundConnIndex = conns.findIndex(c => (c.a === idA && c.b === idB) || (c.a === idB && c.b === idA));
+    if (foundConnIndex !== -1) {
+      const conn = conns[foundConnIndex];
+      conns.splice(foundConnIndex, 1);
+      saveLocalConnections(conns);
+      
+      // Удаление на сервере
+      fetch(`${BASE}/api/family-connections/${conn.id}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+      
+      disconnected = true;
+    }
+
+    // 2. Ищем и сбрасываем супружескую связь (spouse_id)
+    const nodeA = allNodes.find(n => n.id === idA);
+    const nodeB = allNodes.find(n => n.id === idB);
+    
+    if (nodeA && nodeB) {
+      const spouseIdA = nodeA.spouse_id || nodeA.spouseId;
+      const spouseIdB = nodeB.spouse_id || nodeB.spouseId;
+      if (spouseIdA === idB || spouseIdB === idA) {
+        nodeA.spouse_id = null;
+        nodeA.spouseId = null;
+        nodeB.spouse_id = null;
+        nodeB.spouseId = null;
+        
+        await saveNodeUpdates(nodeA);
+        await saveNodeUpdates(nodeB);
+        disconnected = true;
+      }
+
+      // Ищем и сбрасываем детско-родительскую связь (parent_ids)
+      const pidsA = getParentIds(nodeA);
+      const pidsB = getParentIds(nodeB);
+
+      if (pidsA.includes(idB)) {
+        setParentIds(nodeA, pidsA.filter(pid => pid !== idB));
+        await saveNodeUpdates(nodeA);
+        disconnected = true;
+      }
+      if (pidsB.includes(idA)) {
+        setParentIds(nodeB, pidsB.filter(pid => pid !== idA));
+        await saveNodeUpdates(nodeB);
+        disconnected = true;
+      }
+    }
+
+    if (disconnected) {
+      // Полный перерендер дерева для очистки связей
+      reloadTreeInPlace();
+      showSuccessToast('Связь успешно удалена');
+    } else {
+      showErrorToast('Связь между выбранными карточками не найдена');
+    }
   }
 
   /* ════════════════════════════════════════════
@@ -2306,6 +2494,8 @@
       .tree-edit-btn--create:hover { background:rgba(200,168,75,0.22); border-color:var(--gold); }
       .tree-node--conn-selected .tree-node__frame { box-shadow:0 0 0 3px rgba(200,168,75,0.95),0 0 24px rgba(200,168,75,0.55)!important; transform:translateY(-4px) scale(1.07)!important; }
       .tree-node--conn-selected .tree-node__name { color:var(--gold-light)!important; }
+      .tree-node--disconn-selected .tree-node__frame { box-shadow:0 0 0 3px rgba(239,68,68,0.95),0 0 24px rgba(239,68,68,0.55)!important; transform:translateY(-4px) scale(1.07)!important; }
+      .tree-node--disconn-selected .tree-node__name { color:#ff9e9e!important; }
       .tree-node--branch-root .tree-node__frame::after { content:'🌿'; position:absolute; bottom:4px; right:4px; font-size:14px; z-index:5; }
 
       /* ── Легенда — активная подсветка при клике «Соединить» ── */
