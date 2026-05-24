@@ -188,6 +188,50 @@
     era:     '❧',
   };
 
+  /* ── GET PEOPLE ALIVE IN YEAR ── */
+  function getPeopleAliveInYear(year) {
+    const list = [];
+    const seenIds = new Set();
+
+    // 1. From static PEOPLE data
+    const staticPeople = typeof PEOPLE !== 'undefined' ? PEOPLE : [];
+    staticPeople.forEach(p => {
+      const by = parseYear(p.born);
+      const dy = parseYear(p.died) || new Date().getFullYear();
+      if (by && by <= year && dy >= year) {
+        if (!seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          list.push({ id: p.id, name: p.name, years: `${p.born}–${p.died || '...'}` });
+        }
+      }
+    });
+
+    // 2. From active tree nodes
+    const treeNodes = dbNodes.length ? dbNodes : loadActiveTreeNodes();
+    treeNodes.forEach(node => {
+      const name = node.full_name || node.fullName || node.name || '';
+      const years = node.years || '';
+      if (!years) return;
+      
+      const mBoth = years.match(/(\d{4})[^\d]+(\d{4})/);
+      const mBorn = years.match(/^(\d{4})/);
+      const mDied = years.match(/(\d{4})\s*$/);
+
+      const born = mBoth ? parseInt(mBoth[1]) : (mBorn ? parseInt(mBorn[1]) : null);
+      const died = mBoth ? parseInt(mBoth[2]) : (born && mDied && parseInt(mDied[1]) !== born ? parseInt(mDied[1]) : new Date().getFullYear());
+      
+      const pId = node.linked_profile_id || node.id || node.personId;
+      if (born && born <= year && died >= year) {
+        if (pId && !seenIds.has(pId)) {
+          seenIds.add(pId);
+          list.push({ id: pId, name: name, years: years });
+        }
+      }
+    });
+
+    return list;
+  }
+
   /* ── RENDER ONE EVENT ── */
   function buildEventHTML(e, i) {
     const side       = i % 2 === 0 ? 'left' : 'right';
@@ -246,6 +290,23 @@
         </div>`;
     }
 
+    let relativesHtml = '';
+    if (e.type === 'history') {
+      const alivePeople = getPeopleAliveInYear(e.year);
+      if (alivePeople.length > 0) {
+        relativesHtml = `
+          <div class="timeline__relatives" style="margin-top:12px;border-top:1px dashed rgba(200,168,75,0.15);padding-top:8px;">
+            <div style="font-family:var(--font-ui);font-size:10px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;text-align:left;">Свидетели эпохи из семьи:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
+              ${alivePeople.map(p => `
+                <a href="person.html?id=${encodeURIComponent(p.id)}" class="timeline__relative-link" style="font-family:var(--font-body);font-size:12px;color:var(--cream-dim);text-decoration:none;background:rgba(200,168,75,0.06);padding:3px 8px;border-radius:12px;border:1px solid rgba(200,168,75,0.15);transition:all 0.3s;display:inline-block;">
+                  ${p.name} <span style="font-size:10px;opacity:0.6;">(${p.years})</span>
+                </a>`).join('')}
+            </div>
+          </div>`;
+      }
+    }
+
     return `
       <article class="timeline__item timeline__item--${side} timeline__item--${e.type}"
                data-type="${e.type}" data-year="${e.year}">
@@ -256,6 +317,7 @@
           ${customDel}
           ${headerHtml}
           <p class="timeline__subtitle">${e.subtitle}</p>
+          ${relativesHtml}
           <div class="timeline__meta">
             ${cityHtml}
             ${ageTag}

@@ -169,9 +169,12 @@ bot.on('callback_query', (ctx) => {
    ЗАПУСК
    ══════════════════════════════════════ */
 
+const { startScheduler } = require('./scheduler');
+
 bot.launch()
   .then(() => {
     process.stdout.write('🤖 Memorial Bot запущен\n');
+    startScheduler(bot);
   })
   .catch(err => {
     process.stderr.write('❌ Ошибка запуска бота: ' + err.message + '\n');

@@ -330,7 +330,13 @@
                 <span class="review-type-tab__icon">✦</span> Текст
               </button>
               <button type="button" class="review-type-tab" data-type="photo">
-                <span class="review-type-tab__icon">📷</span> С фотографией
+                <span class="review-type-tab__icon">📷</span> Фото
+              </button>
+              <button type="button" class="review-type-tab" data-type="audio">
+                <span class="review-type-tab__icon">🎙️</span> Аудио
+              </button>
+              <button type="button" class="review-type-tab" data-type="video">
+                <span class="review-type-tab__icon">🎥</span> Видео
               </button>
               <button type="button" class="review-type-tab" data-type="quote">
                 <span class="review-type-tab__icon">❧</span> Цитата
@@ -355,6 +361,38 @@
               <div class="review-media-preview" id="review-media-preview">
                 <img id="review-media-preview-img" src="" alt=""/>
                 <button type="button" class="review-media-preview__remove" id="review-media-remove">×</button>
+              </div>
+            </div>
+
+            <!-- Поле загрузки аудио (показывается при типе audio) -->
+            <div class="review-media-field" id="review-audio-field">
+              <label class="review-media-upload">
+                <input type="file" name="reviewAudio" id="review-audio-input" accept="audio/*"/>
+                <span class="review-media-upload__icon">🎙️</span>
+                <span>
+                  <div class="review-media-upload__text">Прикрепить аудиозапись</div>
+                  <div class="review-media-upload__hint">MP3, WAV, M4A, WEBM — до 16 МБ</div>
+                </span>
+              </label>
+              <div class="review-media-preview" id="review-audio-preview">
+                <audio id="review-media-preview-audio" src="" controls style="max-width:100%;margin-top:8px;"></audio>
+                <button type="button" class="review-media-preview__remove" id="review-audio-remove">×</button>
+              </div>
+            </div>
+
+            <!-- Поле загрузки видео (показывается при типе video) -->
+            <div class="review-media-field" id="review-video-field">
+              <label class="review-media-upload">
+                <input type="file" name="reviewVideo" id="review-video-input" accept="video/*"/>
+                <span class="review-media-upload__icon">🎥</span>
+                <span>
+                  <div class="review-media-upload__text">Прикрепить видеоклип</div>
+                  <div class="review-media-upload__hint">MP4, MOV, WEBM — до 16 МБ</div>
+                </span>
+              </label>
+              <div class="review-media-preview" id="review-video-preview">
+                <video id="review-media-preview-video" src="" controls style="max-width:100%;max-height:160px;margin-top:8px;"></video>
+                <button type="button" class="review-media-preview__remove" id="review-video-remove">×</button>
               </div>
             </div>
 
@@ -410,6 +448,8 @@
     const REVIEW_TYPE_LABELS = {
       text:   '✦ Текст',
       photo:  '📷 Фотография',
+      audio:  '🎙️ Аудио',
+      video:  '🎥 Видео',
       quote:  '❧ Цитата',
       memory: '✿ Яркий момент',
     };
@@ -420,7 +460,29 @@
         : '';
       
       let inner = '';
-      if (item.photoDataUrl) {
+      if (item.reviewType === 'audio' && item.photoDataUrl) {
+        inner = `
+          <div class="memory-card__text-only">
+            ${badge}
+            <p class="memory-card__text">${item.text}</p>
+            <div class="memory-card__audio-wrapper" style="margin: 12px 0;">
+              <audio src="${API.resolveUrl(item.photoDataUrl)}" controls style="width: 100%;"></audio>
+            </div>
+            <p class="memory-card__author">${item.author}</p>
+          </div>`;
+      } else if (item.reviewType === 'video' && item.photoDataUrl) {
+        inner = `
+          <div class="memory-card__video-layout" style="display: flex; flex-direction: column; gap: 10px; padding: 20px;">
+            <div class="memory-card__video-wrapper" style="position: relative; width: 100%; overflow: hidden; border-radius: 4px; background: #000;">
+              <video src="${API.resolveUrl(item.photoDataUrl)}" controls style="width: 100%; display: block; max-height: 240px; object-fit: contain;"></video>
+            </div>
+            <div class="memory-card__video-info">
+              ${badge}
+              <p class="memory-card__text" style="margin-top: 10px;">${item.text}</p>
+              <p class="memory-card__author" style="margin-top: 10px;">${item.author}</p>
+            </div>
+          </div>`;
+      } else if (item.photoDataUrl) {
         inner = `
           <div class="memory-card__split">
             <div class="memory-card__split-media">
@@ -618,6 +680,19 @@
     const previewImg  = document.getElementById('review-media-preview-img');
     const removeBtn   = document.getElementById('review-media-remove');
     const textarea    = document.getElementById('review-text');
+
+    const audioField  = document.getElementById('review-audio-field');
+    const audioInput  = document.getElementById('review-audio-input');
+    const audioPreview= document.getElementById('review-audio-preview');
+    const previewAudio= document.getElementById('review-media-preview-audio');
+    const audioRemove = document.getElementById('review-audio-remove');
+
+    const videoField  = document.getElementById('review-video-field');
+    const videoInput  = document.getElementById('review-video-input');
+    const videoPreview= document.getElementById('review-video-preview');
+    const previewVideo= document.getElementById('review-media-preview-video');
+    const videoRemove = document.getElementById('review-video-remove');
+
     if (!form) return;
 
     let selectedPhotoDataUrl = null;
@@ -626,6 +701,8 @@
     const TYPE_PLACEHOLDERS = {
       text:   'Напишите своё воспоминание...',
       photo:  'Подпишите фотографию или расскажите что на ней...',
+      audio:  'Добавьте описание или комментарий к аудиозаписи...',
+      video:  'Добавьте описание или комментарий к видеозаписи...',
       quote:  'Любимое выражение или слова, которые вы запомнили...',
       memory: 'Расскажите о ярком моменте, который вы не забудете...',
     };
@@ -636,16 +713,29 @@
         tab.classList.add('review-type-tab--active');
         const type = tab.dataset.type;
         typeInput.value = type;
-        /* Показываем/скрываем поле фото */
-        if (type === 'photo') {
-          mediaField.classList.add('is-visible');
-        } else {
-          mediaField.classList.remove('is-visible');
-          /* сброс фото если переключились */
+        
+        /* Показываем/скрываем медиа поля */
+        mediaField?.classList.toggle('is-visible', type === 'photo');
+        audioField?.classList.toggle('is-visible', type === 'audio');
+        videoField?.classList.toggle('is-visible', type === 'video');
+
+        /* Сброс если переключились */
+        if (type !== 'photo') {
           selectedPhotoDataUrl = null;
           if (photoInput) photoInput.value = '';
           preview?.classList.remove('is-visible');
         }
+        if (type !== 'audio') {
+          if (audioInput) audioInput.value = '';
+          if (previewAudio) previewAudio.src = '';
+          audioPreview?.classList.remove('is-visible');
+        }
+        if (type !== 'video') {
+          if (videoInput) videoInput.value = '';
+          if (previewVideo) previewVideo.src = '';
+          videoPreview?.classList.remove('is-visible');
+        }
+
         if (textarea) textarea.placeholder = TYPE_PLACEHOLDERS[type] || TYPE_PLACEHOLDERS.text;
       });
     });
@@ -668,6 +758,36 @@
       if (photoInput) photoInput.value = '';
       if (previewImg) previewImg.src = '';
       preview?.classList.remove('is-visible');
+    });
+
+    /* ── Превью аудио ── */
+    audioInput?.addEventListener('change', () => {
+      const file = audioInput.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      if (previewAudio) previewAudio.src = url;
+      audioPreview?.classList.add('is-visible');
+    });
+
+    audioRemove?.addEventListener('click', () => {
+      if (audioInput) audioInput.value = '';
+      if (previewAudio) previewAudio.src = '';
+      audioPreview?.classList.remove('is-visible');
+    });
+
+    /* ── Превью видео ── */
+    videoInput?.addEventListener('change', () => {
+      const file = videoInput.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      if (previewVideo) previewVideo.src = url;
+      videoPreview?.classList.add('is-visible');
+    });
+
+    videoRemove?.addEventListener('click', () => {
+      if (videoInput) videoInput.value = '';
+      if (previewVideo) previewVideo.src = '';
+      videoPreview?.classList.remove('is-visible');
     });
 
     /* ════════════════════════════════════════════
@@ -856,6 +976,32 @@
         if (!photoDataUrl && selectedPhotoDataUrl) {
           photoDataUrl = selectedPhotoDataUrl;
         }
+      } else if (rType === 'audio') {
+        if (audioInput && audioInput.files && audioInput.files[0]) {
+          try {
+            const formData = new FormData();
+            formData.append('audio', audioInput.files[0]);
+            const uploadRes = await API.upload('/api/upload-audio', formData);
+            if (uploadRes && uploadRes.ok && uploadRes.url) {
+              photoDataUrl = uploadRes.url;
+            }
+          } catch (uploadErr) {
+            console.error('Audio upload failed:', uploadErr);
+          }
+        }
+      } else if (rType === 'video') {
+        if (videoInput && videoInput.files && videoInput.files[0]) {
+          try {
+            const formData = new FormData();
+            formData.append('video', videoInput.files[0]);
+            const uploadRes = await API.upload('/api/upload-video', formData);
+            if (uploadRes && uploadRes.ok && uploadRes.url) {
+              photoDataUrl = uploadRes.url;
+            }
+          } catch (uploadErr) {
+            console.error('Video upload failed:', uploadErr);
+          }
+        }
       }
 
       const newReview = {
@@ -896,14 +1042,19 @@
         } catch {}
       }
 
-      /* Если добавили фото — оно войдёт в воспоминания через newReview */
-
       /* Сброс формы */
       form.reset();
       typeInput.value = 'text';
       selectedPhotoDataUrl = null;
       preview?.classList.remove('is-visible');
       mediaField?.classList.remove('is-visible');
+      audioPreview?.classList.remove('is-visible');
+      audioField?.classList.remove('is-visible');
+      videoPreview?.classList.remove('is-visible');
+      videoField?.classList.remove('is-visible');
+      if (previewAudio) previewAudio.src = '';
+      if (previewVideo) previewVideo.src = '';
+
       document.querySelectorAll('.review-type-tab').forEach((t, i) =>
         t.classList.toggle('review-type-tab--active', i === 0));
       if (textarea) textarea.placeholder = TYPE_PLACEHOLDERS.text;

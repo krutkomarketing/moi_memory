@@ -639,6 +639,26 @@ async function handlePhotoUpload(req, res) {
   }
 }
 
+/* ── POST /api/upload-audio — загрузка аудио с сайта ── */
+async function handleAudioUpload(req, res) {
+  try {
+    const filename = await upload.parseUpload(req, 'audio', upload.ALLOWED_AUDIO);
+    send(res, 200, { ok: true, url: '/uploads/' + filename });
+  } catch (err) {
+    send(res, 400, { ok: false, error: err.message });
+  }
+}
+
+/* ── POST /api/upload-video — загрузка видео с сайта ── */
+async function handleVideoUpload(req, res) {
+  try {
+    const filename = await upload.parseUpload(req, 'video', upload.ALLOWED_VIDEO);
+    send(res, 200, { ok: true, url: '/uploads/' + filename });
+  } catch (err) {
+    send(res, 400, { ok: false, error: err.message });
+  }
+}
+
 /* ── PUT /api/profiles/:id — обновление профиля в бот-БД ── */
 async function updateProfileInBot(req, res, params) {
   const profileId = params.id;
@@ -1323,6 +1343,12 @@ async function dispatch(req, res) {
     /* ── POST /api/upload-photo — загрузка фото с сайта, конвертация в WebP ── */
     if (method === 'POST' && pathname === '/api/upload-photo') {
       return await handlePhotoUpload(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/upload-audio') {
+      return await handleAudioUpload(req, res);
+    }
+    if (method === 'POST' && pathname === '/api/upload-video') {
+      return await handleVideoUpload(req, res);
     }
 
     if ((p = matchRoute('/api/people/:id', pathname))) {

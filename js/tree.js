@@ -8,6 +8,16 @@
 (function () {
 
   const BASE = window.location.port === '3000' ? '' : 'http://localhost:3000';
+  
+  // Pan and Zoom State Variables
+  let zoom = 1.0;
+  let panX = 0;
+  let panY = 0;
+  let isDragging = false;
+  let isPanning = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+
   const resolveUrl = path => {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
@@ -1429,7 +1439,7 @@
     }
 
     nodeEls[newNode.id] = node;
-    node.addEventListener('click', () => highlight(newNode.id));
+    node.addEventListener('click', () => { if (isPanning) return; highlight(newNode.id); });
 
     setTimeout(() => {
       node.classList.remove('tree-node--new-pulse');
@@ -1443,6 +1453,7 @@
     Object.entries(nodeEls).forEach(([id, el]) => {
       el.addEventListener('click', e => {
         e.stopPropagation();
+        if (isPanning) return;
 
         // CONNECT MODE
         if (connectMode) {
@@ -1631,5 +1642,115 @@
     dataLoadPromise.then(() => {
       setTimeout(drawThreads, 200);
     });
+  });
+
+  // --- PAN & ZOOM INITIALIZATION ---
+  function initPanZoom() {
+    const sectionEl = document.querySelector('.tree-section');
+    if (!sectionEl || !wrapper) return;
+
+    // Apply styles to enable grab cursor and hide default overflow-x scrollbar
+    sectionEl.style.overflow = 'hidden';
+    sectionEl.style.cursor = 'grab';
+    wrapper.style.transformOrigin = 'center center';
+    wrapper.style.transition = 'transform 0.05s ease-out';
+
+    let isPointerDown = false;
+    let startPointerX = 0;
+    let startPointerY = 0;
+
+    const onPointerDown = (clientX, clientY) => {
+      isPointerDown = true;
+      isPanning = false;
+      sectionEl.style.cursor = 'grabbing';
+      dragStartX = clientX - panX;
+      dragStartY = clientY - panY;
+      startPointerX = clientX;
+      startPointerY = clientY;
+      wrapper.style.transition = 'none'; // Instant response during dragging
+    };
+
+    const onPointerMove = (clientX, clientY) => {
+      if (!isPointerDown) return;
+      
+      const dx = clientX - startPointerX;
+      const dy = clientY - startPointerY;
+      
+      // If the mouse has moved more than 5px, it's a drag/pan operation
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isPanning = true;
+      }
+      
+      panX = clientX - dragStartX;
+      panY = clientY - dragStartY;
+      updateTreeTransform();
+    };
+
+    const onPointerUp = () => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      sectionEl.style.cursor = 'grab';
+      wrapper.style.transition = 'transform 0.15s ease-out';
+      
+      // Clear isPanning after a short delay so click handler still ignores it
+      setTimeout(() => {
+        isPanning = false;
+      }, 50);
+    };
+
+    // Mouse Listeners
+    sectionEl.addEventListener('mousedown', e => {
+      if (e.button !== 0) return; // Only left click
+      if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap')) return;
+      onPointerDown(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mousemove', e => {
+      onPointerMove(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => {
+      onPointerUp();
+    });
+
+    // Touch Listeners (Mobile support)
+    sectionEl.addEventListener('touchstart', e => {
+      if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap')) return;
+      if (e.touches.length === 1) {
+        onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    sectionEl.addEventListener('touchmove', e => {
+      if (e.touches.length === 1) {
+        onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    sectionEl.addEventListener('touchend', () => {
+      onPointerUp();
+    });
+
+    // Wheel Zoom
+    sectionEl.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = 0.08;
+      if (e.deltaY < 0) {
+        zoom = Math.min(2.5, zoom + zoomFactor);
+      } else {
+        zoom = Math.max(0.3, zoom - zoomFactor);
+      }
+      wrapper.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      updateTreeTransform();
+    }, { passive: false });
+  }
+
+  function updateTreeTransform() {
+    wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  // Hook into dataLoadPromise
+  dataLoadPromise.then(() => {
+    initPanZoom();
   });
 })();

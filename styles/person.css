@@ -1284,3 +1284,31 @@
   letter-spacing: 0.05em;
   color: var(--gold);
 }
+
+/* ── AUDIO & VIDEO PREVIEWS AND LAYOUTS ── */
+#review-audio-preview,
+#review-video-preview {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+}
+
+#review-audio-preview .review-media-preview__remove,
+#review-video-preview .review-media-preview__remove {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  z-index: 5;
+}
+
+.memory-card__audio-wrapper audio {
+  outline: none;
+}
+
+.memory-card__video-wrapper video {
+  outline: none;
+}
+

@@ -16,8 +16,10 @@ try {
 }
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
-const MAX_SIZE   = 8 * 1024 * 1024; // 8 MB
+const MAX_SIZE   = 16 * 1024 * 1024; // Increase max size to 16 MB for media files
 const ALLOWED    = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const ALLOWED_AUDIO = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.aac']);
+const ALLOWED_VIDEO = new Set(['.mp4', '.mov', '.webm', '.m4v', '.avi']);
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -25,7 +27,7 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
  * Parse a multipart/form-data request and save the first file field.
  * Returns the saved filename.
  */
-function parseUpload(req, prefix) {
+function parseUpload(req, prefix, allowedExts = ALLOWED) {
   return new Promise((resolve, reject) => {
     const ct = req.headers['content-type'] || '';
     const boundaryMatch = ct.match(/boundary=([^\s;]+)/);
@@ -65,10 +67,10 @@ function parseUpload(req, prefix) {
 
           const origName = cdMatch[1];
           const ext      = path.extname(origName).toLowerCase();
-          if (!ALLOWED.has(ext)) { return reject(new Error(`File type not allowed: ${ext}`)); }
+          if (!allowedExts.has(ext)) { return reject(new Error(`File type not allowed: ${ext}`)); }
 
-          // If sharp is available and not a GIF, compress and convert to WebP
-          if (sharp && ext !== '.gif') {
+          // If sharp is available and it is a static image (not GIF), compress and convert to WebP
+          if (sharp && ALLOWED.has(ext) && ext !== '.gif') {
             try {
               const safeName = `${prefix}-${Date.now()}.webp`;
               const savePath = path.join(UPLOAD_DIR, safeName);
@@ -107,4 +109,4 @@ function parseUpload(req, prefix) {
   });
 }
 
-module.exports = { parseUpload };
+module.exports = { parseUpload, ALLOWED, ALLOWED_AUDIO, ALLOWED_VIDEO };
