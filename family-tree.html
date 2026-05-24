@@ -38,6 +38,16 @@
       <p class="hero__eyebrow">Родословная</p>
       <h1 class="tree-hero__title">Древо <em>семьи</em></h1>
       <p class="tree-hero__sub">Снизу — корни, сверху — крона. Старшие поколения внизу, молодые вверху.</p>
+      
+      <!-- Выбор дерева -->
+      <div class="tree-selector" style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; position: relative; z-index: 10;">
+        <a href="family-tree.html" class="tree-selector__btn" id="tree-sel-main" style="text-decoration: none; font-family: var(--font-ui); font-size: 13px; letter-spacing: 0.05em; padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(200, 168, 75, 0.35); background: rgba(0, 0, 0, 0.45); color: var(--cream-dim); transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px;">
+          🌳 Основное древо (43 чел.)
+        </a>
+        <a href="family-tree.html?tree=presentation-tree" class="tree-selector__btn" id="tree-sel-pres" style="text-decoration: none; font-family: var(--font-ui); font-size: 13px; letter-spacing: 0.05em; padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(200, 168, 75, 0.35); background: rgba(0, 0, 0, 0.45); color: var(--cream-dim); transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px;">
+          📊 Презентация (8 чел.)
+        </a>
+      </div>
     </div>
   </section>
 
@@ -117,9 +127,29 @@
 
   <script>
     /* Если переходим к новому дереву — анимация появления */
-    if (new URLSearchParams(location.search).get('tree')) {
+    const treeParam = new URLSearchParams(location.search).get('tree');
+    if (treeParam) {
       document.body.classList.add('tree-page--entering');
       setTimeout(() => document.body.classList.remove('tree-page--entering'), 800);
+    }
+    
+    // Подсветка активной кнопки выбора дерева
+    const selMain = document.getElementById('tree-sel-main');
+    const selPres = document.getElementById('tree-sel-pres');
+    if (treeParam === 'presentation-tree') {
+      if (selPres) {
+        selPres.style.background = 'linear-gradient(135deg, var(--gold-dim), var(--gold))';
+        selPres.style.color = 'var(--black)';
+        selPres.style.borderColor = 'var(--gold)';
+        selPres.style.fontWeight = '500';
+      }
+    } else {
+      if (selMain) {
+        selMain.style.background = 'linear-gradient(135deg, var(--gold-dim), var(--gold))';
+        selMain.style.color = 'var(--black)';
+        selMain.style.borderColor = 'var(--gold)';
+        selMain.style.fontWeight = '500';
+      }
     }
   </script>
   <script src="js/particles.js"></script>
