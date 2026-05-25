@@ -17,7 +17,7 @@
   --paper:      #fdf6e3;
 
   --font-display:  'Playfair Display', Georgia, serif;
-  --font-body:     'Cormorant Garamond', Georgia, serif;
+  --font-body:     'Lora', Georgia, serif;
   --font-script:   'Dancing Script', cursive;
   --font-ui:       'Inter', sans-serif;
 
@@ -94,7 +94,7 @@ body {
 
 .nav__link {
   text-decoration: none;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 15px;
   font-weight: 400;
   letter-spacing: 0.06em;
@@ -224,7 +224,7 @@ section { position: relative; z-index: 1; }
 .btn {
   display: inline-block;
   text-decoration: none;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 15px;
   letter-spacing: 0.12em;
   padding: 14px 38px;
