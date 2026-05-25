@@ -2931,8 +2931,8 @@ select option:hover {
    ═══════════════════════════════════════════════ */
 .hero-canvas-container {
   position: relative;
-  width: 290px;
-  height: 390px;
+  width: 348px;
+  height: 468px;
   border-radius: 12px;
   overflow: hidden;
   cursor: grab;
