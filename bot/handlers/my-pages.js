@@ -1,21 +1,25 @@
-/**
- * my-pages.js — Просмотр и управление своими страницами
- */
-
 'use strict';
 
+/**
+ * my-pages.js v2 — список профилей юзера через Prisma.
+ */
+
 const { Markup } = require('telegraf');
-const db = require('../db');
+const prisma = require('../lib/prisma');
+const { getOrCreateBotUser } = require('../lib/auth');
 
 async function myPages(ctx) {
-  const telegramId = String(ctx.from.id);
-  const user = db.getOrCreateUser(telegramId);
-  const profiles = db.getProfilesByOwner(user.id);
+  const user = await getOrCreateBotUser(ctx.from);
+
+  const profiles = await prisma.profile.findMany({
+    where: { ownerId: user.id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, slug: true, fullName: true, birthDate: true, deathDate: true },
+  });
 
   if (!profiles.length) {
     return ctx.reply(
-      '📋 У вас пока нет страниц памяти.\n\n' +
-      'Нажмите «Создать страницу памяти» чтобы начать.',
+      '📋 У вас пока нет страниц памяти.\n\nНажмите «Создать страницу памяти» чтобы начать.',
       Markup.keyboard([
         ['🕯 Создать страницу памяти'],
         ['📋 Мои страницы', '❓ Помощь'],
@@ -25,51 +29,59 @@ async function myPages(ctx) {
 
   const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
 
+  const formatYear = (d) => (d ? new Date(d).getFullYear() : '?');
   const list = profiles.map((p, i) => {
-    return `${i + 1}. *${p.full_name}* (${p.dates})\n   🔗 ${siteUrl}/person.html?id=${p.id}`;
+    const dates = `${formatYear(p.birthDate)}–${formatYear(p.deathDate)}`;
+    return `${i + 1}. ${p.fullName} (${dates})\n   🔗 ${siteUrl}/person.html?id=${p.slug}`;
   }).join('\n\n');
 
-  const buttons = profiles.map(p => [
-    Markup.button.callback(`✏️ ${p.full_name.slice(0, 20)}`, `edit_${p.id.slice(0, 30)}`),
-    Markup.button.callback('🗑', `delete_${p.id.slice(0, 30)}`),
+  const buttons = profiles.map((p) => [
+    Markup.button.callback(`✏️ ${p.fullName.slice(0, 20)}`, `edit_${p.id}`),
+    Markup.button.callback('🗑', `delete_${p.id}`),
   ]);
 
   return ctx.reply(
-    `📋 *Ваши страницы памяти (${profiles.length}):*\n\n${list}`,
-    {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard(buttons)
-    }
+    `📋 Ваши страницы памяти (${profiles.length}):\n\n${list}`,
+    Markup.inlineKeyboard(buttons)
   );
 }
 
 function handleEdit(ctx, data) {
   const profileId = data.replace('edit_', '');
   ctx.answerCbQuery();
-
   return ctx.reply(
-    '✏️ *Редактирование*\n\n' +
-    'Скоро здесь будет Mini App для редактирования страницы.\n' +
-    `ID: \`${profileId}\``,
-    { parse_mode: 'Markdown' }
+    '✏️ Редактирование\n\nСкоро здесь будет Mini App для редактирования.\n' +
+    `ID: ${profileId}`
   );
 }
 
 function handleDelete(ctx, data) {
   const profileId = data.replace('delete_', '');
   ctx.answerCbQuery();
-
   return ctx.reply(
-    '⚠️ *Удалить страницу?*\n\n' +
-    'Это действие нельзя отменить. Все данные будут потеряны.',
-    {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback('🗑 Да, удалить', `confirm_delete_${profileId}`)],
-        [Markup.button.callback('↩️ Отмена', 'cancel_delete')],
-      ])
-    }
+    '⚠️ Удалить страницу?\n\nЭто действие нельзя отменить.',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('🗑 Да, удалить', `confirm_delete_${profileId}`)],
+      [Markup.button.callback('↩️ Отмена', 'cancel_delete')],
+    ])
   );
 }
 
-module.exports = { myPages, handleEdit, handleDelete };
+async function confirmDelete(ctx, profileId) {
+  const user = await getOrCreateBotUser(ctx.from);
+  const profile = await prisma.profile.findUnique({ where: { id: profileId } });
+  if (!profile) {
+    ctx.answerCbQuery('Не найдено');
+    return ctx.reply('⚠️ Страница уже удалена.');
+  }
+  if (profile.ownerId !== user.id && user.role !== 'ADMIN') {
+    ctx.answerCbQuery('Доступ запрещён');
+    return ctx.reply('⛔ Это не ваша страница.');
+  }
+
+  await prisma.profile.delete({ where: { id: profileId } });
+  ctx.answerCbQuery('Удалено');
+  return ctx.reply('✅ Страница удалена.');
+}
+
+module.exports = { myPages, handleEdit, handleDelete, confirmDelete };

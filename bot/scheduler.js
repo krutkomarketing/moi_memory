@@ -1,186 +1,129 @@
 'use strict';
 
-const { DatabaseSync } = require('node:sqlite');
-const path = require('node:path');
-const fs = require('node:fs');
+/**
+ * scheduler.js v2 — анниверсари через Prisma.
+ *
+ * Раз в час чекает: сегодня день рождения или день смерти у любого Profile?
+ * Если да — рассылает всем User-ам с заполненным telegramId.
+ *
+ * State (last_anniversary_check) храним in-memory (для прода — заменить на Redis или таблицу).
+ */
 
-const BOT_DB_PATH = path.join(__dirname, 'data', 'bot.db');
-const SERVER_DB_PATH = path.join(__dirname, '..', 'server', 'data', 'memory.db');
+const prisma = require('./lib/prisma');
 
-function parseDDMMYYYY(str) {
-  if (!str) return null;
-  const clean = str.replace(/,/g, '.').replace(/\//g, '.').trim();
-  const m = clean.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (m) {
-    return {
-      day: parseInt(m[1], 10),
-      month: parseInt(m[2], 10),
-      year: parseInt(m[3], 10)
-    };
-  }
-  return null;
-}
+let lastCheckedDate = '';
 
 function declension(n, forms) {
   const abs = Math.abs(n) % 100;
   const rem = abs % 10;
   if (abs > 10 && abs < 20) return forms[2];
   if (rem > 1 && rem < 5)   return forms[1];
-  if (rem === 1)             return forms[0];
+  if (rem === 1)            return forms[0];
   return forms[2];
+}
+
+function formatDateRu(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
 }
 
 async function checkAnniversaries(bot) {
   console.log('[Scheduler] Checking anniversaries...');
-  
-  if (!fs.existsSync(SERVER_DB_PATH) || !fs.existsSync(BOT_DB_PATH)) {
-    console.warn('[Scheduler] Database files not found. Skipping check.');
-    return;
-  }
 
   const today = new Date();
   const day = today.getDate();
   const month = today.getMonth() + 1;
   const currentYear = today.getFullYear();
 
-  const serverDb = new DatabaseSync(SERVER_DB_PATH, { open: true });
-  const botDb = new DatabaseSync(BOT_DB_PATH, { open: true });
+  // Берём все Profile у которых месяц/день дат совпадает с сегодняшним
+  // (Postgres EXTRACT в Prisma через $queryRaw)
+  const profiles = await prisma.$queryRaw`
+    SELECT id, slug, "fullName", "birthDate", "deathDate"
+    FROM "Profile"
+    WHERE
+      (EXTRACT(MONTH FROM "birthDate") = ${month} AND EXTRACT(DAY FROM "birthDate") = ${day})
+      OR
+      (EXTRACT(MONTH FROM "deathDate") = ${month} AND EXTRACT(DAY FROM "deathDate") = ${day})
+  `;
 
-  // Ensure settings table exists in bot.db
-  botDb.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-  `);
-
-  // Query all static people from family tree
-  let people = [];
-  try {
-    people = serverDb.prepare('SELECT id, name, born, died, city, bio FROM people').all();
-  } catch (err) {
-    console.error('[Scheduler] Failed to query people from memory.db:', err.message);
+  if (!profiles.length) {
+    console.log('[Scheduler] No anniversaries today.');
+    return;
   }
 
-  // Find anniversaries
-  const birthAnniversaries = [];
-  const deathAnniversaries = [];
+  // Все юзеры бота
+  const users = await prisma.user.findMany({
+    where: { telegramId: { not: null } },
+    select: { telegramId: true },
+  });
 
-  for (const p of people) {
-    const birth = parseDDMMYYYY(p.born);
-    const death = parseDDMMYYYY(p.died);
+  console.log(`[Scheduler] Found ${profiles.length} anniversaries, broadcasting to ${users.length} users.`);
 
-    if (birth && birth.day === day && birth.month === month) {
-      const age = currentYear - birth.year;
-      // If the person is deceased, it's a "would have been X years old" anniversary
-      const isDeceased = !!p.died;
-      birthAnniversaries.push({ person: p, age, isDeceased, birthYear: birth.year });
+  const messages = [];
+
+  for (const p of profiles) {
+    const birth = p.birthDate ? new Date(p.birthDate) : null;
+    const death = p.deathDate ? new Date(p.deathDate) : null;
+
+    // День смерти
+    if (death && death.getDate() === day && death.getMonth() + 1 === month) {
+      const yearsPassed = currentYear - death.getFullYear();
+      messages.push(
+        `🕯️ День памяти сегодня\n\n` +
+        `Сегодня исполняется ${yearsPassed} ${declension(yearsPassed, ['год','года','лет'])} ` +
+        `со дня ухода из жизни:\n` +
+        `${p.fullName}\n` +
+        `(${formatDateRu(p.birthDate)} — ${formatDateRu(p.deathDate)})\n\n` +
+        `🕊️ Светлая память.`
+      );
     }
 
-    if (death && death.day === day && death.month === month) {
-      const yearsPassed = currentYear - death.year;
-      birthAnniversaries.push({ person: p, yearsPassed, isDeathAnniversary: true, deathYear: death.year });
+    // День рождения
+    if (birth && birth.getDate() === day && birth.getMonth() + 1 === month) {
+      const age = currentYear - birth.getFullYear();
+      const isDeceased = !!death;
+      messages.push(
+        isDeceased
+          ? (`🕯️ День памяти (день рождения)\n\n` +
+             `Сегодня исполнилось бы ${age} ${declension(age, ['год','года','лет'])}:\n` +
+             `${p.fullName}\n(${formatDateRu(p.birthDate)} — ${formatDateRu(p.deathDate)})\n\n🕊️ Светлая память.`)
+          : (`🎉 День рождения сегодня!\n\n` +
+             `${p.fullName} (род. ${formatDateRu(p.birthDate)})\n` +
+             `Исполняется ${age} ${declension(age, ['год','года','лет'])} 🎂`)
+      );
     }
   }
 
-  // If there are anniversaries, broadcast to all bot users
-  if (birthAnniversaries.length > 0 || deathAnniversaries.length > 0) {
-    let users = [];
-    try {
-      users = botDb.prepare("SELECT telegram_id FROM users WHERE telegram_id NOT LIKE 'site_user%'").all();
-    } catch (err) {
-      console.error('[Scheduler] Failed to query users from bot.db:', err.message);
-    }
-
-    console.log(`[Scheduler] Found ${birthAnniversaries.length + deathAnniversaries.length} anniversaries. Broadcasting to ${users.length} users.`);
-
-    for (const ann of birthAnniversaries) {
-      let text = '';
-      if (ann.isDeathAnniversary) {
-        text = `🕯️ *День памяти сегодня*\n\n` +
-               `Сегодня исполняется *${ann.yearsPassed} ${declension(ann.yearsPassed, ['год', 'года', 'лет'])}* со дня ухода из жизни нашего близкого:\n` +
-               `*${ann.person.name}*\n` +
-               `(${ann.person.born} — ${ann.person.died})\n\n` +
-               `${ann.person.city ? `📍 Место: ${ann.person.city}\n` : ''}` +
-               `🕊️ Вспомним добрым словом и почтим его память.`;
-      } else if (ann.isDeceased) {
-        text = `🕯️ *День памяти (день рождения)*\n\n` +
-               `Сегодня исполнилось бы *${ann.age} ${declension(ann.age, ['год', 'года', 'лет'])}* нашему родственнику:\n` +
-               `*${ann.person.name}*\n` +
-               `(${ann.person.born} — ${ann.person.died})\n\n` +
-               `🕊️ Светлая память!`;
-      } else {
-        text = `🎉 *День рождения сегодня!*\n\n` +
-               `Сегодня празднует свой день рождения:\n` +
-               `*${ann.person.name}* (род. ${ann.person.born})\n` +
-               `Исполняется *${ann.age} ${declension(ann.age, ['год', 'года', 'лет'])}*! 🎂\n\n` +
-               `Поздравляем и желаем крепкого здоровья!`;
-      }
-
-      for (const u of users) {
-        try {
-          await bot.telegram.sendMessage(u.telegram_id, text, { parse_mode: 'Markdown' });
-        } catch (sendErr) {
-          console.warn(`[Scheduler] Failed to send message to user ${u.telegram_id}:`, sendErr.message);
-        }
+  for (const text of messages) {
+    for (const u of users) {
+      try {
+        await bot.telegram.sendMessage(u.telegramId, text);
+      } catch (sendErr) {
+        console.warn(`[Scheduler] Send failed → ${u.telegramId}:`, sendErr.message);
       }
     }
-  } else {
-    console.log('[Scheduler] No anniversaries found for today.');
   }
-
-  serverDb.close();
-  botDb.close();
 }
 
 function runCheck(bot) {
   const today = new Date();
-  const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  const dateStr = today.toISOString().split('T')[0];
   const currentHour = today.getHours();
 
-  let botDb = null;
-  try {
-    botDb = new DatabaseSync(BOT_DB_PATH, { open: true });
-    botDb.exec(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-      );
-    `);
+  if (lastCheckedDate === dateStr) return;
+  if (currentHour < 9 && lastCheckedDate !== '') return;
 
-    const row = botDb.prepare("SELECT value FROM settings WHERE key = 'last_anniversary_check'").get();
-    const lastChecked = row ? row.value : '';
-
-    // Only run if not run today, and it is 9:00 AM or later (or first run ever)
-    if (lastChecked !== dateStr) {
-      if (currentHour >= 9 || lastChecked === '') {
-        botDb.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('last_anniversary_check', ?)")
-             .run(dateStr);
-        botDb.close();
-        botDb = null;
-        
-        checkAnniversaries(bot).catch(err => {
-          console.error('[Scheduler] Error checking anniversaries:', err);
-        });
-      }
-    }
-  } catch (dbErr) {
-    console.error('[Scheduler] Database error during scheduler loop:', dbErr.message);
-  } finally {
-    if (botDb) botDb.close();
-  }
+  lastCheckedDate = dateStr;
+  checkAnniversaries(bot).catch((err) => {
+    console.error('[Scheduler] Error:', err);
+  });
 }
 
 function startScheduler(bot) {
   console.log('⏳ [Scheduler] Initialization...');
-  
-  // Run checks initially on boot
   setTimeout(() => runCheck(bot), 5000);
-
-  // Poll every hour to see if we should trigger today's checks
-  setInterval(() => {
-    runCheck(bot);
-  }, 60 * 60 * 1000); // 1 hour
+  setInterval(() => runCheck(bot), 60 * 60 * 1000);
 }
 
 module.exports = { startScheduler };

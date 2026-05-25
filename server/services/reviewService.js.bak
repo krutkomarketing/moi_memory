@@ -1,0 +1,94 @@
+'use strict';
+const prisma = require('../lib/prisma');
+const { ApiError } = require('../middleware/errors');
+
+const REVIEW_TYPE_TO_DB = {
+  text:   'TEXT',
+  photo:  'PHOTO',
+  audio:  'AUDIO',
+  video:  'VIDEO',
+  quote:  'TEXT',
+  memory: 'TEXT',
+};
+
+function serialize(m) {
+  return {
+    id:           m.id,
+    author:       m.authorName,
+    text:         m.text || '',
+    reviewType:   (m.type || 'TEXT').toLowerCase(),
+    photoDataUrl: m.media?.url || null,
+    created_at:   m.createdAt,
+  };
+}
+
+async function findProfileMin(idOrSlug) {
+  const p = await prisma.profile.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    select: { id: true, visibility: true, ownerId: true },
+  });
+  if (!p) throw new ApiError(404, 'Профиль не найден');
+  return p;
+}
+
+async function list(idOrSlug) {
+  const profile = await findProfileMin(idOrSlug);
+  const memories = await prisma.guestMemory.findMany({
+    where: { profileId: profile.id, isApproved: true },
+    include: { media: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return memories.map(serialize);
+}
+
+async function create(idOrSlug, data, viewerId) {
+  const author = (data.author || '').toString().trim().slice(0, 120);
+  const text   = (data.text   || '').toString().trim().slice(0, 4000);
+  if (!author || !text) throw new ApiError(400, 'author и text обязательны');
+
+  const profile = await findProfileMin(idOrSlug);
+  if (profile.visibility === 'PRIVATE' && profile.ownerId !== viewerId) {
+    throw new ApiError(403, 'Профиль закрыт');
+  }
+
+  const type = REVIEW_TYPE_TO_DB[data.reviewType] || 'TEXT';
+
+  let mediaId = null;
+  if (data.photoDataUrl && /^\/uploads\//.test(data.photoDataUrl)) {
+    const media = await prisma.media.findFirst({ where: { url: data.photoDataUrl } });
+    if (media) mediaId = media.id;
+  }
+
+  // TODO: модерация. Пока авто-аппрув (как было в SQLite v1).
+  // Включить очередь — поменять isApproved на false и добавить admin-endpoint /api/memories/:id/approve.
+  const memory = await prisma.guestMemory.create({
+    data: {
+      profileId:    profile.id,
+      authorUserId: viewerId || null,
+      authorName:   author,
+      type,
+      text,
+      mediaId,
+      isApproved:   true,
+      approvedAt:   new Date(),
+      approvedById: viewerId || null,
+    },
+    include: { media: true },
+  });
+  return serialize(memory);
+}
+
+async function del(memoryId, userId, userRole) {
+  const m = await prisma.guestMemory.findUnique({
+    where: { id: memoryId },
+    include: { profile: { select: { ownerId: true } } },
+  });
+  if (!m) throw new ApiError(404, 'Воспоминание не найдено');
+  if (userRole !== 'ADMIN' && m.profile.ownerId !== userId) {
+    throw new ApiError(403, 'Нет прав на удаление');
+  }
+  await prisma.guestMemory.delete({ where: { id: memoryId } });
+  return { ok: true };
+}
+
+module.exports = { list, create, del };

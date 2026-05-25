@@ -1,179 +1,114 @@
-/* ═══════════════════════════════════════════════
-   MEMORY SITE — Node.js HTTP Server
-   No external dependencies — pure Node 24
-   ═══════════════════════════════════════════════ */
 'use strict';
 
-/* Load .env if present */
-const fs   = require('node:fs');
-const path = require('node:path');
-const http = require('node:http');
-const zlib = require('node:zlib');
+require('dotenv').config();
 
-const { runBackup } = require('./backup');
-const { runCleanup } = require('./cleanup');
+const path = require('path');
+const fs = require('fs');
+const express = require('express');
+const cors = require('cors');
 
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
-  fs.readFileSync(envPath, 'utf8')
-    .split('\n')
-    .forEach(line => {
-      const [k, ...v] = line.split('=');
-      if (k && v.length) process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
-    });
+const prisma = require('./lib/prisma');
+const router = require('./router');
+const { errorHandler, notFoundHandler } = require('./middleware/errors');
+
+const app = express();
+
+/* ─── Config ─────────────────────────────────────────── */
+
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+	fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const PORT = process.env.PORT || 3000;
-const STATIC_DIR = path.join(__dirname, '..'); // serve frontend from site/
+/* ─── CORS allowlist ──────────────────────────────────── */
 
-// Папка с данными Telegram-бота (WebP + JSON страниц)
-const BOT_DATA_DIR = path.join(__dirname, '..', '..', 'memorial-bot', 'data');
+const corsAllowlist = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500')
+	.split(',')
+	.map((s) => s.trim())
+	.filter(Boolean);
 
-const { dispatch, seedIfEmpty, seedFamilyDefaultIfEmpty } = require('./router');
+app.use(cors({
+	origin: (origin, cb) => {
+		// Без Origin (curl, server-to-server) — пропускаем
+		if (!origin) return cb(null, true);
+		if (corsAllowlist.includes(origin)) return cb(null, true);
+		return cb(new Error('CORS: origin not allowed: ' + origin));
+	},
+	credentials: true,
+}));
 
-/* ── Seed database on first run ── */
-seedIfEmpty();
-seedFamilyDefaultIfEmpty();
+/* ─── Body parsers ────────────────────────────────────── */
 
-/* ── MIME types ── */
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.json': 'application/json',
-  '.png':  'image/png',
-  '.jpg':  'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.gif':  'image/gif',
-  '.svg':  'image/svg+xml',
-  '.ico':  'image/x-icon',
-  '.woff2':'font/woff2',
-  '.woff': 'font/woff',
-  '.ttf':  'font/ttf',
-};
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-function serveStatic(req, res) {
-  const url      = new URL(req.url, 'http://localhost');
-  let   pathname = decodeURIComponent(url.pathname);
-  const acceptEncoding = req.headers['accept-encoding'] || '';
-  const supportsGzip = acceptEncoding.includes('gzip');
+/* ─── Healthcheck ─────────────────────────────────────── */
 
-  // uploads from server/uploads/
-  if (pathname.startsWith('/uploads/')) {
-    const file = path.join(__dirname, 'uploads', path.basename(pathname));
-    if (fs.existsSync(file)) {
-      const ext  = path.extname(file).toLowerCase();
-      const mime = MIME[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': mime });
-      return fs.createReadStream(file).pipe(res);
-    }
-    res.writeHead(404); return res.end('Not found');
-  }
+app.get('/health', async (req, res) => {
+	try {
+		await prisma.$queryRaw`SELECT 1`;
+		res.json({ ok: true, db: 'up', uptime: process.uptime() });
+	} catch (err) {
+		res.status(503).json({ ok: false, error: 'db_down' });
+	}
+});
 
-  // default to index.html for SPA-like navigation
-  if (pathname === '/' || pathname === '') pathname = '/index.html';
-  const file = path.join(STATIC_DIR, pathname);
+/* ─── API ─────────────────────────────────────────────── */
 
-  if (!file.startsWith(STATIC_DIR)) { res.writeHead(403); return res.end('Forbidden'); }
+app.use('/api', router);
 
-  const fallback = path.join(STATIC_DIR, 'index.html');
-  const targetFile = fs.existsSync(file) ? file : (fs.existsSync(fallback) ? fallback : null);
+/* ─── Static: uploads + frontend ──────────────────────── */
 
-  if (!targetFile) {
-    res.writeHead(404); return res.end('Not found');
-  }
+app.use('/uploads', express.static(UPLOADS_DIR, {
+	maxAge: '7d',
+	immutable: true,
+	fallthrough: true,
+}));
 
-  const ext  = path.extname(targetFile).toLowerCase();
-  const mime = MIME[ext] || 'text/plain';
-  
-  // Compress text assets (HTML, CSS, JS, JSON, SVG)
-  const compressible = /^(text\/|application\/javascript|application\/json|image\/svg\+xml)/.test(mime);
+// Раздача фронта из корня проекта (HTML/CSS/JS)
+app.use(express.static(PROJECT_ROOT, {
+	maxAge: '1h',
+	index: ['index.html'],
+}));
 
-  if (supportsGzip && compressible) {
-    res.writeHead(200, { 
-      'Content-Type': mime,
-      'Content-Encoding': 'gzip'
-    });
-    return fs.createReadStream(targetFile).pipe(zlib.createGzip()).pipe(res);
-  } else {
-    res.writeHead(200, { 'Content-Type': mime });
-    return fs.createReadStream(targetFile).pipe(res);
-  }
+/* ─── 404 + error handler ─────────────────────────────── */
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+/* ─── Start ───────────────────────────────────────────── */
+
+const server = app.listen(PORT, () => {
+	console.log(`✅ Server listening on http://localhost:${PORT}`);
+	console.log(`   API:      http://localhost:${PORT}/api`);
+	console.log(`   Uploads:  http://localhost:${PORT}/uploads`);
+	console.log(`   Frontend: http://localhost:${PORT}/`);
+});
+
+/* ─── Graceful shutdown ───────────────────────────────── */
+
+async function shutdown(signal) {
+	console.log(`\n[shutdown] ${signal} received, closing...`);
+	server.close(async () => {
+		try {
+			await prisma.$disconnect();
+			console.log('[shutdown] Prisma disconnected, bye');
+			process.exit(0);
+		} catch (err) {
+			console.error('[shutdown] error:', err);
+			process.exit(1);
+		}
+	});
+
+	// Force exit через 10 сек
+	setTimeout(() => {
+		console.error('[shutdown] force exit');
+		process.exit(1);
+	}, 10000).unref();
 }
 
-/* ── Main request handler ── */
-const server = http.createServer((req, res) => {
-  // Inject standard security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-  const url = new URL(req.url, 'http://localhost');
-
-  if (url.pathname.startsWith('/api/')) {
-    return dispatch(req, res);
-  }
-
-  // Раздаём файлы из папки бота: /bot-data/* → memorial-bot/data/*
-  if (url.pathname.startsWith('/bot-data/')) {
-    const rel  = decodeURIComponent(url.pathname.slice('/bot-data/'.length));
-    const file = path.join(BOT_DATA_DIR, rel);
-    if (!file.startsWith(BOT_DATA_DIR)) { res.writeHead(403); return res.end('Forbidden'); }
-    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); return res.end('Not found'); }
-    const ext  = path.extname(file).toLowerCase();
-    const mime = MIME[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-cache' });
-    return fs.createReadStream(file).pipe(res);
-  }
-
-  serveStatic(req, res);
-});
-
-server.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║  🕯️  Memory Site Server                ║
-║  http://localhost:${PORT}                 ║
-║  API: http://localhost:${PORT}/api/       ║
-╚════════════════════════════════════════╝
-  `);
-
-  // Run database backup and file cleanup checks on startup
-  try {
-    console.log('[Startup] Executing automatic database backup...');
-    runBackup();
-  } catch (err) {
-    console.error('[Startup] Automatic backup failed:', err.message);
-  }
-
-  try {
-    console.log('[Startup] Executing automatic uploads cleanup...');
-    runCleanup();
-  } catch (err) {
-    console.error('[Startup] Automatic cleanup failed:', err.message);
-  }
-
-  // Schedule background backups and cleanups every 24 hours
-  const INTERVAL_24H = 24 * 60 * 60 * 1000;
-  setInterval(() => {
-    try {
-      console.log('[Scheduled] Running scheduled database backup...');
-      runBackup();
-    } catch (err) {
-      console.error('[Scheduled] Scheduled backup failed:', err.message);
-    }
-
-    try {
-      console.log('[Scheduled] Running scheduled uploads cleanup...');
-      runCleanup();
-    } catch (err) {
-      console.error('[Scheduled] Scheduled cleanup failed:', err.message);
-    }
-  }, INTERVAL_24H);
-});
-
-server.on('error', err => {
-  console.error('Server error:', err.message);
-  process.exit(1);
-});
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

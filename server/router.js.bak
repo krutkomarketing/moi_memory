@@ -102,16 +102,8 @@ async function listHandler(req, res) {
 }
 
 async function detailHandler(req, res) {
-    const accessToken =
-        req.headers['x-profile-access'] ||
-        req.query.accessToken ||
-        null;
-    const data = await profileService.getProfileDetail(
-        req.params.id,
-        req.user || null,
-        { accessToken },
-    );
-    return ok(res, { data });
+	const data = await profileService.getProfileDetail(req.params.id, req.user || null);
+	return ok(res, { data });
 }
 
 async function createHandler(req, res) {
@@ -167,15 +159,12 @@ router.post('/profiles/:id/photo', requireAuth, upload.single('photo'), wrap(asy
 
 /* ── Access code (per-profile password) ── */
 router.post('/people/:id/verify-code', wrap(async (req, res) => {
-    const { code } = req.body || {};
-    const result = await codeService.verify(req.params.id, code);
-    return ok(res, result); // { ok, accessToken?, expiresIn?, required? }
+	const { code } = req.body || {};
+	const result = await codeService.verify(req.params.id, code);
+	if (!result.ok) return err(res, 403, result.error || 'invalid_code');
+	return ok(res, {});
 }));
-router.post('/people/:id/unset-code', requireAuth, wrap(async (req, res) => {
-    const { visibility } = req.body || {};
-    const result = await codeService.unset(req.params.id, req.user.id, req.user.role, visibility);
-    return ok(res, result);
-}));
+
 router.post('/people/:id/set-code', requireAuth, wrap(async (req, res) => {
 	const { code } = req.body || {};
 	await codeService.set(req.params.id, code, req.user.id, req.user.role);
@@ -185,37 +174,21 @@ router.post('/people/:id/set-code', requireAuth, wrap(async (req, res) => {
 /* ═══════════════════════════════════════════════════════ */
 /*  REVIEWS / GUEST MEMORIES                               */
 /* ═══════════════════════════════════════════════════════ */
+
 router.get('/reviews/:personId', optionalAuth, wrap(async (req, res) => {
-    const data = await reviewService.list(req.params.personId, req.user || null);
-    return ok(res, { data });
+	const data = await reviewService.list(req.params.personId);
+	return ok(res, { data });
 }));
 
 router.post('/reviews/:personId', optionalAuth, wrap(async (req, res) => {
-    const data = await reviewService.create(req.params.personId, req.body || {}, req.user?.id || null);
-    return ok(res, { data }, 201);
+	const data = await reviewService.create(req.params.personId, req.body || {}, req.user?.id || null);
+	return ok(res, { data }, 201);
 }));
 
-// Pending очередь — только для owner / ADMIN
-router.get('/reviews/:personId/pending', requireAuth, wrap(async (req, res) => {
-    const data = await reviewService.listPending(req.params.personId, req.user);
-    return ok(res, { data });
-}));
-
-// Approve / Reject (модерация)
-router.put('/reviews/:id/approve', requireAuth, wrap(async (req, res) => {
-    const data = await reviewService.approve(req.params.id, req.user.id, req.user.role);
-    return ok(res, { data });
-}));
-
-router.put('/reviews/:id/reject', requireAuth, wrap(async (req, res) => {
-    const result = await reviewService.reject(req.params.id, req.user.id, req.user.role);
-    return ok(res, result);
-}));
-
-// Кастомный endpoint от frontend (старый)
+// Кастомный endpoint от frontend
 router.delete('/reviews/delete/:id', requireAuth, wrap(async (req, res) => {
-    await reviewService.del(req.params.id, req.user.id, req.user.role);
-    return ok(res, {});
+	await reviewService.del(req.params.id, req.user.id, req.user.role);
+	return ok(res, {});
 }));
 
 /* ═══════════════════════════════════════════════════════ */
@@ -264,7 +237,7 @@ router.post('/upload-video', optionalAuth, upload.single('photo'), wrap(makeUplo
 /*  FAMILY TREES                                           */
 /* ═══════════════════════════════════════════════════════ */
 
-router.get('/family-trees', optionalAuth, wrap(async (req, res) => {
+router.get('/family-trees', requireAuth, wrap(async (req, res) => {
 	const data = await familyService.listTrees(req.user);
 	return ok(res, { data });
 }));
@@ -274,7 +247,7 @@ router.post('/family-trees', requireAuth, wrap(async (req, res) => {
 	return ok(res, { data }, 201);
 }));
 
-router.get('/family-trees/:id', optionalAuth, wrap(async (req, res) => {
+router.get('/family-trees/:id', requireAuth, wrap(async (req, res) => {
 	const data = await familyService.getTree(req.params.id, req.user);
 	return ok(res, { data });
 }));

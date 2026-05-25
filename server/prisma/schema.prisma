@@ -1,5 +1,7 @@
-// Prisma Schema для мемориальных страниц
-// PostgreSQL + Prisma ORM
+// ============================================================
+//  МЕМОРИАЛЬНЫЙ САЙТ «ПАМЯТЬ» — единая схема (v2)
+//  PostgreSQL + Prisma
+// ============================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -10,57 +12,466 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Владелец профиля (пользователь из Telegram-бота)
-model User {
-  id         Int       @id @default(autoincrement())
-  telegramId String    @unique
-  createdAt  DateTime  @default(now())
-  
-  profiles   Profile[]
+// ============================================================
+//  ENUMS
+// ============================================================
+
+enum UserRole {
+  USER       // обычный пользователь сайта
+  EDITOR     // может редактировать назначенные профили
+  ADMIN      // полный доступ
 }
 
-// Профиль мемориальной страницы (Hero-блок)
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum Visibility {
+  PUBLIC          // виден всем
+  UNLISTED        // только по прямой ссылке
+  PASSWORD        // требует пин-код / пароль
+  PRIVATE         // только владелец / разрешённые
+}
+
+// Типизация 6 дефолтных блоков биографии (п. 1.4)
+enum BlockType {
+  HERO       // hero-блок (фото + имя + даты) — генерируется из Profile, опционально
+  CHILDHOOD
+  EDUCATION
+  CAREER
+  FAMILY
+  HOBBIES
+  LEGACY
+  CUSTOM     // пользовательский блок
+}
+
+enum MemoryType {
+  TEXT
+  PHOTO
+  AUDIO
+  VIDEO
+}
+
+enum RelationType {
+  PARENT     // node -> child (родитель → ребёнок)
+  SPOUSE     // супружество (двунаправленное, см. ниже)
+  ADOPTIVE   // приёмный родитель
+  STEP       // отчим / мачеха
+}
+
+enum TimelineCategory {
+  BIRTH
+  DEATH
+  MARRIAGE
+  EDUCATION
+  CAREER
+  RELOCATION
+  AWARD
+  HISTORICAL  // событие страны/мира (без привязки к FamilyNode)
+  CUSTOM
+}
+
+enum MediaKind {
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+}
+
+// ============================================================
+//  AUTH / USERS
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  // PBKDF2-SHA512: хранится строкой формата "iterations:saltHex:hashHex"
+  passwordHash  String
+  displayName   String?
+  role          UserRole  @default(USER)
+  telegramId    BigInt?   @unique   // привязка к боту (объединение bot.db)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Что человек создал/чем владеет
+  ownedProfiles    Profile[]        @relation("ProfileOwner")
+  guestMemories    GuestMemory[]    // если оставил воспоминание авторизованным
+  candleLights     CandleLight[]
+  accessGrants     ProfileAccess[]
+  editorOf         ProfileAccess[]  @relation("EditorGrants")
+  uploadedMedia    Media[]
+
+  @@index([role])
+}
+
+// ============================================================
+//  PROFILE — страница памяти
+// ============================================================
+
 model Profile {
-  id           String         @id @default(uuid())
-  ownerId      Int
-  fullName     String
-  dates        String
-  mainText     String         @db.Text
-  mainPhotoUrl String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  contentBlocks ContentBlock[]
-  guestMemories GuestMemory[]
-  
+  id            String     @id @default(cuid())
+  slug          String     @unique          // для красивых URL: /p/ivan-petrov
+  fullName      String
+  birthDate     DateTime?
+  deathDate     DateTime?
+  birthPlace    String?
+  deathPlace    String?
+  burialPlace   String?
+  burialLat     Float?
+  burialLng     Float?
+  bio           String?    @db.Text         // короткое intro (hero subtitle)
+  coverPhotoId  String?    @unique
+  coverPhoto    Media?     @relation("ProfileCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  gender        Gender     @default(UNKNOWN)
+
+  // Видимость и защита
+  visibility    Visibility @default(PUBLIC)
+  // Пароль страницы: PBKDF2 в том же формате "iterations:saltHex:hashHex".
+  // NULL если visibility != PASSWORD
+  accessHash    String?
+
+  ownerId       String
+  owner         User       @relation("ProfileOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  // Привязка к узлу в семейном дереве (1:1, опционально)
+  familyNodeId  String?    @unique
+  familyNode    FamilyNode? @relation(fields: [familyNodeId], references: [id], onDelete: SetNull)
+
+  // Связи
+  blocks         ContentBlock[]
+  galleryItems   GalleryItem[]
+  guestMemories  GuestMemory[]
+  candleLights   CandleLight[]
+  accessGrants   ProfileAccess[]
+  timelineEvents TimelineEvent[]   // личные события, не привязанные к FamilyNode
+  qrPlaques      QrPlaque[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([ownerId])
+  @@index([visibility])
+  @@index([fullName])
+  searchVector  Unsupported("tsvector")?
+}
+
+// Расширенный доступ: editor / viewer на конкретный профиль (RBAC уровня сущности)
+model ProfileAccess {
+  id         String   @id @default(cuid())
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy  String
+  grantor    User     @relation("EditorGrants", fields: [grantedBy], references: [id], onDelete: Restrict)
+  canEdit    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([profileId, userId])
+  @@index([userId])
+}
+
+// ============================================================
+//  CONTENT BLOCKS — типизированные блоки страницы (п. 1.4)
+// ============================================================
+
+model ContentBlock {
+  id         String     @id @default(cuid())
+  profileId  String
+  profile    Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  type       BlockType                       // жёстко типизирован enum
+  title      String?                          // кастомный заголовок (для CUSTOM)
+  body       String     @db.Text              // основной текст
+  // Опциональное иллюстративное фото (одно — в зебра-вёрстке слева/справа)
+  photoId    String?
+  photo      Media?     @relation("BlockPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+
+  order      Int                              // порядок сортировки
+  isHidden   Boolean    @default(false)
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Уникальность по (profileId, type) — для дефолтных блоков (1 CHILDHOOD на профиль).
+  // CUSTOM-блоков может быть много; для них создаём отдельный частичный индекс в SQL миграции
+  // (Prisma пока не поддерживает partial unique в schema.prisma).
+  @@unique([profileId, order])
+  @@index([profileId, type])
+}
+
+// ============================================================
+//  GALLERY — фото-карусель страницы (отдельная сущность, не путать с блоками)
+// ============================================================
+
+model GalleryItem {
+  id         String   @id @default(cuid())
+  profileId  String
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  mediaId    String
+  media      Media    @relation("GalleryMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+  caption    String?
+  order      Int
+  createdAt  DateTime @default(now())
+
+  @@unique([profileId, order])
+  @@index([profileId])
+}
+
+// ============================================================
+//  GUEST MEMORIES — воспоминания посетителей (модерация)
+// ============================================================
+
+model GuestMemory {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  authorUserId String?                          // если оставил авторизованный
+  authorUser   User?      @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorName   String                            // имя, отображаемое на карточке (может отличаться)
+
+  type         MemoryType @default(TEXT)
+  text         String?    @db.Text
+  mediaId      String?
+  media        Media?     @relation("MemoryMedia", fields: [mediaId], references: [id], onDelete: SetNull)
+
+  isApproved   Boolean    @default(false)        // модерация
+  approvedAt   DateTime?
+  approvedById String?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([profileId, isApproved])
+  @@index([authorUserId])
+}
+
+// ============================================================
+//  CANDLE LIGHTS — свечи (счётчик заменён нормализованной таблицей)
+// ============================================================
+
+model CandleLight {
+  id         String   @id @default(cuid())
+  // Свеча может быть зажжена:
+  //  - на главной (profileId = NULL) — общая «свеча памяти»
+  //  - на конкретной странице памяти
+  profileId  String?
+  profile    Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Анонимный fingerprint (IP+UA hash) для антифрод и rate-limit
+  fingerprint String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([userId])
+  @@index([fingerprint, createdAt])
+}
+
+// ============================================================
+//  FAMILY TREE
+// ============================================================
+
+model FamilyTree {
+  id          String       @id @default(cuid())
+  name        String                              // «Род Петровых»
+  description String?      @db.Text
+  ownerId     String
+  visibility  Visibility   @default(UNLISTED)
+  accessHash  String?
+
+  nodes       FamilyNode[]
+  clans       FamilyClan[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
   @@index([ownerId])
 }
+// ============================================================
+//  FAMILY CLAN — род (для цветной подсветки линий в дереве)
+// ============================================================
 
-// Контентные блоки для Zebra-ленты (чередующиеся истории)
-model ContentBlock {
-  id        Int      @id @default(autoincrement())
-  profileId String
-  text      String   @db.Text
-  imageUrl  String?
-  order     Int      // КРИТИЧНО: порядок для шахматной раскладки
-  createdAt DateTime @default(now())
-  
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  @@index([profileId, order])
+model FamilyClan {
+  id          String       @id @default(cuid())
+  treeId      String
+  tree        FamilyTree   @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  name        String                              // «Род Ивановых»
+  color       String       @default("#c8a84b")    // hex для отрисовки нитей
+  icon        String       @default("✦")          // короткий символ (1-4 char)
+  description String?      @db.Text
+  nodes       FamilyNode[]
+  createdAt   DateTime     @default(now())
+
+  @@unique([treeId, name])
+  @@index([treeId])
 }
 
-// Воспоминания от посетителей
-model GuestMemory {
-  id         Int      @id @default(autoincrement())
+// Узел дерева. Может (но не обязан) ссылаться на Profile (страницу памяти).
+model FamilyNode {
+  id           String       @id @default(cuid())
+  treeId       String
+  tree         FamilyTree   @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  // Имя и даты дублируются здесь, чтобы можно было строить дерево
+  // без обязательной полноценной страницы памяти.
+  firstName    String
+  lastName     String?
+  maidenName   String?
+  birthDate    DateTime?
+  deathDate    DateTime?
+  gender       Gender       @default(UNKNOWN)
+  photoId      String?
+  photo        Media?       @relation("NodePhoto", fields: [photoId], references: [id], onDelete: SetNull)
+
+  clanId       String?
+  clan         FamilyClan?  @relation(fields: [clanId], references: [id], onDelete: SetNull)
+  notes        String?      @db.Text
+
+  // 1:1 со страницей памяти, если она есть (зеркало Profile.familyNodeId)
+  profile      Profile?
+
+  // Реляционные связи (п. 1.2) — JSON parent_ids больше не нужен
+  parentLinks  FamilyConnection[] @relation("Child")
+  childLinks   FamilyConnection[] @relation("Parent")
+
+  // События жизни (п. 1.3) — напрямую связаны с узлом
+  timelineEvents TimelineEvent[]
+
+  // Позиция в схеме (для редактора дерева; опционально)
+  posX         Float?
+  posY         Float?
+  generation   Int?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([treeId, generation])
+  @@index([lastName, firstName])
+}
+
+// Самоссылающаяся таблица связей вместо JSON parent_ids.
+// PARENT: fromNode = родитель, toNode = ребёнок (направленно).
+// SPOUSE: записываем ОДНУ строку (fromNode < toNode по id) — приложение интерпретирует как двунаправленную.
+model FamilyConnection {
+  id          String       @id @default(cuid())
+  fromNodeId  String
+  fromNode    FamilyNode   @relation("Parent", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNodeId    String
+  toNode      FamilyNode   @relation("Child",  fields: [toNodeId],   references: [id], onDelete: Cascade)
+
+  type        RelationType
+  // Для SPOUSE: даты брака/развода
+  startDate   DateTime?
+  endDate     DateTime?
+  notes       String?
+
+  createdAt   DateTime     @default(now())
+
+  // Никаких дубликатов: одна связь определённого типа между двумя узлами
+  @@unique([fromNodeId, toNodeId, type])
+  @@index([toNodeId, type])
+  @@index([fromNodeId, type])
+}
+
+// ============================================================
+//  TIMELINE / ЛЕТОПИСЬ
+// ============================================================
+
+model TimelineEvent {
+  id           String           @id @default(cuid())
+
+  // Событие может относиться к:
+  //   - конкретному родственнику (FamilyNode)   ← п. 1.3
+  //   - конкретной странице (Profile)
+  //   - быть «историческим» (оба NULL + category=HISTORICAL)
+  familyNodeId String?
+  familyNode   FamilyNode?      @relation(fields: [familyNodeId], references: [id], onDelete: Cascade)
+  profileId    String?
+  profile      Profile?         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  category     TimelineCategory
+  title        String
+  description  String?          @db.Text
+  date         DateTime                              // точная дата
+  dateAccuracy String?                               // "year" | "month" | "day"
+  place        String?
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([familyNodeId, date])
+  @@index([profileId, date])
+  @@index([category, date])
+}
+
+// ============================================================
+//  MEDIA — единое хранилище для всех файлов (фото/аудио/видео)
+// ============================================================
+
+model Media {
+  id           String     @id @default(cuid())
+  kind         MediaKind
+  url          String                       // путь относительно /uploads/
+  originalName String?
+  mimeType     String
+  sizeBytes    Int
+  width        Int?
+  height       Int?
+  durationSec  Int?                          // для audio/video
+
+  uploadedById String?
+  uploadedBy   User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime   @default(now())
+
+  // Обратные связи (для каскадного удаления и анализа)
+  profileCover     Profile?       @relation("ProfileCover")
+  galleryItems     GalleryItem[]  @relation("GalleryMedia")
+  blockPhotos      ContentBlock[] @relation("BlockPhoto")
+  nodePhotos       FamilyNode[]   @relation("NodePhoto")
+  memoryAttachments GuestMemory[] @relation("MemoryMedia")
+
+  @@index([uploadedById])
+  @@index([kind])
+}
+
+// ============================================================
+//  QR ТАБЛИЧКИ
+// ============================================================
+
+model QrPlaque {
+  id         String   @id @default(cuid())
   profileId  String
-  authorName String
-  memoryText String   @db.Text
-  isApproved Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  
   profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  @@index([profileId, isApproved])
+  code       String   @unique                  // короткий код для /qr/:code
+  isActive   Boolean  @default(true)
+  orderedAt  DateTime @default(now())
+  shippedAt  DateTime?
+
+  @@index([profileId])
+}
+
+// ============================================================
+//  PROFILE ACCESS CODE — пин-код для PASSWORD-страниц
+//  (на случай нескольких ротируемых кодов; основной хеш живёт в Profile.accessHash)
+// ============================================================
+
+model ProfileAccessCode {
+  id         String   @id @default(cuid())
+  profileId  String
+  // Не храним plaintext: PBKDF2 в формате "iterations:saltHex:hashHex"
+  codeHash   String
+  label      String?                           // «Для семьи», «Для коллег»
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([profileId])
 }
