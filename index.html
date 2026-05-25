@@ -53,32 +53,10 @@
       </div>
       
       <div class="hero__visual">
-        <div class="qr-plaque" title="Металлическая мемориальная табличка с QR-кодом">
-          <div class="qr-plaque__border"></div>
-          <div class="qr-plaque__bolt qr-plaque__bolt--tl"></div>
-          <div class="qr-plaque__bolt qr-plaque__bolt--tr"></div>
-          <div class="qr-plaque__bolt qr-plaque__bolt--bl"></div>
-          <div class="qr-plaque__bolt qr-plaque__bolt--br"></div>
-          <div class="qr-plaque__content">
-            <div class="qr-plaque__header">
-              <span class="qr-plaque__candle">🕯️</span>
-              <span class="qr-plaque__title">Страница памяти</span>
-            </div>
-            <div class="qr-plaque__qr-wrapper">
-              <svg class="qr-plaque__qr" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 0h25v5H0zm0 5h5v15H0zm20 0h5v15h-5zM0 20h25v5H0zm30 0h5v5h-5zm10 0h15v5H40zm20 0h10v5H60zm15 0h10v5H75zm15 0h10v5H90zM0 30h5v15H0zm10 0h10v5H10zm10 10h5v5h-5zm10-10h15v5H30zm20 0h5v15h-5zM0 50h25v5H0zm0 5h5v15H0zm20 0h5v15h-5zM0 70h25v5H0zm30-20h5v5h-5zm10 0h10v5H40zm15 0h10v5H55zm15 0h15v5H70zm15 0h10v5H85zm-55 10h5v5h-5zm10 0h15v5H40zm20 0h5v15h-5zM30 70h15v5H30zm20 0h10v5H50zm15 0h15v5H65zm15 0h10v5H80zm10 0h10v5H90zM30 80h5v15H30zm10 0h10v5H40zm15 0h5v15h-5zm10 0h15v5H65zm15 0h10v5H80z" />
-                <rect x="0" y="0" width="30" height="30" fill="none" stroke="#111111" stroke-width="6"/>
-                <rect x="10" y="10" width="10" height="10" fill="#111111"/>
-                <rect x="70" y="0" width="30" height="30" fill="none" stroke="#111111" stroke-width="6"/>
-                <rect x="80" y="10" width="10" height="10" fill="#111111"/>
-                <rect x="0" y="70" width="30" height="30" fill="none" stroke="#111111" stroke-width="6"/>
-                <rect x="10" y="80" width="10" height="10" fill="#111111"/>
-              </svg>
-            </div>
-            <p class="qr-plaque__instruction">Считайте код смартфоном<br/>чтобы войти в мемориал памяти</p>
-            <div class="qr-plaque__footer">MEMORY.SITE</div>
+        <div id="hero-canvas-container" class="hero-canvas-container">
+          <div id="hero-canvas-loader" class="hero-canvas-loader">
+            <div class="spinner"></div>
           </div>
-          <div class="qr-plaque__shimmer"></div>
         </div>
       </div>
     </div>
@@ -241,6 +219,94 @@
     </div>
   </section>
 
+  <!-- 3D CONSTRUCTOR -->
+  <section class="constructor-3d" id="plaque-constructor">
+    <div class="constructor-3d__inner">
+
+      <div class="constructor-3d__grid">
+        <!-- 3D Canvas Column -->
+        <div class="constructor-3d__visual-col">
+          <div id="canvas-container" class="constructor-3d__canvas-container">
+            <div id="canvas-loader" class="constructor-3d__canvas-loader">
+              <div class="spinner"></div>
+              <span>Отливка металла...</span>
+            </div>
+            <div class="constructor-3d__hint-overlay">
+              <span class="constructor-3d__hint-text">Потяните пластину, чтобы рассмотреть грани</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Controls Column -->
+        <div class="constructor-3d__controls-col">
+          <div class="constructor-3d__panel">
+            <h3 class="constructor-3d__panel-title">Настройки гравировки</h3>
+            
+            <!-- URL Input -->
+            <div class="constructor-3d__form-group">
+              <label class="constructor-3d__label">Ссылка на страницу памяти</label>
+              <input type="text" id="qr-input" value="https://example.com/memory" 
+                     class="constructor-3d__input" placeholder="https://example.com/memory">
+            </div>
+
+            <!-- Metal Choice -->
+            <div class="constructor-3d__form-group">
+              <label class="constructor-3d__label">Материал основы</label>
+              <div class="constructor-3d__metals-grid">
+                <button type="button" onclick="setMetal('gold')" id="btn-gold" class="metal-btn metal-btn--active">
+                  <div class="metal-btn__circle metal-btn__circle--gold"></div>
+                  <span class="metal-btn__name">Золото</span>
+                </button>
+                <button type="button" onclick="setMetal('bronze')" id="btn-bronze" class="metal-btn">
+                  <div class="metal-btn__circle metal-btn__circle--bronze"></div>
+                  <span class="metal-btn__name">Бронза</span>
+                </button>
+                <button type="button" onclick="setMetal('silver')" id="btn-silver" class="metal-btn">
+                  <div class="metal-btn__circle metal-btn__circle--silver"></div>
+                  <span class="metal-btn__name">Серебро</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Parameters sliders -->
+            <div class="constructor-3d__form-group">
+              <div class="constructor-3d__slider-header">
+                <span class="constructor-3d__label">Матовость</span>
+                <span id="roughness-val" class="constructor-3d__slider-val">15%</span>
+              </div>
+              <input type="range" id="roughness-slider" min="0.05" max="0.5" step="0.01" value="0.15" 
+                     class="constructor-3d__range-input">
+            </div>
+
+            <div class="constructor-3d__form-group">
+              <div class="constructor-3d__slider-header">
+                <span class="constructor-3d__label">Глубина тиснения</span>
+                <span id="etch-val" class="constructor-3d__slider-val">65%</span>
+              </div>
+              <input type="range" id="etch-slider" min="0.1" max="1.0" step="0.05" value="0.65" 
+                     class="constructor-3d__range-input">
+            </div>
+
+            <!-- Switch & Action Button -->
+            <div class="constructor-3d__footer">
+              <div class="constructor-3d__toggle-row">
+                <span class="constructor-3d__label">Осмотр (Вращение)</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="autorotate-check" checked>
+                  <span class="toggle-switch__slider"></span>
+                </label>
+              </div>
+
+              <button type="button" id="laser-btn" class="btn btn--primary constructor-3d__submit-btn">
+                <span>Высечь в металле</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CANDLE -->
   <section class="candle-section">
     <div class="candle-section__inner">
@@ -329,6 +395,13 @@
       </div>
     </div>
   </footer>
+
+  <!-- 3D Constructor & Hero Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script src="js/hero-3d.js"></script>
+  <script src="js/constructor-3d.js"></script>
 
   <script src="js/particles.js"></script>
   <script src="js/favicon.js"></script>

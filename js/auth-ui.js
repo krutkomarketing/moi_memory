@@ -88,6 +88,20 @@
   /* ── Inject auth button into nav ── */
   const authBtn = document.createElement('button');
   authBtn.className = 'nav__auth';
+
+  // Injected mobile auth element inside the dropdown menu
+  const navLinks = document.querySelector('.nav__links');
+  let mobileAuthLi = null;
+  let mobileAuthBtn = null;
+  if (navLinks) {
+    mobileAuthLi = document.createElement('li');
+    mobileAuthBtn = document.createElement('a');
+    mobileAuthBtn.className = 'nav__link nav__link--auth';
+    mobileAuthBtn.style.cursor = 'pointer';
+    mobileAuthLi.appendChild(mobileAuthBtn);
+    navLinks.appendChild(mobileAuthLi);
+  }
+
   updateAuthBtn();
   nav.appendChild(authBtn);
 
@@ -95,9 +109,17 @@
     if (API.isLoggedIn()) {
       authBtn.textContent = 'Выйти';
       authBtn.onclick = () => { API.logout(); location.reload(); };
+      if (mobileAuthBtn) {
+        mobileAuthBtn.textContent = 'Выйти';
+        mobileAuthBtn.onclick = () => { API.logout(); location.reload(); };
+      }
     } else {
       authBtn.textContent = 'Войти';
       authBtn.onclick = () => openModal('login');
+      if (mobileAuthBtn) {
+        mobileAuthBtn.textContent = 'Войти';
+        mobileAuthBtn.onclick = () => openModal('login');
+      }
     }
   }
 
