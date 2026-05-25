@@ -110,15 +110,15 @@
       featuredSection.innerHTML = `
         <div class="featured-person__inner" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
           <p class="hero__eyebrow">Личный Кабинет</p>
-          <div class="featured-person__card" style="width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3.5rem 2rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; backdrop-filter: blur(15px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);">
-            <div style="font-size: 3rem; color: #c8a84b; margin-bottom: 1.5rem; text-shadow: 0 0 15px rgba(200, 168, 75, 0.3);">✦</div>
-            <h2 class="featured-person__name" style="font-size: 2rem; font-weight: 600; margin-bottom: 1rem; color: #fff;">Создайте Свою Семейную Летопись</h2>
-            <p style="font-size: 1.05rem; color: rgba(255, 255, 255, 0.7); max-width: 600px; line-height: 1.6; margin-bottom: 2rem;">
+          <div class="featured-person__card" style="width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; backdrop-filter: blur(15px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);">
+            <div style="font-size: 1.6rem; color: #c8a84b; margin-bottom: 0.75rem; text-shadow: 0 0 15px rgba(200, 168, 75, 0.3);">✦</div>
+            <h2 class="featured-person__name" style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: #fff;">Создайте Свою Семейную Летопись</h2>
+            <p style="font-size: 0.88rem; color: rgba(255, 255, 255, 0.7); max-width: 100%; line-height: 1.6; margin-bottom: 1.5rem;">
               Сохраните историю вашего рода, создавайте интерактивные семейные древа, добавляйте памятные события родственникам и пишите воспоминания. Ваши данные полностью конфиденциальны и видны только вам.
             </p>
-            <div style="display: flex; gap: 15px;">
-              <button onclick="window.openAuthModal('register')" class="btn btn--primary" style="padding: 0.9rem 2rem; font-size: 0.95rem;">Создать аккаунт</button>
-              <button onclick="window.openAuthModal('login')" class="btn btn--secondary" style="padding: 0.9rem 2rem; font-size: 0.95rem; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;">Войти</button>
+            <div style="display: flex; gap: 12px;">
+              <button onclick="window.openAuthModal('register')" class="btn btn--primary" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">Создать аккаунт</button>
+              <button onclick="window.openAuthModal('login')" class="btn btn--secondary" style="padding: 0.6rem 1.4rem; font-size: 0.85rem; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;">Войти</button>
             </div>
           </div>
         </div>
