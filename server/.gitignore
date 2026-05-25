@@ -1,1 +1,11 @@
+
 # Empty gitignore
+# Не коммитить node_modules и SQLite-бэкапы
+*.bak
+*.db
+*.db-shm
+*.db-wal
+.env
+data/
+data/backups/
+node_modules/
