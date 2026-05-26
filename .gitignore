@@ -40,3 +40,52 @@ copy-ts.sh
 
 # tmp scripts
 /tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local databases (SQLite legacy)
+*.db
+*.db-shm
+*.db-wal
+
+# Docker volumes
+volumes/
+
+# IDE
+.kiro/
+.vscode/
+.idea/
+
+# Env
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local databases (SQLite legacy)
+*.db
+*.db-shm
+*.db-wal
+
+# Docker
+volumes/
+docker-compose.override.yml
+
+# IDE
+.kiro/
+.vscode/
+.idea/
+
+# Env
+.env
+!.env.example
