@@ -116,6 +116,15 @@ router.get('/auth/me', authGeneralLimiter, requireAuth, wrap(async (req, res) =>
     return ok(res, { user: req.user });
 }));
 
+router.post('/auth/logout', requireAuth, wrap(async (req, res) => {
+    await auditService.logAction({
+        action: 'LOGOUT',
+        userId: req.user.id,
+        req,
+    });
+    return ok(res, {});
+}));
+
 /* ═══════════════════════════════════════════════════════ */
 /*  STATS                                                  */
 /* ═══════════════════════════════════════════════════════ */
@@ -148,6 +157,35 @@ router.get('/admin/audit-logs', requireAuth, wrap(async (req, res) => {
         limit: parseInt(req.query.limit || '50', 10),
     });
     return ok(res, result);
+}));
+
+// ========== USER ROLE CHANGE (ADMIN only) ==========
+router.put('/admin/users/:id/role', requireAuth, wrap(async (req, res) => {
+    if (req.user.role !== 'ADMIN') return err(res, 403, 'Доступ только для администраторов');
+    const { role } = req.body || {};
+    if (!['USER', 'ADMIN'].includes(role)) return err(res, 400, 'Invalid role (USER|ADMIN)');
+    const before = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, email: true, role: true },
+    });
+    if (!before) return err(res, 404, 'User not found');
+    if (before.id === req.user.id) return err(res, 400, 'Нельзя менять роль себе');
+    const updated = await prisma.user.update({
+        where: { id: req.params.id },
+        data: { role },
+        select: { id: true, email: true, displayName: true, role: true },
+    });
+    await auditService.logAction({
+        action: 'USER_ROLE_CHANGE',
+        userId: req.user.id,
+        entityType: 'User',
+        entityId: updated.id,
+        oldValue: { role: before.role },
+        newValue: { role: updated.role },
+        metadata: { targetEmail: updated.email },
+        req,
+    });
+    return ok(res, { user: updated });
 }));
 /* ═══════════════════════════════════════════════════════ */
 /*  PROFILES / PEOPLE (alias)                              */
@@ -219,11 +257,33 @@ async function detailHandler(req, res) {
 
 async function createHandler(req, res) {
     const data = await profileService.createProfile(req.body || {}, req.user);
+    await auditService.logAction({
+        action: 'PROFILE_CREATE',
+        userId: req.user.id,
+        entityType: 'Profile',
+        entityId: data?.id || null,
+        newValue: { id: data?.id, slug: data?.slug, fullName: data?.fullName, visibility: data?.visibility },
+        req,
+    });
     return ok(res, { data }, 201);
 }
 
 async function updateHandler(req, res) {
+    let oldSnapshot = null;
+    try {
+        const p = await profileService.resolveProfile(req.params.id);
+        if (p) oldSnapshot = { id: p.id, slug: p.slug, fullName: p.fullName, visibility: p.visibility };
+    } catch (_) {}
     const data = await profileService.updateProfile(req.params.id, req.body || {}, req.user);
+    await auditService.logAction({
+        action: 'PROFILE_UPDATE',
+        userId: req.user.id,
+        entityType: 'Profile',
+        entityId: data?.id || req.params.id,
+        oldValue: oldSnapshot,
+        newValue: { id: data?.id, slug: data?.slug, fullName: data?.fullName, visibility: data?.visibility },
+        req,
+    });
     return ok(res, { data });
 }
 
@@ -379,6 +439,14 @@ router.get('/family-trees', optionalAuth, wrap(async (req, res) => {
 
 router.post('/family-trees', requireAuth, wrap(async (req, res) => {
     const data = await familyService.createTree(req.body || {}, req.user);
+    await auditService.logAction({
+        action: 'TREE_CREATE',
+        userId: req.user.id,
+        entityType: 'FamilyTree',
+        entityId: data?.id || null,
+        newValue: { id: data?.id, name: data?.name, visibility: data?.visibility },
+        req,
+    });
     return ok(res, { data }, 201);
 }));
 
@@ -554,6 +622,14 @@ router.get('/profiles/:idOrSlug/access-codes', requireAuth, wrap(async (req, res
 
 router.post('/profiles/:idOrSlug/access-codes', requireAuth, wrap(async (req, res) => {
     const data = await accessCodeService.createCode(req.params.idOrSlug, req.body || {}, req.user);
+    await auditService.logAction({
+        action: 'ACCESS_CODE_GENERATE',
+        userId: req.user.id,
+        entityType: 'ProfileAccessCode',
+        entityId: data?.id || null,
+        metadata: { profileSlug: req.params.idOrSlug, label: data?.label || null, expiresAt: data?.expiresAt || null },
+        req,
+    });
     return ok(res, { data }, 201);
 }));
 
@@ -570,6 +646,14 @@ router.delete('/profiles/:idOrSlug/access-codes/:codeId', requireAuth, wrap(asyn
 router.post('/profiles/:idOrSlug/verify-access-code', optionalAuth, wrap(async (req, res) => {
     const { code } = req.body || {};
     const data = await accessCodeService.verifyAccessCode(req.params.idOrSlug, code, req.user || null);
+    await auditService.logAction({
+        action: 'ACCESS_CODE_REDEEM',
+        userId: req.user?.id || null,
+        entityType: 'ProfileAccessCode',
+        entityId: data?.codeId || null,
+        metadata: { profileSlug: req.params.idOrSlug, grantCreated: data?.grantCreated || false },
+        req,
+    });
     return ok(res, { data });
 }));
 
