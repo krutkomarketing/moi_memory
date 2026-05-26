@@ -8,6 +8,7 @@
     "dev": "node --watch index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio --port 5557",
     "migrate:from-sqlite": "node scripts/migrate-from-sqlite.js",
     "restore:clans": "node scripts/restore-clans.js"
@@ -19,6 +20,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "multer": "^2.0.1",
     "sharp": "^0.33.5"
   },

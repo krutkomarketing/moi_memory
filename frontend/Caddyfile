@@ -1,0 +1,43 @@
+:80 {
+    root * /srv
+    encode gzip zstd
+
+    # === API → backend ===
+    handle /api/* {
+        reverse_proxy backend:3000
+    }
+
+    # === SEO на корне → backend ===
+    handle /sitemap.xml {
+        reverse_proxy backend:3000
+    }
+    handle /robots.txt {
+        reverse_proxy backend:3000
+    }
+    handle /health {
+        reverse_proxy backend:3000
+    }
+
+    # === Загруженные файлы профилей (volume mount) ===
+    handle_path /uploads/* {
+        root * /srv/uploads
+        file_server
+    }
+
+    # === Статика фронта + fallback на .html ===
+    handle {
+        try_files {path} {path}.html /index.html
+        file_server
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}
+
+# Когда появится домен:
+# example.com {
+#     # тот же набор handle-блоков
+#     # Caddy сам получит TLS-сертификат
+# }

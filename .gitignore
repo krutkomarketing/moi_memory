@@ -1,42 +1,46 @@
-# Node
+# === Node ===
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 
-# Env (СЕКРЕТЫ!)
-.env
-.env.local
-.env.*.local
-*/.env
-**/.env
+# === OS ===
+.DS_Store
+Thumbs.db
 
-# Uploads (генерятся пользователями)
-server/uploads/
+# === Logs ===
+*.log
 
-# Old SQLite (мусор)
+# === Local databases (SQLite legacy) ===
 *.db
 *.db-shm
 *.db-wal
-server/data/
-bot/data/
 
-# Backups
-backups/
+# === Docker ===
+volumes/
+docker-compose.override.yml
 
-# Бэкап-файлы редакторов
-*.bak
+# === IDE ===
+.kiro/
+.vscode/
+.idea/
 *.swp
 *~
 
-# IDE / OS
-.DS_Store
-.vscode/
-.idea/
-*.log
+# === Env (СЕКРЕТЫ!) ===
+.env
+**/.env
+!.env.example
+!**/.env.example
 
-# Debug-дампы
+# === Backups & временный мусор ===
+backups/
+*.bak
 project_dump.txt
+project_structure.txt
 copy-ts.sh
-
-# tmp scripts
 /tmp/
+
+# uploads (только .gitkeep и тестовые webp коммитим)
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/*.webp

@@ -1,0 +1,2 @@
+mkdir -p backend/uploads
+touch backend/uploads/.gitkeep

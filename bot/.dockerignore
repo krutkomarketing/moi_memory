@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+*.log
+.dockerignore
+Dockerfile
+.git
+.gitignore
+.DS_Store
+.vscode/
+.idea/
+data/
+bot.db*

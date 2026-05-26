@@ -1,12 +1,13 @@
 /* ═══════════════════════════════════════════════
-   API CLIENT — AbortController timeout (3s),
-   auto-detects base URL
+   API CLIENT — same-origin via Caddy, JWT auto,
+   AbortController timeouts (15s default, 60s upload)
    ═══════════════════════════════════════════════ */
-
 const API = (() => {
-  const BASE = window.location.port === '3000' ? '' : 'http://localhost:3000';
+  // Same-origin: Caddy проксирует /api → backend и отдаёт /uploads
+  const BASE = '';
   const TOKEN_KEY = 'memory_jwt';
-  const TIMEOUT_MS = 3000;
+  const TIMEOUT_DEFAULT = 15000;
+  const TIMEOUT_UPLOAD = 60000;
 
   function getToken() { return localStorage.getItem(TOKEN_KEY); }
   function setToken(t) { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
@@ -15,14 +16,12 @@ const API = (() => {
     return new Promise((resolve) => {
       if (!window.FileReader || !window.HTMLCanvasElement) return resolve(file);
       if (!file.type || !file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file);
-
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
           let width = img.width;
           let height = img.height;
-
           if (width > maxW || height > maxH) {
             if (width > height) {
               height = Math.round((height * maxW) / width);
@@ -32,26 +31,20 @@ const API = (() => {
               height = maxH;
             }
           }
-
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
-
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-
           canvas.toBlob((blob) => {
             if (!blob) return resolve(file);
-            
             const originalName = file.name || 'image.png';
             const cleanName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
             const newName = cleanName + '.webp';
-
             const compressedFile = new File([blob], newName, {
               type: 'image/webp',
               lastModified: Date.now()
             });
-
             resolve(compressedFile.size < file.size ? compressedFile : file);
           }, 'image/webp', quality);
         };
@@ -63,12 +56,12 @@ const API = (() => {
     });
   }
 
-  // Global fetch interceptor to automatically append JWT bearer token and compress photo uploads
+  // Global fetch interceptor: JWT injection + image compression
   const originalFetch = window.fetch;
   window.fetch = async function (resource, options = {}) {
     const url = typeof resource === 'string' ? resource : (resource instanceof URL ? resource.href : resource?.url || '');
     if (url && (url.startsWith('/api/') || url.includes('/api/'))) {
-      // 1. JWT auth token injection
+      // 1. JWT
       const token = getToken();
       if (token) {
         options.headers = options.headers || {};
@@ -86,8 +79,7 @@ const API = (() => {
           }
         }
       }
-
-      // 2. Client-side Image compression & WebP conversion
+      // 2. Image compression
       if (options.body instanceof FormData && options.body.has('photo')) {
         const file = options.body.get('photo');
         if (file instanceof File && file.type.startsWith('image/') && file.type !== 'image/gif') {
@@ -105,7 +97,8 @@ const API = (() => {
 
   async function req(method, path, body, isForm) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timeoutMs = isForm ? TIMEOUT_UPLOAD : TIMEOUT_DEFAULT;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     const headers = {};
     const tok = getToken();
@@ -113,7 +106,7 @@ const API = (() => {
     if (body && !isForm) headers['Content-Type'] = 'application/json';
 
     try {
-      const res  = await fetch(BASE + path, {
+      const res = await fetch(BASE + path, {
         method,
         headers,
         body: isForm ? body : (body ? JSON.stringify(body) : undefined),
@@ -125,7 +118,7 @@ const API = (() => {
       return json;
     } catch (err) {
       clearTimeout(timer);
-      if (err.name === 'AbortError') throw new Error('Сервер недоступен');
+      if (err.name === 'AbortError') throw new Error('Сервер недоступен (таймаут)');
       throw err;
     }
   }
@@ -137,11 +130,12 @@ const API = (() => {
       if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
         return path;
       }
+      // Same-origin: /uploads/, /bot-data/, /images/ отдаются тем же хостом через Caddy
       if (path.startsWith('/uploads/') || path.startsWith('/bot-data/') || path.startsWith('/images/')) {
-        return BASE + path;
+        return path;
       }
       if (path.startsWith('uploads/') || path.startsWith('bot-data/') || path.startsWith('images/')) {
-        return BASE + '/' + path;
+        return '/' + path;
       }
       return path;
     },
@@ -151,7 +145,6 @@ const API = (() => {
     del:    (path)       => req('DELETE', path),
     upload: (path, form) => req('POST',   path, form, true),
     compressImage,
-
     getToken, setToken,
     isLoggedIn: () => !!getToken(),
     getUser() {
@@ -162,7 +155,6 @@ const API = (() => {
         return null;
       }
     },
-
     async login(email, password) {
       const r = await req('POST', '/api/auth/login', { email, password });
       setToken(r.token);
