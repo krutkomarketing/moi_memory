@@ -148,6 +148,7 @@ router.get('/admin/audit-logs', requireAuth, wrap(async (req, res) => {
     }
     const result = await auditService.queryLogs({
         userId: req.query.userId,
+        userEmail: req.query.userEmail,
         action: req.query.action,
         entityType: req.query.entityType,
         entityId: req.query.entityId,

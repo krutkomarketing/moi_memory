@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Аудит-журнал — Память</title>
+  <meta name="description" content="Журнал системных событий (только для администраторов)." />
+  <meta property="og:title"       content="Аудит-журнал — Память" />
+  <meta property="og:description" content="Журнал системных событий." />
+  <meta property="og:type"        content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/responsive.css" />
+  <link rel="stylesheet" href="styles/audit.css" />
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">
+      <span class="nav__logo-script">Память</span>
+    </a>
+    <ul class="nav__links">
+      <li><a href="index.html" class="nav__link">Главная</a></li>
+      <li><a href="memory.html" class="nav__link">Страницы памяти</a></li>
+      <li><a href="family-tree.html" class="nav__link">Древо семьи</a></li>
+      <li><a href="timeline.html" class="nav__link">Летопись</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="timeline-hero">
+  <div class="timeline-hero__inner">
+    <p class="hero__eyebrow">Администрирование</p>
+    <h1 class="timeline-hero__title">Аудит <em>системы</em></h1>
+    <p class="timeline-hero__sub">Журнал ключевых событий: входы, изменения, удаления, восстановления.</p>
+  </div>
+</section>
+
+<!-- CONTENT -->
+<section class="audit-section">
+  <div class="audit-section__inner">
+    <div id="audit-content">
+      <div class="audit-loader">Загрузка…</div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer__top">
+    <div class="footer__logo-wrap">
+      <span class="footer__logo">Память</span>
+      <span class="footer__tagline">Хранители воспоминаний</span>
+    </div>
+    <nav class="footer__nav" aria-label="Навигация сайта">
+      <a href="index.html" class="footer__nav-link">Главная</a>
+      <a href="memory.html" class="footer__nav-link">Страницы памяти</a>
+      <a href="family-tree.html" class="footer__nav-link">Древо семьи</a>
+      <a href="timeline.html" class="footer__nav-link">Летопись</a>
+    </nav>
+    <p class="footer__quote">Пока мы помним —<br/>они живы.</p>
+  </div>
+  <div class="footer__bottom">
+    <div class="footer__inner">
+      <p class="footer__copy">© 2024 — Хранители воспоминаний</p>
+      <p class="footer__copy">Сайт создан с любовью к памяти</p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/particles.js"></script>
+<script src="js/favicon.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>
