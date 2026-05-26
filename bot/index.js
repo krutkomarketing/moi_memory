@@ -6,6 +6,7 @@ const { Telegraf, Markup, session } = require('telegraf');
 const { createProfile } = require('./handlers/create-profile');
 const { blockWizard } = require('./handlers/block-wizard');
 const { myPages, handleEdit, handleDelete, confirmDelete } = require('./handlers/my-pages');
+const setPassword = require('./handlers/set-password');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -23,8 +24,9 @@ bot.use((ctx, next) => {
 });
 
 const MAIN_MENU = Markup.keyboard([
-  ['🕯 Создать страницу памяти'],
-  ['📋 Мои страницы', '❓ Помощь'],
+	['🕯 Создать страницу памяти'],
+	['📋 Мои страницы', '🔑 Пароль'],
+	['❓ Помощь'],
 ]).resize();
 
 bot.start(async (ctx) => {
@@ -39,7 +41,13 @@ bot.start(async (ctx) => {
     'а бот собирает из этого красивую веб-страницу с уникальной ссылкой и QR-кодом.'
   );
 
+  await ctx.reply('🔄 Обновляю меню…', Markup.removeKeyboard());
   await ctx.reply('👇 Выберите действие:', MAIN_MENU);
+});
+
+bot.command('menu', async (ctx) => {
+  await ctx.reply('🔄 Обновляю меню…', Markup.removeKeyboard());
+  return ctx.reply('👇 Выберите действие:', MAIN_MENU);
 });
 
 bot.hears('❓ Помощь', (ctx) => {
@@ -58,6 +66,7 @@ bot.hears('❓ Помощь', (ctx) => {
 
 bot.hears('📋 Мои страницы', (ctx) => myPages(ctx));
 bot.hears('🕯 Создать страницу памяти', (ctx) => createProfile.start(ctx));
+bot.hears('🔑 Пароль', (ctx) => setPassword.start(ctx));
 
 bot.on('text', (ctx) => {
   const state = ctx.session?.wizard;
@@ -68,6 +77,7 @@ bot.on('text', (ctx) => {
     case 'mainText':        return createProfile.handleMainText(ctx);
     case 'blockText':       return blockWizard.handleBlockText(ctx);
     case 'quoteAfterBlock': return blockWizard.handleQuoteAfterBlock(ctx);
+		case 'setpw_input':     return setPassword.handleInput(ctx);
     default: return;
   }
 });
@@ -93,6 +103,7 @@ bot.on('callback_query', async (ctx) => {
   if (data === 'visibility_private')     return blockWizard.setVisibility(ctx, false);
   if (data === 'confirm_publish')        return createProfile.confirmPublish(ctx);
   if (data === 'cancel_wizard')          return createProfile.cancel(ctx);
+	if (data === 'setpw_cancel')          return setPassword.cancel(ctx);
   if (data === 'cancel_delete')          { ctx.answerCbQuery('Отменено'); return; }
 
   if (data.startsWith('confirm_delete_')) {
