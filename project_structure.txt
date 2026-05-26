@@ -2,13 +2,14 @@
 📁 АРХИТЕКТУРА ПРОЕКТА (FILE TREE)
 ============================================================
 .
+.env
 .env.example
 .git
 .gitignore
-.kiro
 backend
 backend/.dockerignore
 backend/.env
+backend/.env.example
 backend/.gitignore
 backend/Dockerfile
 backend/README.md
@@ -57,8 +58,11 @@ backend/prisma/migrations/20260526103015_add_profile_access_code_cascade
 backend/prisma/migrations/20260526103015_add_profile_access_code_cascade/migration.sql
 backend/prisma/migrations/20260526103200_add_profile_soft_delete
 backend/prisma/migrations/20260526103200_add_profile_soft_delete/migration.sql
+backend/prisma/migrations/20260526170400_add_historical_to_timeline
+backend/prisma/migrations/20260526170400_add_historical_to_timeline/migration.sql
 backend/prisma/migrations/migration_lock.toml
 backend/prisma/schema.prisma
+backend/prisma/seed-historical.js
 backend/router.js
 backend/router.js.bak
 backend/scripts
@@ -66,7 +70,6 @@ backend/scripts/fill-remaining-photos.js
 backend/scripts/link-cover-photos.js
 backend/scripts/migrate-from-sqlite.js
 backend/scripts/restore-clans.js
-backend/server.log
 backend/services
 backend/services/accessCodeService.js
 backend/services/accessService.js
@@ -143,7 +146,6 @@ bot/.env
 bot/.env.example
 bot/.gitignore
 bot/Dockerfile
-bot/bot.log
 bot/handlers
 bot/handlers/block-wizard.js
 bot/handlers/create-profile.js
