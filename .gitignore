@@ -1,91 +1,41 @@
-# Node
+# === Node ===
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 
-# Env (СЕКРЕТЫ!)
-.env
-.env.local
-.env.*.local
-*/.env
-**/.env
-
-# Uploads (генерятся пользователями)
-server/uploads/
-
-# Old SQLite (мусор)
-*.db
-*.db-shm
-*.db-wal
-server/data/
-bot/data/
-
-# Backups
-backups/
-
-# Бэкап-файлы редакторов
-*.bak
-*.swp
-*~
-
-# IDE / OS
-.DS_Store
-.vscode/
-.idea/
-*.log
-
-# Debug-дампы
-project_dump.txt
-copy-ts.sh
-
-# tmp scripts
-/tmp/
-
-# OS
+# === OS ===
 .DS_Store
 Thumbs.db
 
-# Logs
+# === Logs ===
 *.log
 
-# Local databases (SQLite legacy)
+# === Local databases (SQLite legacy) ===
 *.db
 *.db-shm
 *.db-wal
 
-# Docker volumes
-volumes/
-
-# IDE
-.kiro/
-.vscode/
-.idea/
-
-# Env
-.env
-!.env.example
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Local databases (SQLite legacy)
-*.db
-*.db-shm
-*.db-wal
-
-# Docker
+# === Docker ===
 volumes/
 docker-compose.override.yml
 
-# IDE
+# === IDE ===
 .kiro/
 .vscode/
 .idea/
+*.swp
+*~
 
-# Env
+# === Env (СЕКРЕТЫ!) ===
 .env
+**/.env
 !.env.example
+!**/.env.example
+
+# === Backups & временный мусор ===
+backups/
+*.bak
+project_dump.txt
+project_structure.txt
+copy-ts.sh
+/tmp/
