@@ -12,7 +12,7 @@ async function myPages(ctx) {
   const user = await getOrCreateBotUser(ctx.from);
 
   const profiles = await prisma.profile.findMany({
-    where: { ownerId: user.id },
+    where: { ownerId: user.id, deletedAt: null },
     orderBy: { createdAt: 'desc' },
     select: { id: true, slug: true, fullName: true, birthDate: true, deathDate: true },
   });
@@ -59,7 +59,7 @@ function handleDelete(ctx, data) {
   const profileId = data.replace('delete_', '');
   ctx.answerCbQuery();
   return ctx.reply(
-    '⚠️ Удалить страницу?\n\nЭто действие нельзя отменить.',
+    '⚠️ Перенести страницу в корзину?\n\nЕё можно будет восстановить из 🗑 Корзины в течение 30 дней.',
     Markup.inlineKeyboard([
       [Markup.button.callback('🗑 Да, удалить', `confirm_delete_${profileId}`)],
       [Markup.button.callback('↩️ Отмена', 'cancel_delete')],
@@ -79,9 +79,12 @@ async function confirmDelete(ctx, profileId) {
     return ctx.reply('⛔ Это не ваша страница.');
   }
 
-  await prisma.profile.delete({ where: { id: profileId } });
-  ctx.answerCbQuery('Удалено');
-  return ctx.reply('✅ Страница удалена.');
+  await prisma.profile.update({
+	where: { id: profileId },
+	data: { deletedAt: new Date() },
+});
+	ctx.answerCbQuery('В корзину');
+	return ctx.reply('🗑 Страница перенесена в корзину.\n\nВосстановить можно через /trash в течение 30 дней.');
 }
 
 module.exports = { myPages, handleEdit, handleDelete, confirmDelete };

@@ -7,6 +7,7 @@ const { createProfile } = require('./handlers/create-profile');
 const { blockWizard } = require('./handlers/block-wizard');
 const { myPages, handleEdit, handleDelete, confirmDelete } = require('./handlers/my-pages');
 const setPassword = require('./handlers/set-password');
+const trash = require('./handlers/trash');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -26,7 +27,7 @@ bot.use((ctx, next) => {
 const MAIN_MENU = Markup.keyboard([
 	['🕯 Создать страницу памяти'],
 	['📋 Мои страницы', '🔑 Пароль'],
-	['❓ Помощь'],
+	['🗑 Корзина', '❓ Помощь'],
 ]).resize();
 
 bot.start(async (ctx) => {
@@ -67,6 +68,8 @@ bot.hears('❓ Помощь', (ctx) => {
 bot.hears('📋 Мои страницы', (ctx) => myPages(ctx));
 bot.hears('🕯 Создать страницу памяти', (ctx) => createProfile.start(ctx));
 bot.hears('🔑 Пароль', (ctx) => setPassword.start(ctx));
+bot.hears('🗑 Корзина', (ctx) => trash.showTrash(ctx));
+bot.command('trash', (ctx) => trash.showTrash(ctx));
 
 bot.on('text', (ctx) => {
   const state = ctx.session?.wizard;
@@ -104,6 +107,10 @@ bot.on('callback_query', async (ctx) => {
   if (data === 'confirm_publish')        return createProfile.confirmPublish(ctx);
   if (data === 'cancel_wizard')          return createProfile.cancel(ctx);
 	if (data === 'setpw_cancel')          return setPassword.cancel(ctx);
+	if (data === 'trash_cancel')          return trash.cancelHardDelete(ctx);
+	if (data.startsWith('trash_restore_')) return trash.handleRestore(ctx, data.replace('trash_restore_', ''));
+	if (data.startsWith('trash_hard_'))    return trash.handleHardDelete(ctx, data.replace('trash_hard_', ''));
+	if (data.startsWith('trash_confirm_')) return trash.confirmHardDelete(ctx, data.replace('trash_confirm_', ''));
   if (data === 'cancel_delete')          { ctx.answerCbQuery('Отменено'); return; }
 
   if (data.startsWith('confirm_delete_')) {
