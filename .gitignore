@@ -44,3 +44,4 @@ copy-ts.sh
 backend/uploads/*
 !backend/uploads/.gitkeep
 !backend/uploads/*.webp
+*.bak
