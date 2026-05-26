@@ -16,6 +16,7 @@
   let showHistory = true;
   let dbNodes = [];
   let dbCustomEvents = [];
+  let dbHistoricalEvents = [];  
 
   /* ── БЕЛОРУССКИЕ И СОВЕТСКИЕ ИСТОРИЧЕСКИЕ СОБЫТИЯ ── */
   const HISTORY = [
@@ -172,15 +173,33 @@
     const treeNodes = dbNodes.length ? dbNodes : loadActiveTreeNodes();
     treeNodesToEvents(treeNodes, treeMeta).forEach(e => events.push(e));
 
-    /* Historical */
-    HISTORY.forEach(h => events.push({
-      year: h.year, type: 'history',
+/* Historical — из API если есть, иначе локальный fallback */
+if (dbHistoricalEvents.length > 0) {
+  dbHistoricalEvents.forEach(h => {
+    const year = parseYear(h.date);
+    if (!year) return;
+    events.push({
+      id: h.id,
+      year,
+      type: 'history',
       title: h.title,
-      subtitle: h.desc,
-      city: '',
-      icon: h.icon,
-    }));
-
+      subtitle: h.description || '',
+      city: h.place || '',
+      icon: iconForHistorical(h),
+      iconKey: h.iconKey || null,
+      witnesses: h.witnesses || null,  // ← список свидетелей от бэка
+    });
+  });
+} else {
+  // Fallback: статичный список (если бэк недоступен)
+  HISTORY.forEach(h => events.push({
+    year: h.year, type: 'history',
+    title: h.title,
+    subtitle: h.desc,
+    city: '',
+    icon: h.icon,
+  }));
+}
     /* Custom (non-tree) */
     const customEvents = dbCustomEvents.length ? dbCustomEvents : loadCustom();
     customEvents.filter(c => !c._fromTree).forEach(c => events.push({ ...c, type: c.type || 'custom' }));
@@ -197,6 +216,21 @@
     custom:  '★',
     era:     '❧',
   };
+
+  /* iconKey (бэк) → emoji (фронт) */
+const ICON_KEY_TO_EMOJI = {
+  war:   '⚔',
+  flag:  '🚩',
+  star:  '★',
+  book:  '📚',
+  cross: '✝',
+  heart: '♥',
+};
+function iconForHistorical(ev) {
+  if (ev.icon) return ev.icon;
+  if (ev.iconKey && ICON_KEY_TO_EMOJI[ev.iconKey]) return ICON_KEY_TO_EMOJI[ev.iconKey];
+  return '❧';
+}
 
   /* ── GET PEOPLE ALIVE IN YEAR ── */
   function getPeopleAliveInYear(year) {
@@ -301,21 +335,32 @@
     }
 
     let relativesHtml = '';
-    if (e.type === 'history') {
-      const alivePeople = getPeopleAliveInYear(e.year);
-      if (alivePeople.length > 0) {
-        relativesHtml = `
-          <div class="timeline__relatives" style="margin-top:12px;border-top:1px dashed rgba(200,168,75,0.15);padding-top:8px;">
-            <div style="font-family:var(--font-ui);font-size:10px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;text-align:left;">Свидетели эпохи из семьи:</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
-              ${alivePeople.map(p => `
-                <a href="person.html?id=${encodeURIComponent(p.id)}" class="timeline__relative-link" style="font-family:var(--font-body);font-size:12px;color:var(--cream-dim);text-decoration:none;background:rgba(200,168,75,0.06);padding:3px 8px;border-radius:12px;border:1px solid rgba(200,168,75,0.15);transition:all 0.3s;display:inline-block;">
-                  ${p.name} <span style="font-size:10px;opacity:0.6;">(${p.years})</span>
-                </a>`).join('')}
-            </div>
-          </div>`;
-      }
-    }
+if (e.type === 'history') {
+  // 1. Приоритет — witnesses от бэка (по реальным PUBLIC профилям)
+  // 2. Fallback — локальный getPeopleAliveInYear (localStorage + статичный PEOPLE)
+  let witnessesList = [];
+  if (e.witnesses && Array.isArray(e.witnesses) && e.witnesses.length > 0) {
+    witnessesList = e.witnesses.map(w => ({
+      id: w.slug || w.id,          // на странице памяти id = slug
+      name: w.fullName,
+      years: '',
+    }));
+  } else {
+    witnessesList = getPeopleAliveInYear(e.year);
+  }
+  if (witnessesList.length > 0) {
+    relativesHtml = `
+      <div class="timeline__relatives" style="margin-top:12px;border-top:1px dashed rgba(200,168,75,0.15);padding-top:8px;">
+        <div style="font-family:var(--font-ui);font-size:10px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;text-align:left;">Свидетели эпохи из семьи:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
+          ${witnessesList.map(p => `
+            <a href="person.html?id=${encodeURIComponent(p.id)}" class="timeline__relative-link" style="font-family:var(--font-body);font-size:12px;color:var(--cream-dim);text-decoration:none;background:rgba(200,168,75,0.06);padding:3px 8px;border-radius:12px;border:1px solid rgba(200,168,75,0.15);transition:all 0.3s;display:inline-block;">
+              ${p.name}${p.years ? ` <span style="font-size:10px;opacity:0.6;">(${p.years})</span>` : ''}
+            </a>`).join('')}
+        </div>
+      </div>`;
+  }
+}
 
     return `
       <article class="timeline__item timeline__item--${side} timeline__item--${e.type}"
@@ -790,27 +835,38 @@
     }
   }
 
-  async function loadDbData() {
-    const treeId = getActiveTreeId() || 'default';
-    try {
-      if (typeof API !== 'undefined') {
-        const [nodesRes, eventsRes] = await Promise.all([
-          API.get(`/api/family-nodes?treeId=${encodeURIComponent(treeId)}`).catch(() => null),
-          API.get(`/api/timeline-events?treeId=${encodeURIComponent(treeId)}`).catch(() => null)
-        ]);
-
-        if (nodesRes && nodesRes.ok && Array.isArray(nodesRes.data)) {
-          dbNodes = nodesRes.data;
-        }
-        if (eventsRes && eventsRes.ok && Array.isArray(eventsRes.data)) {
-          dbCustomEvents = eventsRes.data.filter(e => e.type !== 'birth' && e.type !== 'death' && e.type !== 'history');
-        }
-        render();
+ async function loadDbData() {
+  const treeId = getActiveTreeId();
+  try {
+    if (typeof API !== 'undefined') {
+      // 1. Узлы текущего дерева (если выбрано)
+      // 2. Историчесие + кастомные — общим запросом без treeId
+      const requests = [
+        API.get('/api/timeline-events').catch(() => null),  // общая летопись
+      ];
+      if (treeId) {
+        requests.push(API.get(`/api/family-nodes?treeId=${encodeURIComponent(treeId)}`).catch(() => null));
       }
-    } catch (e) {
-      console.warn('Failed to load database events for timeline:', e);
+      const [allEventsRes, nodesRes] = await Promise.all(requests);
+
+      if (nodesRes && nodesRes.ok && Array.isArray(nodesRes.data)) {
+        dbNodes = nodesRes.data;
+      }
+      if (allEventsRes && allEventsRes.ok && Array.isArray(allEventsRes.data)) {
+        const all = allEventsRes.data;
+        dbHistoricalEvents = all.filter(e => e.category === 'historical');
+        dbCustomEvents     = all.filter(e =>
+          e.category !== 'historical' &&
+          e.category !== 'birth' &&
+          e.category !== 'death'
+        );
+      }
+      render();
     }
+  } catch (e) {
+    console.warn('Failed to load database events for timeline:', e);
   }
+}
 
   loadPhotos();
   loadDbData();

@@ -45,3 +45,6 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 !backend/uploads/*.webp
 *.bak
+
+# Backup artifacts
+*.bak
