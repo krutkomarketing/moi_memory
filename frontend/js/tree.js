@@ -7,6 +7,10 @@
 
 (function () {
 
+const urlParams = new URLSearchParams(window.location.search);
+const currentTreeId = urlParams.get('tree') || 'default';
+
+
   const BASE = window.location.port === '3000' ? '' : 'http://localhost:3000';
   
   // Pan and Zoom State Variables
@@ -418,9 +422,9 @@
   // Asynchronous Loader from database
   async function loadDataFromDb() {
     try {
-      const clansRes = await fetch(`${BASE}/api/family-clans?treeId=default`);
-      const nodesRes = await fetch(`${BASE}/api/family-nodes?treeId=default`);
-      const connsRes = await fetch(`${BASE}/api/family-connections?treeId=default`);
+      const clansRes = await fetch(`${BASE}/api/family-clans?treeId=${encodeURIComponent(currentTreeId)}`);
+      const nodesRes = await fetch(`${BASE}/api/family-nodes?treeId=${encodeURIComponent(currentTreeId)}`);
+      const connsRes = await fetch(`${BASE}/api/family-connections?treeId=${encodeURIComponent(currentTreeId)}`);
       const clansJson = await clansRes.json();
       const nodesJson = await nodesRes.json();
       const connsJson = await connsRes.json().catch(() => ({ ok: false }));
