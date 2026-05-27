@@ -126,6 +126,10 @@ else
 fi
 
 # ─── 3. Build образов ────────────────────────────────────
+# Cache-busting: версия = короткий git SHA (передаётся в frontend Dockerfile)
+export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+log "🔖 Cache-bust version: $COMMIT_SHA"
+
 DEPLOY_STAGE="build"
 log "🔨 Build (docker compose build)"
 BUILD_ARGS=""

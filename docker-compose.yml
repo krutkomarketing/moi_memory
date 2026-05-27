@@ -72,6 +72,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VERSION: ${COMMIT_SHA:-dev}
     container_name: memory-frontend
     restart: unless-stopped
     logging: *default-logging

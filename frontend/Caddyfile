@@ -30,6 +30,15 @@
 
 	# === Статика фронта + fallback на .html ===
 	handle {
+		# __CACHE_CONTROL_V1__
+		@static path *.js *.css *.png *.jpg *.jpeg *.svg *.gif *.ico *.webp *.woff *.woff2 *.ttf *.map
+		header @static Cache-Control "public, max-age=3600"
+
+		@html {
+			not path *.js *.css *.png *.jpg *.jpeg *.svg *.gif *.ico *.webp *.woff *.woff2 *.ttf *.map
+		}
+		header @html Cache-Control "no-cache, must-revalidate"
+
 		try_files {path} {path}.html /index.html
 		file_server
 	}
