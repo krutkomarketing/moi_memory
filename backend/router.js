@@ -556,20 +556,81 @@ router.get('/timeline/historical', wrap(async (req, res) => {
     return ok(res, { data });
 }));
 
-router.post('/timeline/historical', requireAuth, requireAdmin, wrap(async (req, res) => {
+router.post('/timeline/historical', requireAuth, requireAdmin,
+  auditWrap({
+    action: 'TIMELINE_EVENT_CREATE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (_req, result) => result?.data?.id || null,
+    getNewValue: async (_req, result) => result?.data ? { id: result.data.id, category: result.data.category, title: result.data.title } : null,
+    getMetadata: async () => ({ scope: 'historical' }),
+  })(async (req, res) => {
     const data = await timelineService.createHistoricalEvent(req.body || {}, req.user);
-    return ok(res, { data }, 201);
-}));
+    const payload = { data };
+    ok(res, payload, 201);
+    return payload;
+  })
+);
+function auditWrap({ action, entityType, getEntityId, getOldValue, getNewValue, getMetadata }) {
+  return (handler) =>
+    wrap(async (req, res) => {
+      const result = await handler(req, res);
 
-router.put('/timeline/historical/:id', requireAuth, requireAdmin, wrap(async (req, res) => {
+      // Логируем только если есть actor и запрос реально “успешный”
+      // (ok(...) уже отдал ответ 2xx; но мы не можем надёжно вытащить status из res после send,
+      // поэтому считаем успехом факт выполнения handler без throw)
+      try {
+        if (req.user && action) {
+          await auditService.logAction({
+            action,
+            userId: req.user.id,
+            entityType: entityType || null,
+            entityId: getEntityId ? (await getEntityId(req, result)) : null,
+            oldValue: getOldValue ? (await getOldValue(req, result)) : null,
+            newValue: getNewValue ? (await getNewValue(req, result)) : null,
+            metadata: {
+              method: req.method,
+              path: req.originalUrl,
+              ...(getMetadata ? (await getMetadata(req, result)) : {}),
+            },
+            req,
+          });
+        }
+      } catch (e) {
+        // audit never blocks business flow
+        console.error('[auditWrap] failed:', e.message);
+      }
+
+      return result;
+    });
+}
+router.put('/timeline/historical/:id', requireAuth, requireAdmin,
+  auditWrap({
+    action: 'TIMELINE_EVENT_UPDATE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (req, _result) => req.params.id,
+    getNewValue: async (_req, result) => result?.data ? { id: result.data.id, category: result.data.category, title: result.data.title } : null,
+    getMetadata: async () => ({ scope: 'historical' }),
+  })(async (req, res) => {
     const data = await timelineService.updateHistoricalEvent(req.params.id, req.body || {}, req.user);
-    return ok(res, { data });
-}));
+    const payload = { data };
+    ok(res, payload);
+    return payload;
+  })
+);
 
-router.delete('/timeline/historical/:id', requireAuth, requireAdmin, wrap(async (req, res) => {
+router.delete('/timeline/historical/:id', requireAuth, requireAdmin,
+  auditWrap({
+    action: 'TIMELINE_EVENT_DELETE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (req, _result) => req.params.id,
+    getMetadata: async () => ({ scope: 'historical' }),
+  })(async (req, res) => {
     await timelineService.softDeleteHistoricalEvent(req.params.id, req.user);
-    return ok(res, {});
-}));
+    const payload = {};
+    ok(res, payload);
+    return payload;
+  })
+);
 
 router.get('/timeline-events', optionalAuth, wrap(async (req, res) => {
     const data = await timelineService.listEvents({
@@ -587,20 +648,46 @@ router.get('/timeline-events', optionalAuth, wrap(async (req, res) => {
     return ok(res, { data });
 }));
 
-router.post('/timeline-events', requireAuth, wrap(async (req, res) => {
+router.post('/timeline-events', requireAuth,
+  auditWrap({
+    action: 'TIMELINE_EVENT_CREATE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (_req, result) => result?.data?.id || null,
+    getNewValue: async (_req, result) => result?.data ? { id: result.data.id, category: result.data.category, title: result.data.title } : null,
+  })(async (req, res) => {
     const data = await timelineService.createEvent(req.body || {}, req.user);
-    return ok(res, { data }, 201);
-}));
+    const payload = { data };
+    ok(res, payload, 201);
+    return payload;
+  })
+);
 
-router.put('/timeline-events/:id', requireAuth, wrap(async (req, res) => {
+router.put('/timeline-events/:id', requireAuth,
+  auditWrap({
+    action: 'TIMELINE_EVENT_UPDATE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (req, _result) => req.params.id,
+    getNewValue: async (_req, result) => result?.data ? { id: result.data.id, category: result.data.category, title: result.data.title } : null,
+  })(async (req, res) => {
     const data = await timelineService.updateEvent(req.params.id, req.body || {}, req.user);
-    return ok(res, { data });
-}));
+    const payload = { data };
+    ok(res, payload);
+    return payload;
+  })
+);
 
-router.delete('/timeline-events/:id', requireAuth, wrap(async (req, res) => {
+router.delete('/timeline-events/:id', requireAuth,
+  auditWrap({
+    action: 'TIMELINE_EVENT_DELETE',
+    entityType: 'TimelineEvent',
+    getEntityId: async (req, _result) => req.params.id,
+  })(async (req, res) => {
     await timelineService.softDeleteEvent(req.params.id, req.user);
-    return ok(res, {});
-}));
+    const payload = {};
+    ok(res, payload);
+    return payload;
+  })
+);
 
 /* ═══════════════════════════════════════════════════════ */
 /*  PROFILE ACCESS GRANTS                                  */
