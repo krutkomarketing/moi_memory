@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const sharp = (() => { try { return require('sharp'); } catch { return null; } })();
 const prisma = require('../lib/prisma');
 const { ApiError } = require('../middleware/errors');
+const s3 = require('../lib/s3');
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -69,7 +70,13 @@ async function saveFile(buffer, originalName, mimetype, opts = {}) {
   }
 
   const filename = `${opts.prefix || 'file'}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${outExt}`;
-  await fs.promises.writeFile(path.join(UPLOAD_DIR, filename), outBuf);
+  let storageUrl;
+  if (s3.isEnabled()) {
+    storageUrl = await s3.uploadBuffer(filename, outBuf, outMime);
+  } else {
+    await fs.promises.writeFile(path.join(UPLOAD_DIR, filename), outBuf);
+    storageUrl = `/uploads/${filename}`;
+  }
 
   let width = null, height = null;
   if (sharp && kind === 'IMAGE') {
@@ -80,7 +87,7 @@ async function saveFile(buffer, originalName, mimetype, opts = {}) {
     } catch {}
   }
 
-  const url = `/uploads/${filename}`;
+  const url = storageUrl;
   const media = await prisma.media.create({
     data: {
       url,

@@ -5,6 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
 const sharp = require('sharp');
+const s3 = require('../lib/s3');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -52,10 +53,16 @@ async function saveImageBuffer(buffer, { maxSize = 1600, quality = 78 } = {}) {
 		.webp({ quality, effort: 4 })
 		.toBuffer({ resolveWithObject: true });
 
-	fs.writeFileSync(filepath, processed.data);
+	let outUrl;
+	if (s3.isEnabled()) {
+		outUrl = await s3.uploadBuffer(filename, processed.data, 'image/webp');
+	} else {
+		fs.writeFileSync(filepath, processed.data);
+		outUrl = `/uploads/${filename}`;
+	}
 
 	return {
-		url: `/uploads/${filename}`,
+		url: outUrl,
 		mimeType: 'image/webp',
 		sizeBytes: processed.data.length,
 		width: processed.info.width,
@@ -67,16 +74,22 @@ async function saveImageBuffer(buffer, { maxSize = 1600, quality = 78 } = {}) {
 
 /* ─── Raw save (audio/video) ──────────────────────────── */
 
-function saveRawBuffer(buffer, originalName, mimeType) {
+async function saveRawBuffer(buffer, originalName, mimeType) {
 	const id = crypto.randomUUID();
 	const ext = (path.extname(originalName || '') || mimeExt(mimeType) || '.bin').toLowerCase();
 	const filename = `${id}${ext}`;
 	const filepath = path.join(UPLOADS_DIR, filename);
 
-	fs.writeFileSync(filepath, buffer);
+	let outUrl;
+	if (s3.isEnabled()) {
+		outUrl = await s3.uploadBuffer(filename, buffer, mimeType);
+	} else {
+		fs.writeFileSync(filepath, buffer);
+		outUrl = `/uploads/${filename}`;
+	}
 
 	return {
-		url: `/uploads/${filename}`,
+		url: outUrl,
 		mimeType,
 		sizeBytes: buffer.length,
 	};
