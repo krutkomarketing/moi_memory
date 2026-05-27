@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Древо семьи — Память</title>
+  <meta name="description" content="Родословное древо семьи с цветными нитями по родам."/>
+  <meta property="og:title"       content="Древо семьи — Память"/>
+  <meta property="og:description" content="Родословное древо — от предков внизу к потомкам вверху."/>
+  <meta property="og:type"        content="website"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/responsive.css" />
+  <link rel="stylesheet" href="styles/tree.css?v=3" />
+</head>
+<body class="tree-page">
+
+  <canvas id="particles-canvas"></canvas>
+
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="index.html" class="nav__logo">
+        <span class="nav__logo-script">Память</span>
+      </a>
+      <ul class="nav__links">
+        <li><a href="index.html" class="nav__link">Главная</a></li>
+        <li><a href="memory.html" class="nav__link">Страницы памяти</a></li>
+        <li><a href="family-tree.html" class="nav__link nav__link--active">Древо семьи</a></li>
+        <li><a href="timeline.html" class="nav__link">Летопись</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="tree-hero">
+    <div class="tree-hero__inner">
+      <p class="hero__eyebrow">Родословная</p>
+      <h1 class="tree-hero__title">Древо <em>семьи</em></h1>
+      <p class="tree-hero__sub">Снизу — корни, сверху — крона. Старшие поколения внизу, молодые вверху.</p>
+    </div>
+  </section>
+
+  <!-- CLAN LEGEND -->
+  <div class="clan-legend-wrap">
+    <p class="clan-legend__hint">Нажмите на род чтобы выделить линию · Одиночный клик — подсветка предков · Двойной клик — страница памяти</p>
+    <div class="clan-legend" id="tree-clan-legend">
+      <!-- injected by tree.js -->
+    </div>
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px;">
+      <button class="tree-edit-btn" id="tree-edit-btn" style="margin-top: 0;">✏️ Редактировать дерево</button>
+      <button class="tree-edit-btn" id="tree-print-btn" style="margin-top: 0;">🖨️ Распечатать дерево</button>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="tree-search-wrap">
+    <div class="tree-search">
+      <span class="tree-search__icon">🔍</span>
+      <input type="text" id="tree-search-input" placeholder="Поиск родственника по имени или году..." />
+    </div>
+  </div>
+
+  <!-- Панель инструментов — появляется только в edit mode -->
+  <div class="tree-toolbar" id="tree-toolbar" style="display:none">
+    <button class="tree-tool" id="tree-new-btn" title="Добавить ветвь">🌿 Ветвь</button>
+    <button class="tree-tool" id="tree-create-btn" title="Создать новое дерево">🌳 Новое дерево</button>
+    <button class="tree-tool" id="tree-connect-btn" title="Соединить карточки">🔗 Связать</button>
+    <button class="tree-tool" id="tree-disconnect-btn" title="Убрать связь">🔓 Убрать связь</button>
+    <button class="tree-tool tree-tool--exit" id="tree-edit-exit" title="Выйти">✕ Выйти</button>
+  </div>
+
+  <!-- TREE CONTAINER -->
+  <section class="tree-section">
+    <div class="tree-wrapper" id="tree-wrapper">
+      <!-- SVG threads drawn by JS -->
+      <svg class="tree-threads" id="tree-threads" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <!-- Generation rows built by JS -->
+      <div class="tree-generations" id="tree-generations"></div>
+    </div>
+  </section>
+
+  <!-- LEGEND — типы связей -->
+  <div class="tree-legend" id="tree-legend">
+    <div class="tree-legend__item">
+      <span class="tree-legend__line tree-legend__line--kinship"></span>
+      <span>Родство (родитель → ребёнок)</span>
+    </div>
+    <div class="tree-legend__item">
+      <span class="tree-legend__line tree-legend__line--marriage"></span>
+      <span>Брачный союз</span>
+    </div>
+  </div>
+
+    <footer class="footer">
+    <div class="footer__top">
+      <div class="footer__logo-wrap">
+        <span class="footer__logo">Память</span>
+        <span class="footer__tagline">Хранители воспоминаний</span>
+      </div>
+      <nav class="footer__nav" aria-label="Навигация сайта">
+        <a href="index.html" class="footer__nav-link">Главная</a>
+        <a href="memory.html" class="footer__nav-link">Страницы памяти</a>
+        <a href="family-tree.html" class="footer__nav-link">Древо семьи</a>
+        <a href="timeline.html" class="footer__nav-link">Летопись</a>
+      </nav>
+      <p class="footer__quote">Пока мы помним —<br/>они живы.</p>
+    </div>
+    <div class="footer__bottom">
+      <div class="footer__inner">
+        <p class="footer__copy">© 2024 — Хранители воспоминаний</p>
+        <p class="footer__copy">Сайт создан с любовью к памяти</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* Если переходим к новому дереву — анимация появления */
+    const treeParam = new URLSearchParams(location.search).get('tree');
+    if (treeParam) {
+      document.body.classList.add('tree-page--entering');
+      setTimeout(() => document.body.classList.remove('tree-page--entering'), 800);
+    }
+  </script>
+  <script src="js/particles.js"></script>
+  <script src="js/favicon.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth-ui.js"></script>
+  <script src="js/tree.js?v=3"></script>
+  <script src="js/tree-edit.js?v=3"></script>
+  <script src="js/reveal.js"></script>
+  <script src="js/nav.js"></script>
+</body>
+</html>

@@ -198,54 +198,8 @@ Drift workaround: `psql ALTER` напрямую + `prisma migrate resolve --appl
 
 ---
 
-## 7. Что ОСТАЛОСЬ (roadmap)
-
-### 🟥 P0 — мелкое и быстрое (1 сессия)
-
-1. **W4 `/my_profiles`** — расширить «📋 Мои страницы» в боте: добавить раздел «Где я редактор» (через `ProfileAccess` join). ~30 мин.
-
-2. **Tech debt cleanup**:
-   - `project_structure.txt` → `.gitignore`
-   - удалить `*.bak` файлы (если ещё остались)
-   - дедуп 2 HISTORICAL row в seed
-   - Dockerfile `CMD` refactor (унификация backend/bot)
-   - ~30 мин.
-
-3. **Onboarding для Ivan**: sparse-checkout, `README.md` локальный setup за 5 минут, `.env.example`. ~1 час.
-
-### 🟧 P1 — backend завершить (3 фичи из старого плана)
-
-4. **I. HISTORICAL events** — `TimelineEvent` с `category=HISTORICAL` без `familyNodeId`/`profileId`; фильтр `scope=historical|personal|all`; ADMIN-only CRUD; поля description, sourceUrl, wikipediaUrl, endYear.
-
-5. **K. Audit log** — таблица `AuditLog (actorId, action, entityType, entityId, before, after, ip, ua, createdAt)`; middleware-обёртка; `GET /audit-log` ADMIN-only. (Cleanup cron уже ротирует audit=90d.)
-
-6. **L. Photo cleanup** — orphan Media (не привязана к Profile/ContentBlock/GalleryItem/GuestMemory/FamilyNode); CLI `npm run cleanup:photos` + `--dry-run`.
-
-### 🟨 P1 — фронт-интеграция остального бэка
-
-7. **G-access UI**: выдача/отзыв грантов на странице профиля (сейчас только через TG-бот).
-8. **H-codes UI**: создание/ротация access-кодов + PASSWORD-форма (отправка `X-Profile-Access` header).
-9. **J-trash UI веб**: корзина, восстановление, hard delete (ADMIN). (В TG уже есть через W2.)
-10. **D-фильтры расширить**: добавить city на фронт (бэк уже принимает).
-
-### 🟧 P1 — Telegram бот доделки
-
-11. **PASSWORD-шаг в create-profile wizard** (`visibility=PASSWORD` + `accessCodeService.createCode`).
-12. **UI кнопка для `/access` и `/trash`** в главном меню (сейчас только slash-команды).
-
-### 🟦 P2 — крупная фича: TG Mini App (отдельный спринт ~неделя+)
-
-13. **TG Mini App** вместо/в дополнение к текущему wizard-боту:
-    - полноценный mini-app (React/vanilla) внутри TG
-    - редактирование профилей с фото-загрузкой
-    - возможно вкатать туда весь сайт + поддержку пользователей
-
-### 🟦 P3 — большие фичи (отдельные спринты)
-
-14. **FamilyNode + древо семьи** (`family-tree.html` сейчас пустая) — визуализация (D3/Cytoscape), редактирование связей.
 15. **Летопись** (`timeline.html` сейчас пустая) — хронология всех событий + фильтры по эпохам.
 16. **QR-коды** для памятников: генерация + PDF-печать. ~1-2 дня.
-17. **SaaS/монетизация** — тарифы, биллинг, лимиты.
 
 ### ⚙️ Прод/инфра (отдельная задача)
 
