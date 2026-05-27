@@ -15,6 +15,38 @@ const SENSITIVE_KEYS = [
   'cookie',
 ];
 
+function stripMarkdownLinks(s) {
+  if (typeof s !== 'string') return s;
+
+  // [label](mailto:label) -> label
+  s = s.replace(/\[([^\]]+)\]\(mailto:[^\)]+\)/gi, '$1');
+
+  // [url](url) -> url
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/gi, '$2');
+
+  return s;
+}
+
+function normalizeKey(k) {
+  if (typeof k !== 'string') return k;
+  if (k.startsWith('[')) return k.slice(1);
+  return k;
+}
+
+function normalizeObject(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(normalizeObject);
+
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const nk = normalizeKey(k);
+    if (v && typeof v === 'object') out[nk] = normalizeObject(v);
+    else if (typeof v === 'string') out[nk] = stripMarkdownLinks(v);
+    else out[nk] = v;
+  }
+  return out;
+}
+
 function sanitize(obj) {
   if (!obj || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(sanitize);
@@ -22,16 +54,15 @@ function sanitize(obj) {
   const out = {};
   for (const [key, val] of Object.entries(obj)) {
     const lower = String(key).toLowerCase();
+
     if (SENSITIVE_KEYS.some((s) => lower.includes(s))) {
       out[key] = '***REDACTED***';
       continue;
     }
 
-    if (val !== null && typeof val === 'object') {
-      out[key] = sanitize(val);
-    } else {
-      out[key] = val;
-    }
+    if (val !== null && typeof val === 'object') out[key] = sanitize(val);
+    else if (typeof val === 'string') out[key] = stripMarkdownLinks(val);
+    else out[key] = val;
   }
   return out;
 }
@@ -76,9 +107,6 @@ async function logAction({
   }
 }
 
-/**
- * Query audit logs (route should enforce ADMIN check).
- */
 async function queryLogs({
   userId,
   userEmail,
@@ -95,9 +123,7 @@ async function queryLogs({
   if (userId) where.userId = userId;
 
   if (userEmail && String(userEmail).trim()) {
-    where.user = {
-      email: { contains: String(userEmail).trim(), mode: 'insensitive' },
-    };
+    where.user = { email: { contains: String(userEmail).trim(), mode: 'insensitive' } };
   }
 
   if (action) where.action = action;
@@ -120,9 +146,7 @@ async function queryLogs({
       skip,
       take,
       include: {
-        user: {
-          select: { id: true, email: true, displayName: true, role: true },
-        },
+        user: { select: { id: true, email: true, displayName: true, role: true } },
       },
     }),
     prisma.auditLog.count({ where }),
@@ -133,12 +157,12 @@ async function queryLogs({
       id: r.id,
       action: r.action,
       userId: r.userId,
-      user: r.user || null,
+      user: r.user ? normalizeObject(r.user) : null,
       entityType: r.entityType,
       entityId: r.entityId,
-      oldValue: r.oldValue,
-      newValue: r.newValue,
-      metadata: r.metadata,
+      oldValue: r.oldValue ? normalizeObject(r.oldValue) : null,
+      newValue: r.newValue ? normalizeObject(r.newValue) : null,
+      metadata: r.metadata ? normalizeObject(r.metadata) : null,
       ipAddress: r.ipAddress,
       userAgent: r.userAgent,
       createdAt: r.createdAt.toISOString(),
