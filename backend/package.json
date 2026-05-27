@@ -11,7 +11,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio --port 5557",
     "migrate:from-sqlite": "node scripts/migrate-from-sqlite.js",
-    "restore:clans": "node scripts/restore-clans.js"
+    "restore:clans": "node scripts/restore-clans.js",
+    "cleanup:photos": "node scripts/cleanup-photos.js --dry-run"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

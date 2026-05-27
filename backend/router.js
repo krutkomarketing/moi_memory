@@ -40,6 +40,12 @@ function getIp(req) {
     return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
 }
 
+function requireAdmin(req, res, next) {
+  if (!req.user) return err(res, 401, 'Unauthorized');
+  if (req.user.role !== 'ADMIN') return err(res, 403, 'Доступ только для администраторов');
+  return next();
+}
+
 /* ═══════════════════════════════════════════════════════ */
 /*  HEALTH CHECK                                           */
 /* ═══════════════════════════════════════════════════════ */
@@ -550,26 +556,33 @@ router.get('/timeline/historical', wrap(async (req, res) => {
     return ok(res, { data });
 }));
 
-router.post('/timeline/historical', requireAuth, wrap(async (req, res) => {
+router.post('/timeline/historical', requireAuth, requireAdmin, wrap(async (req, res) => {
     const data = await timelineService.createHistoricalEvent(req.body || {}, req.user);
     return ok(res, { data }, 201);
 }));
 
-router.put('/timeline/historical/:id', requireAuth, wrap(async (req, res) => {
+router.put('/timeline/historical/:id', requireAuth, requireAdmin, wrap(async (req, res) => {
     const data = await timelineService.updateHistoricalEvent(req.params.id, req.body || {}, req.user);
     return ok(res, { data });
 }));
 
-router.delete('/timeline/historical/:id', requireAuth, wrap(async (req, res) => {
+router.delete('/timeline/historical/:id', requireAuth, requireAdmin, wrap(async (req, res) => {
     await timelineService.softDeleteHistoricalEvent(req.params.id, req.user);
     return ok(res, {});
 }));
 
 router.get('/timeline-events', optionalAuth, wrap(async (req, res) => {
     const data = await timelineService.listEvents({
-        treeId:    req.query.treeId    || null,
-        nodeId:    req.query.nodeId    || null,
+        treeId: req.query.treeId || null,
+        nodeId: req.query.nodeId || null,
         profileId: req.query.profileId || null,
+
+        scope: req.query.scope || 'all',
+        includeWitnesses: req.query.includeWitnesses === '1',
+
+        // legacy toggles (optional)
+        includeHistorical: req.query.includeHistorical,
+        includeAuto: req.query.includeAuto,
     }, req.user || null);
     return ok(res, { data });
 }));
@@ -585,7 +598,7 @@ router.put('/timeline-events/:id', requireAuth, wrap(async (req, res) => {
 }));
 
 router.delete('/timeline-events/:id', requireAuth, wrap(async (req, res) => {
-    await timelineService.deleteEvent(req.params.id, req.user);
+    await timelineService.softDeleteEvent(req.params.id, req.user);
     return ok(res, {});
 }));
 
