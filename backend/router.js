@@ -183,6 +183,10 @@ router.get('/auth/me', authGeneralLimiter, requireAuth, wrap(async (req, res) =>
 }));
 
 router.post('/auth/logout', requireAuth, wrap(async (req, res) => {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { jwtVersion: { increment: 1 } },
+    });
     await auditService.logAction({
         action: 'LOGOUT',
         userId: req.user.id,

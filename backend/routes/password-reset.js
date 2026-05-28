@@ -71,7 +71,7 @@ router.post("/reset-password", async (req, res) => {
     }
     const passwordHash = hashPassword(newPassword);
     await prisma.$transaction([
-      prisma.user.update({ where: { id: row.userId }, data: { passwordHash } }),
+      prisma.user.update({ where: { id: row.userId }, data: { passwordHash, jwtVersion: { increment: 1 } } }),
       prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
       prisma.passwordResetToken.updateMany({
         where: { userId: row.userId, usedAt: null, id: { not: row.id } },

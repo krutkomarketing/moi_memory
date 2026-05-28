@@ -89,6 +89,7 @@ model User {
   email        String   @unique
   // PBKDF2-SHA512: хранится строкой формата "iterations:saltHex:hashHex"
   passwordHash String
+  jwtVersion   Int      @default(0)
   displayName  String?
   role         UserRole @default(USER)
   telegramId   BigInt?  @unique // привязка к боту (объединение bot.db)

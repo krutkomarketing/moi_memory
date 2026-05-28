@@ -39,7 +39,7 @@ async function pollToken(token) {
     const t = await prisma.tgLoginToken.findUnique({
         where: { token },
         include: {
-            user: { select: { id: true, email: true, displayName: true, role: true } },
+            user: { select: { id: true, email: true, displayName: true, role: true, jwtVersion: true } },
         },
     });
     if (!t) return { status: 'NOT_FOUND' };
@@ -59,7 +59,7 @@ async function pollToken(token) {
             where: { token },
             data: { status: 'CONSUMED', consumedAt: new Date() },
         });
-        const jwt = signJWT({ sub: t.user.id, role: t.user.role, email: t.user.email });
+        const jwt = signJWT({ sub: t.user.id, role: t.user.role, email: t.user.email, jwtVersion: t.user.jwtVersion ?? 0 });
         return { status: 'READY', token: jwt, user: t.user };
     }
 
