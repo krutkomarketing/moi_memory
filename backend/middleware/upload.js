@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const sharp = require('sharp');
 const s3 = require('../lib/s3');
+const { ApiError } = require('./errors');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -75,6 +76,12 @@ async function saveImageBuffer(buffer, { maxSize = 1600, quality = 78 } = {}) {
 /* ─── Raw save (audio/video) ──────────────────────────── */
 
 async function saveRawBuffer(buffer, originalName, mimeType) {
+	// Magic-byte validation: reject files whose real content doesn't match audio/video (Task 5)
+	const ft = await getFileType();
+	const detected = await ft.fileTypeFromBuffer(buffer);
+	if (!detected || !RAW_ALLOWED_MIMES.has(detected.mime)) {
+	  throw ApiError.badRequest('Недопустимый или поддельный файл');
+	}
 	const id = crypto.randomUUID();
 	const ext = (path.extname(originalName || '') || mimeExt(mimeType) || '.bin').toLowerCase();
 	const filename = `${id}${ext}`;
@@ -102,6 +109,17 @@ function mimeExt(mime) {
 		'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov', 'video/x-matroska': '.mkv',
 	};
 	return map[mime] || '';
+}
+
+// Magic-byte validation for raw audio/video buffers (Task 5)
+const RAW_ALLOWED_MIMES = new Set([
+  'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/ogg', 'audio/opus', 'audio/webm',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska',
+]);
+let _fileTypeMod = null;
+async function getFileType() {
+  if (!_fileTypeMod) _fileTypeMod = await import('file-type');
+  return _fileTypeMod;
 }
 
 module.exports = {
