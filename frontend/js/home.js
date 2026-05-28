@@ -29,12 +29,13 @@
     API.get('/api/stats').then(res => {
       if (!res?.data) return;
       const map = {
-        '[data-count="18"]': res.data.people,
-        '[data-count="36"]': res.data.reviews,
-        '[data-count="9"]' : res.data.cities,
+        'people': res.data.people,
+        'reviews': res.data.reviews,
+        'cities': res.data.cities,
+          'generations': res.data.generations,
       };
-      for (const [sel, val] of Object.entries(map)) {
-        if (val) document.querySelectorAll(`.stat__num${sel}`).forEach(el => el.dataset.count = val);
+      for (const [key, val] of Object.entries(map)) {
+        if (val != null) document.querySelectorAll(`.stat__num[data-stat="${key}"]`).forEach(el => el.dataset.count = val);
       }
     }).catch(() => {
       /* fallback from data.js */

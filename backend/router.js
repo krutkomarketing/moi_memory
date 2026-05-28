@@ -209,7 +209,24 @@ router.get('/stats', wrap(async (req, res) => {
             distinct: ['burialPlace'],
         }),
     ]);
-    return ok(res, { data: { people, reviews, candles, cities: citiesAgg.length } });
+    // Generations: sum of per-account-max of per-tree generation ranges (MAX-MIN+1)
+    const generationsRows = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(per_owner_max), 0)::int AS total
+      FROM (
+        SELECT MAX(per_tree_range) AS per_owner_max
+        FROM (
+          SELECT t."ownerId",
+                 (MAX(n.generation) - MIN(n.generation) + 1) AS per_tree_range
+          FROM "FamilyTree" t
+          INNER JOIN "FamilyNode" n ON n."treeId" = t.id
+          WHERE n.generation IS NOT NULL
+          GROUP BY t.id, t."ownerId"
+        ) per_tree
+        GROUP BY per_tree."ownerId"
+      ) per_owner
+    `);
+    const generations = Number(generationsRows?.[0]?.total ?? 0);
+    return ok(res, { data: { people, reviews, candles, cities: citiesAgg.length, generations } });
 }));
 // ========== AUDIT LOGS (ADMIN only) ==========
 router.get('/admin/audit-logs', requireAuth, wrap(async (req, res) => {
