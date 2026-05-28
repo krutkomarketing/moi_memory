@@ -35,7 +35,7 @@ body {
   font-family: var(--font-body);
   font-size: 18px;
   line-height: 1.7;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
@@ -128,7 +128,7 @@ section { position: relative; z-index: 1; }
 
 /* ── HERO ── */
 .hero {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2565,7 +2565,7 @@ select option:hover {
   position: relative;
   z-index: 2;
   background: var(--black);
-  height: 100vh;
+  height: 100dvh;
   min-height: 800px;
   width: 100%;
   overflow: hidden;
