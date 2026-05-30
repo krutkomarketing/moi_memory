@@ -1,0 +1,10 @@
+{
+  "name": "memorial-site-root",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Root orchestrator for Memorial Site (Docker Compose wrapper)",
+  "scripts": {
+    "dev": "open http://localhost && docker compose up",
+    "stop": "docker compose down"
+  }
+}

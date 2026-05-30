@@ -2,161 +2,227 @@
    LEGACY CONTACT PAGE STYLES
    ───────────────────────────────────────────────────────────── */
 
+.audit-section {
+  padding-top: 110px;
+  padding-bottom: 120px;
+}
+
 .audit-section__inner {
-  max-width: 800px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
 
+/* ── CARDS ── */
 .lg-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 2.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: rgba(14, 14, 14, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 168, 75, 0.15);
+  border-radius: 12px;
+  padding: 4.5rem 3.5rem; /* Увеличены внутренние отступы (пространство между буквами и рамкой) */
+  margin-bottom: 3rem;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .lg-card:hover {
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(200, 168, 75, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.35), 
+    0 0 0 1px rgba(200, 168, 75, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+/* ── TYPOGRAPHY ── */
 .lg-card__title {
-  font-family: var(--font-display, 'Playfair Display', serif);
-  font-size: 1.8rem;
-  color: var(--gold, #d4af37);
-  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  color: var(--cream);
+  margin: 0 0 0.5rem;
   font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .lg-card__sub {
-  font-family: var(--font-body, 'Inter', sans-serif);
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0 0 2rem;
-  line-height: 1.6;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  color: var(--cream-dim);
+  margin: 0 0 2.5rem;
+  line-height: 1.7;
+  font-style: italic;
+  font-weight: 300;
 }
 
-/* Fields */
+/* ── FORMS & FIELDS ── */
 .lg-field {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .lg-field__label {
   display: block;
-  font-family: var(--font-body, 'Inter', sans-serif);
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--gold-light);
+  margin-bottom: 0.6rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
 }
 
 .lg-input,
-.lg-textarea {
+.lg-textarea,
+.lg-select {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  color: #fff;
-  font-family: var(--font-body, 'Inter', sans-serif);
+  max-width: 480px; /* Ограничение ширины для полей ввода */
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(200, 168, 75, 0.25);
+  border-radius: 6px;
+  padding: 14px 18px;
+  color: var(--white);
+  font-family: var(--font-ui);
   font-size: 1rem;
-  transition: all 0.3s ease;
+  font-weight: 300;
+  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+}
+
+.lg-textarea {
+  max-width: 640px; /* Текстовая область чуть шире */
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .lg-input:focus,
-.lg-textarea:focus {
+.lg-textarea:focus,
+.lg-select:focus {
   outline: none;
-  border-color: var(--gold, #d4af37);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-}
-
-.lg-textarea {
-  min-height: 120px;
-  resize: vertical;
+  border-color: var(--gold);
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 4px rgba(200, 168, 75, 0.12), 0 0 16px rgba(200, 168, 75, 0.08);
 }
 
 .lg-input::placeholder,
 .lg-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(201, 191, 168, 0.4); /* Вариация cream-dim */
+  font-weight: 300;
+  font-style: normal;
 }
 
-/* Actions */
+/* ── ACTIONS & BUTTONS ── */
 .lg-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 1.2rem;
+  margin-top: 3rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .lg-btn {
-  padding: 0.8rem 1.75rem;
-  border-radius: 8px;
-  font-family: var(--font-body, 'Inter', sans-serif);
+  padding: 12px 28px;
+  border-radius: 6px;
+  font-family: var(--font-ui);
   font-size: 0.95rem;
   font-weight: 500;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--transition);
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lg-btn--primary {
-  background: linear-gradient(135deg, var(--gold-dim, #b8962e), var(--gold, #d4af37));
-  color: #000;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--black);
+  box-shadow: 0 4px 14px rgba(200, 168, 75, 0.2);
 }
 
 .lg-btn--primary:hover {
-  background: linear-gradient(135deg, var(--gold, #d4af37), var(--gold-light, #f0c952));
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 24px rgba(200, 168, 75, 0.35);
 }
 
 .lg-btn--ghost {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(200, 168, 75, 0.3);
+  color: var(--gold-light);
 }
 
 .lg-btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(200, 168, 75, 0.08);
+  border-color: var(--gold);
+  color: var(--white);
+  transform: translateY(-2px);
 }
 
 .lg-btn--danger {
   background: transparent;
-  border-color: rgba(220, 53, 69, 0.4);
-  color: #ff6b6b;
+  border-color: rgba(229, 89, 89, 0.4);
+  color: #f3a3a3;
 }
 
 .lg-btn--danger:hover {
-  background: rgba(220, 53, 69, 0.1);
-  border-color: rgba(220, 53, 69, 0.8);
-  color: #ff8787;
+  background: rgba(229, 89, 89, 0.15);
+  border-color: rgba(229, 89, 89, 0.8);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(229, 89, 89, 0.2);
 }
 
-/* Messages */
+.lg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── MESSAGES ── */
 .lg-error {
-  color: #ff6b6b;
+  color: #f3a3a3;
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   margin-top: 1rem;
   min-height: 1.2rem;
+  display: flex;
+  align-items: center;
 }
 
 .lg-success {
-  color: #51cf66;
-  font-size: 0.9rem;
+  color: #9ee6b7;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
   margin-top: 1rem;
   min-height: 1.2rem;
+  display: flex;
+  align-items: center;
 }
 
-/* Info Rows */
+.lg-empty {
+  color: var(--cream-dim);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 1.1rem;
+  padding: 2rem 0;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* ── INFO ROWS (DISPLAY DATA) ── */
 .lg-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.85rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.95rem;
+  padding: 1.2rem 0;
+  border-bottom: 1px solid rgba(200, 168, 75, 0.12);
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .lg-row:last-child {
@@ -164,36 +230,74 @@
 }
 
 .lg-row__key {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--cream-dim);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  min-width: 220px;
+  font-weight: 500;
 }
 
 .lg-row__val {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
-  text-align: right;
-  max-width: 60%;
+  color: var(--cream);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 400;
+  text-align: left;
+  flex: 1;
   word-break: break-word;
+  line-height: 1.6;
 }
 
-/* Badges */
-.audit-badge {
-  display: inline-block;
-  font-family: var(--font-body, 'Inter', sans-serif);
+/* ── BADGES ── */
+.lg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  padding: 0.35rem 0.75rem;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.85rem;
   border-radius: 99px;
   text-transform: uppercase;
+  border: 1px solid;
 }
 
-.audit-badge--neutral { background: rgba(212, 175, 55, 0.15); color: #ecd8a0; border: 1px solid rgba(212, 175, 55, 0.4); }
-.audit-badge--access { background: rgba(72, 187, 120, 0.15); color: #9ee6b7; border: 1px solid rgba(72, 187, 120, 0.4); }
-.audit-badge--delete { background: rgba(229, 89, 89, 0.15); color: #f3a3a3; border: 1px solid rgba(229, 89, 89, 0.45); }
-.audit-badge--update { background: rgba(99, 165, 230, 0.15); color: #a8caf3; border: 1px solid rgba(99, 165, 230, 0.4); }
+.lg-badge--PENDING     { color: #e2c97e; background: rgba(226, 201, 126, 0.1); border-color: rgba(226, 201, 126, 0.3); }
+.lg-badge--ACTIVE      { color: #9ee6b7; background: rgba(158, 230, 183, 0.1); border-color: rgba(158, 230, 183, 0.3); }
+.lg-badge--TRIGGERED   { color: #f3a3a3; background: rgba(243, 163, 163, 0.1); border-color: rgba(243, 163, 163, 0.3); }
+.lg-badge--TRANSFERRED { color: #a8caf3; background: rgba(168, 202, 243, 0.1); border-color: rgba(168, 202, 243, 0.3); }
+.lg-badge--REVOKED     { color: var(--cream-dim); background: rgba(201, 191, 168, 0.05); border-color: rgba(201, 191, 168, 0.2); }
+.lg-badge--APPROVED    { color: #9ee6b7; background: rgba(158, 230, 183, 0.1); border-color: rgba(158, 230, 183, 0.3); }
+.lg-badge--REJECTED    { color: #f3a3a3; background: rgba(243, 163, 163, 0.1); border-color: rgba(243, 163, 163, 0.3); }
+.lg-badge--EXPIRED     { color: var(--cream-dim); background: rgba(201, 191, 168, 0.05); border-color: rgba(201, 191, 168, 0.2); }
 
-.lg-empty {
-  color: rgba(255, 255, 255, 0.4);
-  font-style: italic;
-  padding: 1rem 0;
+/* ── MOBILE RESPONSIVENESS ── */
+@media (max-width: 768px) {
+  .lg-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .lg-card__title {
+    font-size: 1.8rem;
+  }
+  
+  .lg-row {
+    flex-direction: column;
+    padding: 1rem 0;
+  }
+  
+  .lg-row__key {
+    min-width: 100%;
+    margin-bottom: 0.25rem;
+  }
+  
+  .lg-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .lg-btn {
+    width: 100%;
+  }
 }

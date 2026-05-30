@@ -9,59 +9,7 @@
 'use strict';
 (function () {
 
-  if (!document.getElementById('legacy-styles')) {
-    const s = document.createElement('style');
-    s.id = 'legacy-styles';
-    s.textContent = `
-      .lg-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 10px; padding: 22px 22px; margin-bottom: 22px; }
-      .lg-card__title { font-family: var(--font-display,'Cormorant Garamond',serif);
-        font-size: 1.4rem; color: #d8b96b; margin: 0 0 4px; font-weight: 500; }
-      .lg-card__sub { font-size: 0.85rem; color: rgba(255,255,255,0.5); margin: 0 0 18px; line-height: 1.5; }
-      .lg-field { margin-bottom: 14px; }
-      .lg-field__label { display:block; font-size: 0.82rem; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
-      .lg-input, .lg-textarea, .lg-select {
-        width: 100%; padding: 9px 12px; box-sizing: border-box;
-        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 6px; color: #eee; font-family: 'Inter',sans-serif; font-size: 0.9rem;
-      }
-      .lg-textarea { min-height: 90px; resize: vertical; line-height: 1.4; }
-      .lg-input:focus, .lg-textarea:focus, .lg-select:focus { outline:none; border-color: rgba(216,185,107,0.5); }
-      .lg-btn {
-        font-family: 'Inter',sans-serif; font-size: 0.88rem; padding: 9px 18px;
-        border-radius: 6px; border: 1px solid; background: transparent; cursor: pointer;
-        transition: all 0.2s;
-      }
-      .lg-btn--primary { border-color: rgba(216,185,107,0.5); color: #d8b96b; }
-      .lg-btn--primary:hover { background: rgba(216,185,107,0.10); border-color: rgba(216,185,107,0.85); }
-      .lg-btn--danger  { border-color: rgba(200,90,90,0.5); color: #d68080; }
-      .lg-btn--danger:hover  { background: rgba(200,90,90,0.10); border-color: rgba(200,90,90,0.85); }
-      .lg-btn--ghost   { border-color: rgba(255,255,255,0.18); color: rgba(255,255,255,0.7); }
-      .lg-btn--ghost:hover   { background: rgba(255,255,255,0.05); }
-      .lg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-      .lg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-      .lg-row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); align-items: baseline; flex-wrap: wrap; }
-      .lg-row:last-child { border-bottom: none; }
-      .lg-row__key { color: rgba(255,255,255,0.55); min-width: 160px; font-size: 0.85rem; }
-      .lg-row__val { color: #eee; font-size: 0.92rem; }
-      .lg-badge {
-        display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem;
-        border: 1px solid; letter-spacing: 0.04em;
-      }
-      .lg-badge--PENDING     { color: #e0c060; border-color: rgba(224,192,96,0.4); }
-      .lg-badge--ACTIVE      { color: #7dc99a; border-color: rgba(125,201,154,0.4); }
-      .lg-badge--TRIGGERED   { color: #d68080; border-color: rgba(214,128,128,0.4); }
-      .lg-badge--TRANSFERRED { color: #9090e0; border-color: rgba(144,144,224,0.4); }
-      .lg-badge--REVOKED     { color: rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.2); }
-      .lg-badge--APPROVED    { color: #7dc99a; border-color: rgba(125,201,154,0.4); }
-      .lg-badge--REJECTED    { color: #d68080; border-color: rgba(214,128,128,0.4); }
-      .lg-badge--EXPIRED     { color: rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.2); }
-      .lg-error { color: #d68080; font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
-      .lg-success { color: #7dc99a; font-size: 0.88rem; margin-top: 8px; }
-      .lg-empty { color: rgba(255,255,255,0.45); font-style: italic; padding: 18px 4px; text-align: center; }
-    `;
-    document.head.appendChild(s);
-  }
+
 
   const root = document.getElementById('legacy-content');
   if (!root) return;

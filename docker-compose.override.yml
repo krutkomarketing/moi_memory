@@ -29,5 +29,22 @@ services:
 
   frontend:
     volumes:
+      # Bind frontend исходники → hot reload при изменении HTML/CSS/JS
+      - ./frontend/index.html:/srv/index.html
+      - ./frontend/person.html:/srv/person.html
+      - ./frontend/family-tree.html:/srv/family-tree.html
+      - ./frontend/memory.html:/srv/memory.html
+      - ./frontend/timeline.html:/srv/timeline.html
+      - ./frontend/trash.html:/srv/trash.html
+      - ./frontend/audit.html:/srv/audit.html
+      - ./frontend/admin.html:/srv/admin.html
+      - ./frontend/legacy-contact.html:/srv/legacy-contact.html
+      - ./frontend/forgot-password.html:/srv/forgot-password.html
+      - ./frontend/reset-password.html:/srv/reset-password.html
+      - ./frontend/privacy.html:/srv/privacy.html
+      - ./frontend/terms.html:/srv/terms.html
+      - ./frontend/js:/srv/js
+      - ./frontend/styles:/srv/styles
+      - ./frontend/images:/srv/images
       # Тот же путь, read-only — Caddy отдаёт статику /uploads/* напрямую.
       - ./backend/uploads:/srv/uploads:ro

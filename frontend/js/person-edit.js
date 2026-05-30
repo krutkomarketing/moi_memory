@@ -14,19 +14,22 @@
   let isEditing = false;
   let originalData = null; // сохраняем данные для отката
 
-  // Ждём загрузки страницы
-  if (document.readyState === 'complete') {
-    setTimeout(() => {
+  function checkReadyAndInit() {
+    if (document.querySelector('.person-header__name')) {
       initEditPanel();
-      if (autoEdit) setTimeout(() => enterEditMode(), 300);
-    }, 500);
+      if (autoEdit) {
+        // Добавляем небольшую задержку, чтобы убедиться, что все скрипты завершили работу (вкл. person-blocks)
+        setTimeout(() => enterEditMode(), 100);
+      }
+    } else {
+      setTimeout(checkReadyAndInit, 100);
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    checkReadyAndInit();
   } else {
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        initEditPanel();
-        if (autoEdit) setTimeout(() => enterEditMode(), 300);
-      }, 500);
-    });
+    window.addEventListener('load', checkReadyAndInit);
   }
 
   function initEditPanel() {
@@ -628,6 +631,383 @@
       alert('Сервер недоступен: ' + err.message);
       saveBtn.textContent = '💾 Сохранить';
       saveBtn.disabled = false;
+    }
+  }
+
+  // Event delegation to catch clicks on AI assistant buttons (both static and dynamic)
+  document.body.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('ai-assistant-btn')) {
+      const wrapper = e.target.closest('.edit-textarea-wrapper');
+      if (!wrapper) return;
+      const textarea = wrapper.querySelector('textarea');
+      if (!textarea) return;
+      openAiAssistantModal(textarea);
+    }
+  });
+
+  /* ── AI Assistant Popup Modal ── */
+  function openAiAssistantModal(textarea) {
+    const originalText = textarea.value.trim();
+    const field = textarea.dataset.block || textarea.dataset.field || 'text';
+    
+    // Check if the overlay already exists
+    let overlay = document.querySelector('.ai-overlay');
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement('div');
+    overlay.className = 'ai-overlay';
+    
+    overlay.innerHTML = `
+      <div class="ai-modal">
+        <button class="ai-modal__close" title="Закрыть">✕</button>
+        <div class="ai-modal__header">
+          <h3 class="ai-modal__title">✨ ИИ-помощник «Память»</h3>
+        </div>
+        <div class="ai-modal__body" id="ai-modal-body"></div>
+        <div class="ai-modal__footer" id="ai-modal-footer"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const modalBody = overlay.querySelector('#ai-modal-body');
+    const modalFooter = overlay.querySelector('#ai-modal-footer');
+    const closeBtn = overlay.querySelector('.ai-modal__close');
+
+    // Close handlers
+    closeBtn.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    let messages = []; // Chat history
+    let lastProposedText = '';
+
+    // Initialize state
+    if (originalText) {
+      // Scenario 1: Text already entered
+      showScenario1InitialState();
+    } else {
+      // Scenario 2: Text is empty
+      showScenario2Step1();
+    }
+
+    function addMessage(role, content) {
+      const bubble = document.createElement('div');
+      bubble.className = `ai-chat-bubble ai-chat-bubble--${role === 'assistant' ? 'assistant' : 'user'}`;
+      bubble.innerText = content;
+      modalBody.appendChild(bubble);
+      modalBody.scrollTop = modalBody.scrollHeight;
+      
+      messages.push({ role, content });
+    }
+
+    function addThinkingIndicator() {
+      const thinking = document.createElement('div');
+      thinking.className = 'ai-thinking';
+      thinking.id = 'ai-thinking-indicator';
+      thinking.innerHTML = `ИИ подбирает слова<div class="ai-thinking__dots"><div class="ai-thinking__dot"></div><div class="ai-thinking__dot"></div><div class="ai-thinking__dot"></div></div>`;
+      modalBody.appendChild(thinking);
+      modalBody.scrollTop = modalBody.scrollHeight;
+    }
+
+    function removeThinkingIndicator() {
+      const indicator = document.getElementById('ai-thinking-indicator');
+      if (indicator) indicator.remove();
+    }
+
+    function addPreviewBox(text) {
+      // Remove any existing preview box
+      const existing = modalBody.querySelector('.ai-preview-box-container');
+      if (existing) existing.remove();
+
+      const container = document.createElement('div');
+      container.className = 'ai-preview-box-container';
+      container.innerHTML = `
+        <div class="ai-preview-title">📝 Предпросмотр текста:</div>
+        <div class="ai-preview-box">${escHtml(text)}</div>
+      `;
+      modalBody.appendChild(container);
+      modalBody.scrollTop = modalBody.scrollHeight;
+      
+      lastProposedText = text;
+    }
+
+    async function sendChatRequest(contextData) {
+      addThinkingIndicator();
+      
+      const base = window.location.port === '3000' ? '' : 'http://localhost:3000';
+      try {
+        const res = await fetch(`${base}/api/ai/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: messages,
+            context: contextData
+          })
+        });
+        
+        const json = await res.json();
+        removeThinkingIndicator();
+
+        if (json.ok) {
+          if (json.chatResponse) {
+            addMessage('assistant', json.chatResponse);
+          }
+          if (json.proposedText) {
+            addPreviewBox(json.proposedText);
+          }
+          return json;
+        } else {
+          addMessage('assistant', '⚠️ Произошла ошибка при генерации. Пожалуйста, попробуйте еще раз.');
+          return null;
+        }
+      } catch (err) {
+        removeThinkingIndicator();
+        addMessage('assistant', '⚠️ Не удалось связаться с ИИ. Проверьте соединение с сервером.');
+        return null;
+      }
+    }
+
+    // --- Scenario 1 Screens ---
+    function showScenario1InitialState() {
+      modalBody.innerHTML = `
+        <div class="ai-initial-panel">
+          <div class="ai-initial-panel__icon">✍️</div>
+          <div class="ai-initial-panel__text">
+            В этом текстовом блоке уже есть написанный вами текст. 
+            Я могу помочь улучшить его стиль, исправить ошибки, дополнить содержание или изменить тон.
+          </div>
+          <div class="ai-preview-title" style="width: 100%; text-align: left;">Текущий текст:</div>
+          <div class="ai-preview-box" style="width: 100%; text-align: left;">${escHtml(originalText)}</div>
+          <button class="ai-btn ai-btn--primary ai-btn-large" id="ai-btn-improve-start">✨ Улучшить текст</button>
+        </div>
+      `;
+      modalFooter.innerHTML = '';
+
+      modalBody.querySelector('#ai-btn-improve-start').addEventListener('click', () => {
+        modalBody.innerHTML = ''; // Clear initial screen
+        messages = [];
+        addMessage('assistant', 'Здравствуйте! Я готов поработать над улучшением вашего текста. Напишите, какие изменения вы хотите внести (например: «сделай более эмоциональным», «исправь ошибки», «сократи» или напишите конкретные пожелания).');
+        
+        // Show chat controls
+        showChatInterface({ originalText, field });
+        
+        // Trigger first automatic improvement
+        sendChatRequest({ originalText, field });
+      });
+    }
+
+    function showChatInterface(contextData) {
+      modalFooter.innerHTML = `
+        <div class="ai-input-row">
+          <textarea class="ai-textarea" id="ai-chat-input" placeholder="Напишите пожелание по улучшению... (например, 'сделай душевнее')"></textarea>
+          <button class="ai-btn ai-btn--send" id="ai-btn-send-chat" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+        <div class="ai-action-buttons">
+          <button class="ai-btn ai-btn--secondary" id="ai-btn-cancel-chat">✕ Отмена</button>
+          <button class="ai-btn ai-btn--primary" id="ai-btn-apply-text" disabled>💾 Применить текст</button>
+        </div>
+      `;
+
+      const input = modalFooter.querySelector('#ai-chat-input');
+      const sendBtn = modalFooter.querySelector('#ai-btn-send-chat');
+      const applyBtn = modalFooter.querySelector('#ai-btn-apply-text');
+      const cancelBtn = modalFooter.querySelector('#ai-btn-cancel-chat');
+
+      // Enable/disable send button based on input
+      input.addEventListener('input', () => {
+        sendBtn.disabled = !input.value.trim();
+      });
+
+      // Enable apply button once we have proposed text
+      const checkProposedText = setInterval(() => {
+        if (!overlay.parentNode) {
+          clearInterval(checkProposedText);
+          return;
+        }
+        if (lastProposedText) {
+          applyBtn.disabled = false;
+        }
+      }, 500);
+
+      // Send message
+      async function handleSend() {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        sendBtn.disabled = true;
+        
+        addMessage('user', text);
+        await sendChatRequest(contextData);
+      }
+
+      sendBtn.addEventListener('click', handleSend);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      });
+
+      // Apply action
+      applyBtn.addEventListener('click', () => {
+        if (lastProposedText) {
+          textarea.value = lastProposedText;
+          // Dispatch input event to notify any validation/save listeners
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          overlay.remove();
+        }
+      });
+
+      cancelBtn.addEventListener('click', () => overlay.remove());
+    }
+
+    // --- Scenario 2 Screens (Text is empty) ---
+    let writeTopic = '';
+    let writeKeywords = '';
+
+    function showScenario2Step1() {
+      modalBody.innerHTML = `
+        <div class="ai-initial-panel">
+          <div class="ai-initial-panel__icon">🪄</div>
+          <h4 style="font-family: var(--font-display); font-size: 18px; color: var(--gold-light); margin-bottom: -10px;">Давайте напишем текст вместе</h4>
+          <div class="ai-initial-panel__text">
+            Этот текстовый блок пуст. Напишите тему или краткую идею, о чём должен быть этот текст (например: «О детстве в деревне» или «Жизненные ценности и наследие»).
+          </div>
+          <textarea class="edit-textarea" id="ai-topic-input" placeholder="Укажите тему текста..." style="width: 100%; min-height: 80px;"></textarea>
+          <button class="ai-btn ai-btn--primary ai-btn-large" id="ai-btn-topic-next" disabled>Продолжить →</button>
+        </div>
+      `;
+      modalFooter.innerHTML = '';
+
+      const topicInput = modalBody.querySelector('#ai-topic-input');
+      const nextBtn = modalBody.querySelector('#ai-btn-topic-next');
+
+      topicInput.addEventListener('input', () => {
+        nextBtn.disabled = !topicInput.value.trim();
+      });
+
+      nextBtn.addEventListener('click', () => {
+        writeTopic = topicInput.value.trim();
+        showScenario2Step2();
+      });
+    }
+
+    function showScenario2Step2() {
+      modalBody.innerHTML = `
+        <div class="ai-initial-panel">
+          <div class="ai-initial-panel__icon">📝</div>
+          <h4 style="font-family: var(--font-display); font-size: 18px; color: var(--gold-light); margin-bottom: -10px;">Детали и ключевые слова</h4>
+          <div class="ai-initial-panel__text">
+            Укажите ключевые слова, даты, имена, важные факты или ваши пожелания, которые обязательно нужно упомянуть в тексте.
+          </div>
+          <textarea class="edit-textarea" id="ai-keywords-input" placeholder="Например: родился в Минске, любил рыбалку, собака Дружок, 1965 год... (или оставьте пустым)" style="width: 100%; min-height: 80px;"></textarea>
+          <div class="ai-action-buttons" style="width: 100%; margin-top: 10px;">
+            <button class="ai-btn ai-btn--secondary" id="ai-btn-keywords-skip" style="flex: 1;">Пропустить</button>
+            <button class="ai-btn ai-btn--primary" id="ai-btn-keywords-generate" style="flex: 1;">Создать текст ✨</button>
+          </div>
+        </div>
+      `;
+      modalFooter.innerHTML = '';
+
+      const keywordsInput = modalBody.querySelector('#ai-keywords-input');
+      const skipBtn = modalBody.querySelector('#ai-btn-keywords-skip');
+      const genBtn = modalBody.querySelector('#ai-btn-keywords-generate');
+
+      skipBtn.addEventListener('click', () => {
+        writeKeywords = 'пропустить';
+        generateTextFromInputs();
+      });
+
+      genBtn.addEventListener('click', () => {
+        writeKeywords = keywordsInput.value.trim() || 'пропустить';
+        generateTextFromInputs();
+      });
+    }
+
+    async function generateTextFromInputs() {
+      modalBody.innerHTML = ''; // Clear for chat/preview layout
+      
+      messages = [];
+      addMessage('user', `Создать текст на тему: "${writeTopic}".`);
+      if (writeKeywords && writeKeywords !== 'пропустить') {
+        addMessage('user', `Использовать ключевые слова: ${writeKeywords}.`);
+      } else {
+        addMessage('user', `Ключевые слова отсутствуют.`);
+      }
+
+      showScenario2ResultInterface();
+      
+      await sendChatRequest({ field });
+    }
+
+    function showScenario2ResultInterface() {
+      modalFooter.innerHTML = `
+        <div class="ai-input-row" id="ai-redo-input-container">
+          <textarea class="ai-textarea" id="ai-redo-input" placeholder="Что изменить? (например: 'сделай длиннее', 'добавь тепла')"></textarea>
+          <button class="ai-btn ai-btn--send" id="ai-btn-redo" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+        <div class="ai-action-buttons">
+          <button class="ai-btn ai-btn--danger" id="ai-btn-discard-scratch">✕ Отмена</button>
+          <button class="ai-btn ai-btn--primary" id="ai-btn-save-scratch" disabled>💾 Сохранить текст</button>
+        </div>
+      `;
+
+      const redoInput = modalFooter.querySelector('#ai-redo-input');
+      const redoBtn = modalFooter.querySelector('#ai-btn-redo');
+      const saveBtn = modalFooter.querySelector('#ai-btn-save-scratch');
+      const discardBtn = modalFooter.querySelector('#ai-btn-discard-scratch');
+
+      redoInput.addEventListener('input', () => {
+        redoBtn.disabled = !redoInput.value.trim();
+      });
+
+      // Enable save button once we have proposed text
+      const checkProposedText = setInterval(() => {
+        if (!overlay.parentNode) {
+          clearInterval(checkProposedText);
+          return;
+        }
+        if (lastProposedText) {
+          saveBtn.disabled = false;
+        }
+      }, 500);
+
+      // Redo generation
+      async function handleRedo() {
+        const text = redoInput.value.trim();
+        if (!text) return;
+        redoInput.value = '';
+        redoBtn.disabled = true;
+        
+        addMessage('user', text);
+        await sendChatRequest({ field });
+      }
+
+      redoBtn.addEventListener('click', handleRedo);
+      redoInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        }
+      });
+
+      // Save action
+      saveBtn.addEventListener('click', () => {
+        if (lastProposedText) {
+          textarea.value = lastProposedText;
+          // Dispatch input event to notify any validation/save listeners
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          overlay.remove();
+        }
+      });
+
+      discardBtn.addEventListener('click', () => overlay.remove());
     }
   }
 
