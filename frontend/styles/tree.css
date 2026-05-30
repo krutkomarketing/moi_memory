@@ -2895,17 +2895,3 @@ body.tree-page { overflow-x: hidden; }
 .rp-events::-webkit-scrollbar-thumb:hover {
   background: rgba(200, 168, 75, 0.5);
 }
-
-/* ══════════════════════════════════════
-   CONSTELLATION CANVAS OVERLAY
-   ══════════════════════════════════════ */
-#tree-constellation-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  display: block;
-}
