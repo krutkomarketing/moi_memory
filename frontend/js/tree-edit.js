@@ -1252,23 +1252,151 @@
         }
       }
       /* __MARRIAGE_YEAR_PROMPT_V1__ */
-      let __extras = {};
+      const proceedWithConnection = (extras = {}) => {
+        connectNodes(connectionNodeA, nodeId, connectionMode, extras);
+        nodeEl.classList.add('tree-node--conn-selected');
+        updateConnectionToast(2);
+        setTimeout(() => cancelConnectionMode(), 1400);
+      };
+
       if (connectionMode === 'marriage') {
-        const __yearStr = (prompt('Год брака (необязательно, можно оставить пустым):', '') || '').trim();
-        if (__yearStr) {
-          const __y = parseInt(__yearStr, 10);
-          const __yearMax = new Date().getFullYear() + 5;
-          if (Number.isInteger(__y) && __y >= 1500 && __y <= __yearMax) {
-            __extras.startDate = __y + '-01-01';
-          } else {
-            alert('Введите год от 1500 до ' + __yearMax + ', либо оставьте поле пустым.');
+        // Open custom premium modal
+        document.getElementById('tree-marriage-year-modal')?.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'tree-marriage-year-modal';
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0; left: 0; width: 100vw; height: 100vh;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          z-index: 15000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        `;
+        overlay.innerHTML = `
+          <div class="tree-modal" style="
+            background: rgba(18, 18, 18, 0.85);
+            border: 1px solid rgba(200, 168, 75, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            font-family: var(--font-body);
+            color: var(--cream);
+            position: relative;
+          ">
+            <button class="tree-modal__close" id="tmy-close" style="
+              position: absolute;
+              top: 15px; right: 15px;
+              background: transparent;
+              border: none;
+              color: var(--cream-dim);
+              font-size: 24px;
+              cursor: pointer;
+              outline: none;
+            ">×</button>
+            <h3 style="margin-top:0;font-family:var(--font-display);font-size:20px;color:var(--gold-light);margin-bottom:12px;">Год брака</h3>
+            <form id="tmy-form">
+              <div class="tree-modal__field" style="margin-bottom: 20px;">
+                <label style="display:block;margin-bottom:8px;font-size:14px;color:var(--cream-dim);">Укажите год брака (необязательно)</label>
+                <input type="number" id="tmy-year" placeholder="Пример: 1980" min="1500" max="${new Date().getFullYear() + 5}" autofocus style="
+                  width: 100%;
+                  padding: 12px 16px;
+                  background: rgba(255,255,255,0.05);
+                  border: 1px solid rgba(255,255,255,0.1);
+                  border-radius: 8px;
+                  color: #fff;
+                  font-size: 15px;
+                  box-sizing: border-box;
+                  outline: none;
+                  transition: border-color 0.3s;
+                " />
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:12px;">
+                <button type="button" id="tmy-cancel" style="
+                  padding: 8px 16px;
+                  background: transparent;
+                  border: 1px solid rgba(255,255,255,0.15);
+                  color: var(--cream-dim);
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  transition: background 0.3s;
+                ">Пропустить</button>
+                <button type="submit" id="tmy-ok" style="
+                  padding: 8px 20px;
+                  background: var(--gold);
+                  border: none;
+                  color: #121212;
+                  font-weight: 600;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  transition: background 0.3s;
+                ">Сохранить</button>
+              </div>
+            </form>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const input = overlay.querySelector('#tmy-year');
+        input.focus();
+
+        requestAnimationFrame(() => {
+          overlay.style.opacity = '1';
+          overlay.querySelector('.tree-modal').style.transform = 'scale(1)';
+        });
+
+        const close = () => {
+          overlay.style.opacity = '0';
+          overlay.querySelector('.tree-modal').style.transform = 'scale(0.9)';
+          setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.querySelector('#tmy-close').addEventListener('click', close);
+        overlay.querySelector('#tmy-cancel').addEventListener('click', () => {
+          proceedWithConnection({});
+          close();
+        });
+
+        overlay.querySelector('#tmy-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const val = input.value.trim();
+          let extras = {};
+          if (val) {
+            const y = parseInt(val, 10);
+            const yearMax = new Date().getFullYear() + 5;
+            if (Number.isInteger(y) && y >= 1500 && y <= yearMax) {
+              extras.startDate = y + '-01-01';
+            } else {
+              showErrorToast('Введите год от 1500 до ' + yearMax);
+              return;
+            }
           }
-        }
+          proceedWithConnection(extras);
+          close();
+        });
+
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Escape') close();
+        });
+        input.addEventListener('focus', () => {
+          input.style.borderColor = 'var(--gold)';
+        });
+        input.addEventListener('blur', () => {
+          input.style.borderColor = 'rgba(255,255,255,0.1)';
+        });
+      } else {
+        proceedWithConnection({});
       }
-      connectNodes(connectionNodeA, nodeId, connectionMode, __extras);
-      nodeEl.classList.add('tree-node--conn-selected');
-      updateConnectionToast(2);
-      setTimeout(() => cancelConnectionMode(), 1400);
       return true;
     }
     return false;
@@ -1502,13 +1630,19 @@
       const r = await fetch(`${BASE}/api/family-connections?treeId=${currentTreeId}`);
       const j = await r.json();
       if (j.ok && Array.isArray(j.data)) {
-        const conns = j.data.map(c => ({
-          id: c.id,
-          a: c.nodeA,
-          b: c.nodeB,
-          type: c.type,
-          color: c.color,
-        }));
+        const conns = j.data.map(c => {
+          const typeLower = String(c.type || '').toLowerCase();
+          let type = typeLower;
+          if (typeLower === 'spouse') type = 'marriage';
+          if (typeLower === 'parent') type = 'kinship';
+          return {
+            id: c.id,
+            a: c.nodeA,
+            b: c.nodeB,
+            type: type,
+            color: c.color,
+          };
+        });
         saveLocalConnections(conns);
       }
     } catch (_) {}

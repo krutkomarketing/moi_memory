@@ -506,13 +506,19 @@ const currentTreeId = urlParams.get('tree') || 'default';
       const connsJson = await connsRes.json().catch(() => ({ ok: false }));
 
       if (connsJson.ok && Array.isArray(connsJson.data)) {
-        const conns = connsJson.data.map(c => ({
-          id: c.id,
-          a: c.nodeA,
-          b: c.nodeB,
-          type: c.type,
-          color: c.color,
-        }));
+        const conns = connsJson.data.map(c => {
+          const typeLower = String(c.type || '').toLowerCase();
+          let type = typeLower;
+          if (typeLower === 'spouse') type = 'marriage';
+          if (typeLower === 'parent') type = 'kinship';
+          return {
+            id: c.id,
+            a: c.nodeA,
+            b: c.nodeB,
+            type: type,
+            color: c.color,
+          };
+        });
         localStorage.setItem('tree_connections_default', JSON.stringify(conns));
       }
 
@@ -948,7 +954,10 @@ const currentTreeId = urlParams.get('tree') || 'default';
       const conns = JSON.parse(localStorage.getItem('tree_connections_default') || '[]');
       if (conns.length) {
         conns.forEach(c => {
-          drawAnimatedConnection(c.a, c.b, c.type, c.color);
+          const typeLower = String(c.type || '').toLowerCase();
+          if (typeLower !== 'parent' && typeLower !== 'child' && typeLower !== 'spouse' && typeLower !== 'marriage' && typeLower !== 'kinship') {
+            drawAnimatedConnection(c.a, c.b, c.type, c.color);
+          }
         });
       }
     } catch (e) {}

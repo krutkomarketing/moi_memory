@@ -116,6 +116,8 @@ function serializeConnection(c) {
         id: c.id,
         fromNodeId: c.fromNodeId,
         toNodeId: c.toNodeId,
+        nodeA: c.fromNodeId,
+        nodeB: c.toNodeId,
         type: String(c.type).toLowerCase(),
         startDate: c.startDate ? formatDate(c.startDate, 'day') : '',
         endDate: c.endDate ? formatDate(c.endDate, 'day') : '',
