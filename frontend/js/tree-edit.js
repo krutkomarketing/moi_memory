@@ -1237,15 +1237,10 @@
         if (nodeA && nodeB) {
           const genA = nodeA.generation || 0;
           const genB = nodeB.generation || 0;
-          if (genA !== genB) {
-            showErrorToast('Брак разрешен только между членами одного поколения!');
-            cancelConnectionMode();
-            return true;
-          }
           const clanA = nodeA.clan_id || nodeA.clanId;
           const clanB = nodeB.clan_id || nodeB.clanId;
-          if (clanA && clanB && clanA === clanB) {
-            showErrorToast('Брак между членами одного рода запрещен!');
+          if (genA !== genB && clanA && clanB && clanA === clanB) {
+            showErrorToast('Брак между членами одного рода из разных поколений запрещен!');
             cancelConnectionMode();
             return true;
           }
@@ -2550,13 +2545,8 @@
         if (spouseNode) {
           const spouseGen = spouseNode.generation || 0;
           const spouseClan = spouseNode.clan_id || spouseNode.clanId;
-          if (spouseGen !== data.generation) {
-            err.textContent = 'Брак разрешен только между членами одного поколения!';
-            err.style.display = 'block';
-            return;
-          }
-          if (spouseClan && data.clanId && spouseClan === data.clanId) {
-            err.textContent = 'Брак между членами одного рода запрещен!';
+          if (spouseGen !== data.generation && spouseClan && data.clanId && spouseClan === data.clanId) {
+            err.textContent = 'Брак между членами одного рода из разных поколений запрещен!';
             err.style.display = 'block';
             return;
           }
