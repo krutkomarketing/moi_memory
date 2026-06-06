@@ -351,7 +351,14 @@
   }
 
   function closeModal() {
-    document.getElementById('auth-overlay')?.remove();
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) {
+      if (window.closeModalWithGSAP) {
+        window.closeModalWithGSAP(overlay, '.auth-modal');
+      } else {
+        overlay.remove();
+      }
+    }
     document.removeEventListener('keydown', onEsc);
   }
 

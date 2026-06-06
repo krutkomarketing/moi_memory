@@ -1904,7 +1904,7 @@
               <div class="tree-node__years">${node.years || ''}</div>
               ${clan ? `<div class="tree-node__clan-name" style="color:${color}">${clan.name}</div>` : ''}
               ${node.description ? `<div class="tree-node__desc">${node.description}</div>` : ''}
-              ${linked ? `<a href="person.html?id=${linked}" class="tree-node__link">Страница памяти →</a>` : ''}
+              ${linked ? `<a href="/p/${encodeURIComponent(linked)}" class="tree-node__link">Страница памяти →</a>` : ''}
             </div>
           </div>`;
       });

@@ -190,7 +190,7 @@
                 <p class="featured-person__meta">${p.born} — ${p.died || '...'}${age ? ` · ${age} лет` : ''} · ${p.city}</p>
                 ${p.bio ? `<p class="featured-person__bio">${p.bio.slice(0, 160)}…</p>` : ''}
                 ${review ? `<blockquote class="featured-person__quote"><p>"${review.text}"</p><cite>${review.author}</cite></blockquote>` : ''}
-                <a href="person.html?id=${encodeURIComponent(p.id)}" class="featured-person__link">Читать историю →</a>
+                <a href="/p/${encodeURIComponent(p.slug || p.id)}" class="featured-person__link">Читать историю →</a>
               </div>
             </div>
           </div>`;
@@ -219,7 +219,7 @@
   if (lastGrid) {
     function renderLastAdded(people) {
       lastGrid.innerHTML = people.map(p => `
-        <a class="person-card" href="person.html?id=${encodeURIComponent(p.slug || p.id)}">
+        <a class="person-card" href="/p/${encodeURIComponent(p.slug || p.id)}">
           <div class="person-card__photo">
             ${p.photo
               ? `<img src="${API.resolveUrl(p.photo)}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" data-h-fb="person-card"/>`

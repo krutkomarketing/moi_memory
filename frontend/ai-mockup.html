@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta name="google-site-verification" content="XZ1l0f_nu02uk7tS2ID2xVgUC91dXNQa16LdUJihGEM" />
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR-Память Mockup</title>
+  <style>
+    /* Premium Palette Variables */
+    :root {
+      --gold-main: #c8a84b;
+      --gold-light: #e6cf86;
+      --gold-dark: #806524;
+      --gold-deep: #4a3a14;
+      --bg-black-matte: #141210;
+      --bg-black-deep: #0e0d0b;
+      --glass-bg: rgba(20, 18, 16, 0.85);
+      --glass-border: rgba(200, 168, 75, 0.4);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --phone-w: 230px;
+      --phone-h: 490px;
+    }
+
+    /* Standard Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0a0907;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: var(--font-sans);
+    }
+
+    /* Main Container & Viewport Control */
+    .mockup-viewport {
+      width: 100%;
+      max-width: 380px;
+      height: 600px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Wrap everything inside a single root container as requested */
+    .ai-mockup {
+      width: 360px;
+      height: 580px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform-style: preserve-3d;
+      perspective: 1200px;
+    }
+
+    /* Floor Shadow mimicking 3D tilt */
+    .floor-shadow {
+      position: absolute;
+      width: 280px;
+      height: 70px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 70%);
+      bottom: 25px;
+      left: 30px;
+      transform: rotateZ(-14deg);
+      filter: blur(15px);
+      pointer-events: none;
+      animation: shadowPulse 7s ease-in-out infinite;
+    }
+
+    /* 3D Phone Wrapper */
+    .phone-3d-wrap {
+      position: absolute;
+      width: var(--phone-w);
+      height: var(--phone-h);
+      transform-style: preserve-3d;
+      z-index: 10;
+    }
+
+    /* Modern Smartphone with Premium Gold Rim & Matte Black Body */
+    .phone-body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-black-matte);
+      border-radius: 36px;
+      border: 1.5px solid var(--gold-main);
+      padding: 10px; /* Outer Bezel Width */
+      position: relative;
+      transform-style: preserve-3d;
+      /* Precise 3D Rotation matching the diagonal angle of the reference */
+      transform: rotateX(23deg) rotateY(15deg) rotateZ(-16deg);
+      /* Extruded metallic gold layers for realistic depth + drop shadow */
+      box-shadow:
+        -1px 1px 0px #9d7f34,
+        -2px 2px 0px #8a6e29,
+        -3px 3px 0px #70581e,
+        -4px 4px 0px #5c4716,
+        -5px 5px 0px #40310c,
+        -18px 24px 45px rgba(0, 0, 0, 0.85);
+      animation: gentleFloat 7s ease-in-out infinite;
+    }
+
+    /* Phone Notch / Camera Pill */
+    .phone-notch {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateZ(2px);
+      width: 75px;
+      height: 14px;
+      background: var(--bg-black-deep);
+      border-radius: 10px;
+      border: 1px solid rgba(200, 168, 75, 0.15);
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    /* EMPTY transparent screen ready for injected HTML */
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border-radius: 27px;
+      overflow: hidden;
+      position: relative;
+      /* Modern robust mask to clip future content to the rounded screen area */
+      clip-path: inset(0 0 0 0 round 27px);
+      -webkit-clip-path: inset(0 0 0 0 round 27px);
+      z-index: 10;
+    }
+
+    /* FLOATING ELEMENT 1: Voice Message Pill */
+    .voice-pill {
+      position: absolute;
+      top: 45px;
+      right: 5px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 26px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      transform-style: preserve-3d;
+      transform: translateZ(90px) rotateX(10deg) rotateY(-5deg) rotateZ(-3deg);
+      animation: pillFloat 7s ease-in-out infinite;
+    }
+
+    /* Voice Pill UI Parts */
+    .play-btn {
+      width: 26px;
+      height: 26px;
+      background: var(--gold-main);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 3px 8px rgba(200, 168, 75, 0.3);
+    }
+
+    .play-btn svg {
+      width: 12px;
+      height: 12px;
+      fill: var(--bg-black-deep);
+      margin-left: 2px; /* Visual optical alignment */
+    }
+
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 24px;
+    }
+
+    .wave-bar {
+      width: 2px;
+      border-radius: 1px;
+      background: rgba(200, 168, 75, 0.3);
+    }
+
+    .wave-bar.active {
+      background: var(--gold-light);
+    }
+
+    .duration {
+      font-size: 10.5px;
+      color: var(--gold-light);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      margin-left: 2px;
+    }
+
+    /* FLOATING ELEMENT 2: Sparkle Star Icon */
+    .sparkle-wrap {
+      position: absolute;
+      top: 235px;
+      right: 50px;
+      z-index: 90;
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+      animation: sparkleAnim 4s ease-in-out infinite;
+    }
+
+    .sparkle-icon {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 6px rgba(230, 207, 134, 0.7));
+    }
+
+    /* FLOATING ELEMENT 3: Dashed Curved Arrow */
+    .flow-arrow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    /* FLOATING ELEMENT 4: Notification Card */
+    .notif-card {
+      position: absolute;
+      bottom: 70px;
+      left: 12px;
+      width: 285px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+      z-index: 110;
+      transform-style: preserve-3d;
+      transform: translateZ(150px) rotateX(10deg) rotateY(-5deg) rotateZ(-2deg);
+      animation: cardFloat 7s ease-in-out infinite;
+    }
+
+    /* Notification Avatar with QR Text inside */
+    .notif-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--bg-black-deep), var(--bg-black-matte));
+      border: 1.5px solid var(--gold-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(200, 168, 75, 0.15);
+    }
+
+    .avatar-text {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--gold-light);
+      letter-spacing: 0.5px;
+    }
+
+    /* Notification Text Mechanics */
+    .notif-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0; /* Ensures truncation works */
+    }
+
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .notif-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px;
+    }
+
+    .notif-time {
+      font-size: 10px;
+      color: rgba(230, 207, 134, 0.6);
+      font-weight: 400;
+    }
+
+    .notif-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .notif-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+    }
+
+    /* Notification Unread Circle */
+    .notif-badge {
+      width: 16px;
+      height: 16px;
+      background: var(--gold-main);
+      color: var(--bg-black-deep);
+      font-size: 9px;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(200, 168, 75, 0.4);
+    }
+
+    /* GENTLE FLOATING KEYFRAMES (6s-8s cycle times for luxury appeal) */
+    @keyframes gentleFloat {
+      0%, 100% {
+        transform: rotateX(23deg) rotateY(15deg) rotateZ(-16deg) translateY(0);
+      }
+      50% {
+        transform: rotateX(23deg) rotateY(15deg) rotateZ(-16deg) translateY(-8px);
+      }
+    }
+
+    @keyframes shadowPulse {
+      0%, 100% {
+        transform: translateX(-50%) scale(1) rotateZ(-14deg);
+        opacity: 0.75;
+      }
+      50% {
+        transform: translateX(-50%) scale(0.92) rotateZ(-14deg);
+        opacity: 0.5;
+      }
+    }
+
+    @keyframes pillFloat {
+      0%, 100% {
+        transform: translateZ(90px) rotateX(10deg) rotateY(-5deg) rotateZ(-3deg) translateY(0);
+      }
+      50% {
+        transform: translateZ(90px) rotateX(10deg) rotateY(-5deg) rotateZ(-3deg) translateY(-5px);
+      }
+    }
+
+    @keyframes cardFloat {
+      0%, 100% {
+        transform: translateZ(150px) rotateX(10deg) rotateY(-5deg) rotateZ(-2deg) translateY(0);
+      }
+      50% {
+        transform: translateZ(150px) rotateX(10deg) rotateY(-5deg) rotateZ(-2deg) translateY(4px);
+      }
+    }
+
+    @keyframes sparkleAnim {
+      0%, 100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.18) rotate(15deg);
+        opacity: 1;
+      }
+    }
+
+    /* Downscale wrapper smoothly below 380px wide screen */
+    @media (max-width: 380px) {
+      .ai-mockup {
+        transform: scale(0.9);
+        transform-origin: center center;
+      }
+    }
+    @media (max-width: 330px) {
+      .ai-mockup {
+        transform: scale(0.8);
+        transform-origin: center center;
+      }
+    }
+  </style>
+  <script src="js/counters.js?v=1" data-counters></script>
+</head>
+<body>
+
+  <!-- Responsive Scaling Viewport Container -->
+  <div class="mockup-viewport">
+    <div class="ai-mockup">
+
+      <!-- 3D Perspective-matched Floor Shadow -->
+      <div class="floor-shadow"></div>
+
+      <!-- FLOATING ELEMENT 3: Curved Dashed Flow Arrow (Inline SVG with exact coordinates) -->
+      <svg class="flow-arrow" viewBox="0 0 360 580" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="rgba(230, 207, 134, 0.85)" />
+            <stop offset="100%" stop-color="rgba(200, 168, 75, 0.2)" />
+          </linearGradient>
+          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <polygon points="0 0, 6 3, 0 6" fill="#c8a84b" />
+          </marker>
+        </defs>
+        <!-- Custom-tapped curve sweeping from upper-middle phone edge down towards notification card -->
+        <path d="M 235 295 C 295 330, 290 410, 230 455" stroke="url(#arrowGrad)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+      </svg>
+
+      <!-- 3D Smartphone Frame -->
+      <div class="phone-3d-wrap">
+        <div class="phone-body">
+          <!-- Dynamic Notch Pill sitting cleanly in front -->
+          <div class="phone-notch"></div>
+
+          <!-- EMPTY Screen Element formatted specifically for HTML-injection -->
+          <div class="phone-screen"></div>
+        </div>
+      </div>
+
+      <!-- FLOATING ELEMENT 1: Glassmorphic Voice Message Pill -->
+      <div class="voice-pill">
+        <div class="play-btn">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <div class="waveform">
+          <div class="wave-bar active" style="height: 10px;"></div>
+          <div class="wave-bar active" style="height: 14px;"></div>
+          <div class="wave-bar active" style="height: 8px;"></div>
+          <div class="wave-bar active" style="height: 18px;"></div>
+          <div class="wave-bar active" style="height: 12px;"></div>
+          <div class="wave-bar active" style="height: 22px;"></div>
+          <div class="wave-bar active" style="height: 15px;"></div>
+          <div class="wave-bar active" style="height: 9px;"></div>
+          <div class="wave-bar" style="height: 13px;"></div>
+          <div class="wave-bar" style="height: 20px;"></div>
+          <div class="wave-bar" style="height: 10px;"></div>
+          <div class="wave-bar" style="height: 15px;"></div>
+          <div class="wave-bar" style="height: 7px;"></div>
+        </div>
+        <div class="duration">00:32 / 13:59</div>
+      </div>
+
+      <!-- FLOATING ELEMENT 2: Sparkling Star Graphic -->
+      <div class="sparkle-wrap">
+        <svg class="sparkle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" fill="url(#goldGrad)" />
+          <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#e6cf86" />
+              <stop offset="100%" stop-color="#c8a84b" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- FLOATING ELEMENT 4: Telegram / Messenger Premium Notification Card -->
+      <div class="notif-card">
+        <div class="notif-avatar">
+          <span class="avatar-text">QR</span>
+        </div>
+        <div class="notif-content">
+          <div class="notif-header">
+            <span class="notif-title">QR-Память</span>
+            <span class="notif-time">19:48</span>
+          </div>
+          <div class="notif-body">
+            <span class="notif-text">Арктический метеоролог и заме...</span>
+            <div class="notif-badge">1</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

@@ -72,30 +72,6 @@
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
-  /* ── PAGE FADE TRANSITIONS ── */
-  document.querySelectorAll('a[href]').forEach(a => {
-    const href = a.getAttribute('href');
-    if (
-      !href ||
-      href.startsWith('#') ||
-      href.startsWith('http') ||
-      href.startsWith('//') ||
-      href.startsWith('mailto:') ||
-      href.startsWith('tel:') ||
-      href.startsWith('javascript:') ||
-      a.target === '_blank' ||
-      a.hasAttribute('download')
-    ) return;
-
-    a.addEventListener('click', e => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      e.preventDefault();
-      document.body.classList.remove('page-loaded');
-      document.body.classList.add('page-leaving');
-      setTimeout(() => { window.location.href = href; }, 260);
-    });
-  });
-
   /* ── SCROLL TO TOP ── */
   const scrollBtn = document.createElement('button');
   scrollBtn.id = 'scroll-top';
@@ -230,3 +206,30 @@
     if (e.key === 'memory_jwt' || e.key === 'memory_user') tryInject();
   });
 })();
+
+/* ═══════════════════════════════════════════════
+   DYNAMIC FAMILY TREE LINK ROUTING
+   Adjust links pointing to family-tree.html to include
+   the user's rootTreeId directly if logged in, avoiding
+   pointless redirects on entry.
+   ═══════════════════════════════════════════════ */
+(function adjustTreeLinks() {
+  function tryAdjust() {
+    if (typeof API === 'undefined' || !API.isLoggedIn || !API.isLoggedIn()) return;
+    const user = API.getUser ? API.getUser() : null;
+    if (user && user.rootTreeId) {
+      document.querySelectorAll('a[href="family-tree.html"]').forEach(a => {
+        a.href = `family-tree.html?tree=${encodeURIComponent(user.rootTreeId)}`;
+      });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryAdjust, { once: true });
+  } else {
+    tryAdjust();
+  }
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'memory_user') tryAdjust();
+  });
+})();
+

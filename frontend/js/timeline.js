@@ -340,7 +340,7 @@ function iconForHistorical(ev) {
     if (personId) {
       const treeLink = `family-tree.html?highlight=${encodeURIComponent(personId)}`;
       const pageLink = e.person || e._fromTree
-        ? `<a class="timeline__link" href="person.html?id=${encodeURIComponent(personId)}" style="margin-top:0;">страница памяти →</a>`
+        ? `<a class="timeline__link" href="/p/${encodeURIComponent(personId)}" style="margin-top:0;">страница памяти →</a>`
         : '';
       actionsHtml = `
         <div class="timeline__actions-row">
@@ -369,7 +369,7 @@ if (e.type === 'history') {
         <div style="font-family:var(--font-ui);font-size:10px;color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;text-align:left;">Свидетели эпохи из семьи:</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;">
           ${witnessesList.map(p => `
-            <a href="person.html?id=${encodeURIComponent(p.id)}" class="timeline__relative-link" style="font-family:var(--font-body);font-size:12px;color:var(--cream-dim);text-decoration:none;background:rgba(200,168,75,0.06);padding:3px 8px;border-radius:12px;border:1px solid rgba(200,168,75,0.15);transition:all 0.3s;display:inline-block;">
+            <a href="/p/${encodeURIComponent(p.id)}" class="timeline__relative-link" style="font-family:var(--font-body);font-size:12px;color:var(--cream-dim);text-decoration:none;background:rgba(200,168,75,0.06);padding:3px 8px;border-radius:12px;border:1px solid rgba(200,168,75,0.15);transition:all 0.3s;display:inline-block;">
               ${p.name}${p.years ? ` <span style="font-size:10px;opacity:0.6;">(${p.years})</span>` : ''}
             </a>`).join('')}
         </div>

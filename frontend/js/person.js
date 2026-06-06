@@ -321,7 +321,25 @@ async function loadProfileWithAccess() {
      RENDER
      ════════════════════════════════════════════ */
   function render(person, source) {
-    document.title = `${person.name} — Память`;
+    document.title = `${person.name} — QR-Память`;
+
+    // SEO: каноническая страница памяти — это SSR-маршрут /p/<slug>, а не
+    // person.html?id=. Без canonical Google может проиндексировать этот
+    // JS-шелл как дубль. Указываем canonical на /p/<slug> (там серверный
+    // рендер с мета + Person schema; для непубличных он сам отдаёт noindex).
+    try {
+      const canonSlug = encodeURIComponent(person.slug || id);
+      if (canonSlug) {
+        const href = `${location.origin}/p/${canonSlug}`;
+        let link = document.querySelector('link[rel="canonical"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.setAttribute('rel', 'canonical');
+          document.head.appendChild(link);
+        }
+        link.setAttribute('href', href);
+      }
+    } catch (_) { /* canonical не критичен — не валим рендер */ }
 
     // Если sections пусто — генерируем на лету из bio или создаем пустые заготовки
     const isEditMode = new URLSearchParams(window.location.search).get('edit') === '1';
@@ -532,6 +550,10 @@ async function loadProfileWithAccess() {
     initMemories(reviews);
     initGallery(media);
     initReviewForm(reviews, source);
+
+    if (typeof window.triggerFlipTransition === 'function') {
+      window.triggerFlipTransition();
+    }
   }
 
   /* ════════════════════════════════════════════

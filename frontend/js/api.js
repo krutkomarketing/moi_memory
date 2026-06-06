@@ -123,6 +123,10 @@ const API = (() => {
       clearTimeout(timer);
       const json = await res.json().catch(() => ({}));
       if (!res.ok && !json.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem('memory_user');
+        }
         const error = new Error(json.error || `HTTP ${res.status}`);
         error.status = res.status;
         throw error;

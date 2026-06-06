@@ -15,6 +15,7 @@ COPY llms.txt /srv/llms.txt
 COPY js /srv/js
 COPY styles /srv/styles
 COPY images /srv/images
+COPY assets-v2 /srv/assets-v2
 
 # Cache-bust: ?v=${VERSION} на все локальные js/styles ссылки в HTML.
 # Идемпотентно: существующий ?v=... заменяется.

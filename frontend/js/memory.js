@@ -190,7 +190,7 @@
   }
   function buildCard (p) {
     const age = typeof calcAge === 'function' ? calcAge(p.born, p.died) : null;
-    const href = 'person.html?id=' + encodeURIComponent(p.slug || p.id);
+    const href = '/p/' + encodeURIComponent(p.slug || p.id);
     const datesText = p.years || ((p.born || '') + ' — ' + (p.died || '...'));
     return '<a class="person-card" href="' + href + '">' +
       '<div class="person-card__photo">' + photoEl(p) + '</div>' +

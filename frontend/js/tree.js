@@ -21,6 +21,7 @@ const currentTreeId = urlParams.get('tree') || 'default';
   let isPanning = false;
   let dragStartX = 0;
   let dragStartY = 0;
+  let draggableInstance;
 
   const resolveUrl = path => {
     if (!path) return '';
@@ -203,18 +204,29 @@ const currentTreeId = urlParams.get('tree') || 'default';
       dots.forEach(d => d.classList.remove('connection-color-dot--selected'));
       selectedColor = e.target.value;
     });
+    const close = () => {
+      if (window.closeModalWithGSAP) {
+        window.closeModalWithGSAP(modal, '.connection-modal__content');
+      } else {
+        modal.remove();
+      }
+      document.removeEventListener('keydown', handleEsc);
+    };
     modal.querySelectorAll('.connection-modal__options button').forEach(btn => {
       btn.addEventListener('click', () => {
         onConfirm(btn.dataset.type, selectedColor);
-        modal.remove();
+        close();
       });
     });
     modal.querySelector('#connection-cancel-btn').addEventListener('click', () => {
       onCancel();
-      modal.remove();
+      close();
     });
     const handleEsc = (e) => {
-      if (e.key === 'Escape') { onCancel(); modal.remove(); document.removeEventListener('keydown', handleEsc); }
+      if (e.key === 'Escape') { 
+        onCancel(); 
+        close();
+      }
     };
     document.addEventListener('keydown', handleEsc);
   }
@@ -937,17 +949,28 @@ const currentTreeId = urlParams.get('tree') || 'default';
       });
     });
 
-    /* Animate draw */
-    requestAnimationFrame(() => {
+    /* Animate draw using DrawSVGPlugin */
+    if (typeof gsap !== 'undefined' && typeof DrawSVGPlugin !== 'undefined') {
       svgEl.querySelectorAll('.thread-path').forEach(p => {
-        const len = p.getTotalLength ? p.getTotalLength() : 1000;
-        p.setAttribute('stroke-dasharray', len);
-        p.setAttribute('stroke-dashoffset', len);
         const del = parseFloat(p.dataset.delay || 0);
-        p.style.transition = `stroke-dashoffset 1.8s ease ${del}s, stroke 0.5s, stroke-width 0.5s, opacity 0.4s`;
-        requestAnimationFrame(() => { p.style.strokeDashoffset = '0'; });
+        gsap.fromTo(p, 
+          { drawSVG: "0%" },
+          { drawSVG: "100%", duration: 1.5, delay: del, ease: "power2.out" }
+        );
       });
-    });
+    } else {
+      /* Fallback if plugin is not loaded */
+      requestAnimationFrame(() => {
+        svgEl.querySelectorAll('.thread-path').forEach(p => {
+          const len = p.getTotalLength ? p.getTotalLength() : 1000;
+          p.setAttribute('stroke-dasharray', len);
+          p.setAttribute('stroke-dashoffset', len);
+          const del = parseFloat(p.dataset.delay || 0);
+          p.style.transition = `stroke-dashoffset 1.8s ease ${del}s, stroke 0.5s, stroke-width 0.5s, opacity 0.4s`;
+          requestAnimationFrame(() => { p.style.strokeDashoffset = '0'; });
+        });
+      });
+    }
 
     if (activeClan) applyFilter(activeClan);
 
@@ -1183,22 +1206,51 @@ const currentTreeId = urlParams.get('tree') || 'default';
     svgEl.appendChild(group);
 
     /* Анимация рисования */
-    requestAnimationFrame(() => {
-      group.querySelectorAll('.thread-path').forEach((p, i) => {
-        const len = p.getTotalLength ? p.getTotalLength() : 600;
-        p.setAttribute('stroke-dasharray', len);
-        p.setAttribute('stroke-dashoffset', len);
-        p.style.transition = `stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s`;
-        requestAnimationFrame(() => { p.style.strokeDashoffset = '0'; });
+    if (typeof gsap !== 'undefined' && typeof DrawSVGPlugin !== 'undefined') {
+      const paths = group.querySelectorAll('.thread-path');
+      paths.forEach((p, i) => {
+        gsap.fromTo(p, 
+          { drawSVG: "0%" },
+          { drawSVG: "100%", duration: 1.3, delay: i * 0.08, ease: "power2.out" }
+        );
       });
-      setTimeout(() => {
-        diamond.style.transition = 'opacity 0.5s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
-        diamond.style.opacity    = '1';
-        diamond.style.transformOrigin = `${mx}px ${my}px`;
-        let sc = 1;
-        setInterval(() => { sc = sc === 1 ? 1.3 : 1; diamond.style.transform = `scale(${sc})`; }, 1600);
-      }, 1400);
-    });
+      gsap.to(diamond, {
+        opacity: 1,
+        scale: 1,
+        transformOrigin: `${mx}px ${my}px`,
+        duration: 0.5,
+        delay: 1.1,
+        ease: "back.out(1.7)",
+        onComplete: () => {
+          gsap.to(diamond, {
+            scale: 1.3,
+            duration: 0.8,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+            transformOrigin: `${mx}px ${my}px`
+          });
+        }
+      });
+    } else {
+      /* Fallback if no gsap */
+      requestAnimationFrame(() => {
+        group.querySelectorAll('.thread-path').forEach((p, i) => {
+          const len = p.getTotalLength ? p.getTotalLength() : 600;
+          p.setAttribute('stroke-dasharray', len);
+          p.setAttribute('stroke-dashoffset', len);
+          p.style.transition = `stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s`;
+          requestAnimationFrame(() => { p.style.strokeDashoffset = '0'; });
+        });
+        setTimeout(() => {
+          diamond.style.transition = 'opacity 0.5s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+          diamond.style.opacity    = '1';
+          diamond.style.transformOrigin = `${mx}px ${my}px`;
+          let sc = 1;
+          setInterval(() => { sc = sc === 1 ? 1.3 : 1; diamond.style.transform = `scale(${sc})`; }, 1600);
+        }, 1400);
+      });
+    }
   }
 
   /* Кубический Безье */
@@ -1416,10 +1468,18 @@ const currentTreeId = urlParams.get('tree') || 'default';
     });
 
     // Close
-    modal.querySelector('.ctm-close').addEventListener('click', () => modal.remove());
-    modal.querySelector('.ctm-backdrop').addEventListener('click', () => modal.remove());
+    const close = () => {
+      if (window.closeModalWithGSAP) {
+        window.closeModalWithGSAP(modal, '.ctm-panel');
+      } else {
+        modal.remove();
+      }
+      document.removeEventListener('keydown', esc);
+    };
+    modal.querySelector('.ctm-close').addEventListener('click', close);
+    modal.querySelector('.ctm-backdrop').addEventListener('click', close);
     document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
+      if (e.key === 'Escape') { close(); }
     });
 
     // Animate in
@@ -1451,7 +1511,7 @@ const currentTreeId = urlParams.get('tree') || 'default';
       if (!data.firstName || !data.lastName) return;
 
       createNewTree(data);
-      modal.remove();
+      close();
     });
   }
 
@@ -1743,6 +1803,14 @@ const currentTreeId = urlParams.get('tree') || 'default';
           const el = nodeEls[highlightId];
           centerNode(el);
           highlight(highlightId);
+        } else {
+          // Center on a central node by default to prevent negative panning bounds clipping
+          const keys = Object.keys(nodeEls);
+          if (keys.length > 0) {
+            const midId = keys[Math.floor(keys.length / 2)];
+            const el = nodeEls[midId];
+            centerNode(el);
+          }
         }
       }, 300);
     });
@@ -1774,13 +1842,49 @@ const currentTreeId = urlParams.get('tree') || 'default';
     const target = document.getElementById('tree-dynamic') || wrapper;
     if (target) {
       target.style.transformOrigin = '0 0';
-      target.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1)';
     }
 
     panX = (sRect.width / 2) - nodeX * zoom;
     panY = (sRect.height / 2) - nodeY * zoom;
 
-    updateTreeTransform();
+    const wWidth = wrapper.offsetWidth || 1200;
+    const wHeight = wrapper.offsetHeight || 1000;
+    const maxPanX = window.innerWidth * 0.8;
+    const minPanX = -wWidth * zoom - window.innerWidth * 0.2;
+    const maxPanY = window.innerHeight * 0.8;
+    const minPanY = -wHeight * zoom - window.innerHeight * 0.2;
+
+    panX = Math.max(minPanX, Math.min(maxPanX, panX));
+    panY = Math.max(minPanY, Math.min(maxPanY, panY));
+
+    if (typeof gsap !== 'undefined') {
+      gsap.killTweensOf(target);
+      gsap.to(target, {
+        x: panX,
+        y: panY,
+        scale: zoom,
+        duration: 0.6,
+        ease: "power3.out",
+        onUpdate: () => {
+          if (draggableInstance) {
+            draggableInstance.update(true);
+          }
+        }
+      });
+    } else {
+      updateTreeTransform();
+    }
+  }
+
+  function getDraggableBounds() {
+    const wWidth = wrapper.offsetWidth || 1200;
+    const wHeight = wrapper.offsetHeight || 1000;
+    return {
+      minX: -wWidth * zoom - window.innerWidth * 0.2,
+      maxX: window.innerWidth * 0.8,
+      minY: -wHeight * zoom - window.innerHeight * 0.2,
+      maxY: window.innerHeight * 0.8
+    };
   }
 
   // --- PAN & ZOOM INITIALIZATION ---
@@ -1798,108 +1902,112 @@ const currentTreeId = urlParams.get('tree') || 'default';
       sectionEl.scrollTop = 0;
     });
 
-    const getTarget = () => document.getElementById('tree-dynamic') || wrapper;
+    const target = document.getElementById('tree-dynamic') || wrapper;
+    if (target) {
+      target.style.transformOrigin = '0 0';
+    }
 
-    let isPointerDown = false;
-    let startPointerX = 0;
-    let startPointerY = 0;
-
-    const onPointerDown = (clientX, clientY) => {
-      isPointerDown = true;
-      isPanning = false;
-      sectionEl.style.cursor = 'grabbing';
-      dragStartX = clientX - panX;
-      dragStartY = clientY - panY;
-      startPointerX = clientX;
-      startPointerY = clientY;
-      
-      const target = getTarget();
-      if (target) {
-        target.style.transformOrigin = '0 0';
-        target.style.transition = 'none'; // Instant response during dragging
-      }
-    };
-
-    const onPointerMove = (clientX, clientY) => {
-      if (!isPointerDown) return;
-      
-      const dx = clientX - startPointerX;
-      const dy = clientY - startPointerY;
-      
-      // If the mouse has moved more than 5px, it's a drag/pan operation
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        isPanning = true;
-      }
-      
-      panX = clientX - dragStartX;
-      panY = clientY - dragStartY;
-      updateTreeTransform();
-    };
-
-    const onPointerUp = () => {
-      if (!isPointerDown) return;
-      isPointerDown = false;
-      sectionEl.style.cursor = 'grab';
-      
-      const target = getTarget();
-      if (target) {
-        target.style.transition = 'transform 0.15s ease-out';
-      }
-      
-      // Clear isPanning after a short delay so click handler still ignores it
-      setTimeout(() => {
-        isPanning = false;
-      }, 50);
-    };
-
-    // Mouse Listeners
-    sectionEl.addEventListener('mousedown', e => {
-      if (e.button !== 0) return; // Only left click
-      if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap')) return;
-      onPointerDown(e.clientX, e.clientY);
-    });
-
-    window.addEventListener('mousemove', e => {
-      onPointerMove(e.clientX, e.clientY);
-    });
-
-    window.addEventListener('mouseup', () => {
-      onPointerUp();
-    });
-
-    // Touch Listeners (Mobile support)
-    sectionEl.addEventListener('touchstart', e => {
-      if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap')) return;
-      if (e.touches.length === 1) {
-        onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    }, { passive: true });
-
-    sectionEl.addEventListener('touchmove', e => {
-      if (e.touches.length === 1) {
-        if (isPointerDown) {
-          e.preventDefault();
-          onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    if (typeof gsap !== 'undefined' && typeof Draggable !== 'undefined') {
+      draggableInstance = Draggable.create(target, {
+        type: "x,y",
+        inertia: true,
+        edgeResistance: 0.45,
+        trigger: sectionEl,
+        dragClickables: false,
+        allowEventDefault: true,
+        bounds: getDraggableBounds(),
+        onPress: function(e) {
+          if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap') || e.target.closest('.clan-legend-wrap *')) {
+            this.endDrag(e);
+          } else {
+            sectionEl.style.cursor = 'grabbing';
+          }
+        },
+        onDragStart: function() {
+          isPanning = false;
+        },
+        onDrag: function() {
+          isPanning = true;
+          panX = this.x;
+          panY = this.y;
+        },
+        onDragEnd: function() {
+          sectionEl.style.cursor = 'grab';
+          setTimeout(() => {
+            isPanning = false;
+          }, 50);
+        },
+        onThrowUpdate: function() {
+          panX = this.x;
+          panY = this.y;
+        },
+        onThrowComplete: function() {
+          isPanning = false;
         }
-      }
-    }, { passive: false });
+      })[0];
+    } else {
+      // Fallback for non-GSAP dragging
+      let isPointerDown = false;
+      let startPointerX = 0;
+      let startPointerY = 0;
 
-    sectionEl.addEventListener('touchend', () => {
-      onPointerUp();
-    });
+      const onPointerDown = (clientX, clientY) => {
+        isPointerDown = true;
+        isPanning = false;
+        sectionEl.style.cursor = 'grabbing';
+        dragStartX = clientX - panX;
+        dragStartY = clientY - panY;
+        startPointerX = clientX;
+        startPointerY = clientY;
+      };
 
-    // Wheel Zoom & Pan (Standard Figma/Miro approach: normal wheel pans, Ctrl+wheel zooms)
+      const onPointerMove = (clientX, clientY) => {
+        if (!isPointerDown) return;
+        const dx = clientX - startPointerX;
+        const dy = clientY - startPointerY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+          isPanning = true;
+        }
+        panX = clientX - dragStartX;
+        panY = clientY - dragStartY;
+        updateTreeTransform();
+      };
+
+      const onPointerUp = () => {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+        sectionEl.style.cursor = 'grab';
+        setTimeout(() => {
+          isPanning = false;
+        }, 50);
+      };
+
+      sectionEl.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        if (e.target.closest('.tree-node') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.clan-legend-wrap')) return;
+        onPointerDown(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mousemove', e => {
+        onPointerMove(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mouseup', () => {
+        onPointerUp();
+      });
+    }
+
+    // Wheel Zoom & Pan (remains active for both GSAP and fallback)
     sectionEl.addEventListener('wheel', e => {
       e.preventDefault();
       
-      const target = getTarget();
       if (target) {
         target.style.transformOrigin = '0 0';
       }
 
       if (e.ctrlKey) {
         // Zoom centered on pointer location
-        const zoomFactor = 0.05;
+        const zoomFactor = 0.08;
         const oldZoom = zoom;
         if (e.deltaY < 0) {
           zoom = Math.min(2.5, zoom + zoomFactor);
@@ -1919,9 +2027,6 @@ const currentTreeId = urlParams.get('tree') || 'default';
         panY -= e.deltaY * 0.95;
       }
       
-      if (target) {
-        target.style.transition = 'none'; // Fast wheel response
-      }
       updateTreeTransform();
     }, { passive: false });
   }
@@ -1944,7 +2049,19 @@ const currentTreeId = urlParams.get('tree') || 'default';
       panX = Math.max(minPanX, Math.min(maxPanX, panX));
       panY = Math.max(minPanY, Math.min(maxPanY, panY));
 
-      target.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+      if (typeof gsap !== 'undefined') {
+        gsap.set(target, {
+          x: panX,
+          y: panY,
+          scale: zoom
+        });
+        if (draggableInstance) {
+          draggableInstance.applyBounds(getDraggableBounds());
+          draggableInstance.update(true);
+        }
+      } else {
+        target.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+      }
     }
   }
 
