@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy to Production
 
 on:
   push:
@@ -12,15 +12,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
+      - name: Deploy using deploy.sh
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: 130.49.141.252
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /root/site
-            git pull origin main
-            docker compose up -d --build
-            docker compose exec backend npx prisma migrate deploy
-            echo "✅ Deploy completed at $(date)"
+            cd ~/site
+            echo "🚀 Starting deploy via deploy.sh..."
+            ./deploy.sh
