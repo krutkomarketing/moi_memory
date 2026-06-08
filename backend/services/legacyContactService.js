@@ -147,7 +147,7 @@ async function revokeContact(ownerId) {
 async function resendInvite(ownerId) {
   const c = await prisma.legacyContact.findUnique({ where: { ownerId }, include: STANDARD_INCLUDE });
   if (!c) throw new ApiError('legacy_contact_not_found', 404, 'LEGACY_CONTACT_NOT_FOUND');
-  if (c.status !== 'PENDING') throw new ApiError(409, `cannot_resend_status_${c.status}`);
+  if (c.status !== 'PENDING') throw new ApiError(`cannot_resend_status_${c.status}`, 409);
   const inviteToken     = generateToken();
   const inviteTokenHash = hashToken(inviteToken);
   const inviteExpiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 3600 * 1000);
@@ -167,7 +167,7 @@ async function acceptInvite({ inviteToken, claimantId }) {
   const tokenHash = hashToken(inviteToken);
   const contact = await prisma.legacyContact.findUnique({ where: { inviteTokenHash: tokenHash }, include: STANDARD_INCLUDE });
   if (!contact) throw new ApiError('invite_not_found', 404, 'INVITE_NOT_FOUND');
-  if (contact.status !== 'PENDING') throw new ApiError(409, `invite_not_pending_${contact.status}`);
+  if (contact.status !== 'PENDING') throw new ApiError(`invite_not_pending_${contact.status}`, 409);
   if (contact.inviteExpiresAt && contact.inviteExpiresAt < new Date()) throw new ApiError('invite_expired', 410, 'INVITE_EXPIRED');
 
   const claimant = await prisma.user.findUnique({ where: { id: claimantId }, select: { id: true, email: true } });
@@ -216,7 +216,7 @@ async function triggerInactive({ now = new Date() } = {}) {
 async function createClaim({ legacyContactId, claimantId, evidence }) {
   const contact = await prisma.legacyContact.findUnique({ where: { id: legacyContactId } });
   if (!contact) throw new ApiError('legacy_contact_not_found', 404, 'LEGACY_CONTACT_NOT_FOUND');
-  if (contact.status !== 'TRIGGERED') throw new ApiError(409, `contact_not_triggered_${contact.status}`);
+  if (contact.status !== 'TRIGGERED') throw new ApiError(`contact_not_triggered_${contact.status}`, 409);
   if (contact.heirUserId !== claimantId) throw new ApiError('not_heir', 403, 'NOT_HEIR');
 
   const existing = await prisma.legacyClaim.findFirst({ where: { legacyContactId, claimantId, status: 'PENDING' } });
@@ -259,10 +259,10 @@ async function approveClaim(claimId, actor, reviewNotes) {
   if (!isAdmin(actor)) throw new ApiError('admin_only', 403, 'ADMIN_ONLY');
   const claim = await prisma.legacyClaim.findUnique({ where: { id: claimId }, include: { legacyContact: true } });
   if (!claim) throw new ApiError('claim_not_found', 404, 'CLAIM_NOT_FOUND');
-  if (claim.status !== 'PENDING') throw new ApiError(409, `claim_not_pending_${claim.status}`);
+  if (claim.status !== 'PENDING') throw new ApiError(`claim_not_pending_${claim.status}`, 409);
   if (claim.expiresAt < new Date()) throw new ApiError('claim_expired', 410, 'CLAIM_EXPIRED');
   const contact = claim.legacyContact;
-  if (contact.status !== 'TRIGGERED') throw new ApiError(409, `contact_not_triggered_${contact.status}`);
+  if (contact.status !== 'TRIGGERED') throw new ApiError(`contact_not_triggered_${contact.status}`, 409);
 
   const result = await prisma.$transaction(async (tx) => {
     const profileResult = await tx.profile.updateMany({
@@ -299,7 +299,7 @@ async function rejectClaim(claimId, actor, reviewNotes) {
   if (!isAdmin(actor)) throw new ApiError('admin_only', 403, 'ADMIN_ONLY');
   const claim = await prisma.legacyClaim.findUnique({ where: { id: claimId } });
   if (!claim) throw new ApiError('claim_not_found', 404, 'CLAIM_NOT_FOUND');
-  if (claim.status !== 'PENDING') throw new ApiError(409, `claim_not_pending_${claim.status}`);
+  if (claim.status !== 'PENDING') throw new ApiError(`claim_not_pending_${claim.status}`, 409);
   const updated = await prisma.legacyClaim.update({
     where:   { id: claimId },
     data:    { status: 'REJECTED', reviewerId: actor.id, reviewedAt: new Date(), reviewNotes: reviewNotes || null },

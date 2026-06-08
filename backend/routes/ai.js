@@ -4,11 +4,12 @@ const express = require('express');
 const router = express.Router();
 
 const { wrap, ApiError } = require('../middleware/errors');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { aiGenerationLimiter } = require('../middleware/rateLimit');
 const { chatCompletion } = require('../lib/aiClient');
 const { buildSystemPrompt } = require('../lib/aiPrompt');
 const { containsProfanity, cleanProfanity } = require('../lib/profanity');
+const aiService = require('../services/aiService');
 
 const MAX_MESSAGES = 24;
 const MAX_LEN = 4000;
@@ -86,6 +87,56 @@ router.post('/chat', optionalAuth, aiGenerationLimiter, wrap(async (req, res) =>
   if (!chatResponse && proposedText) chatResponse = 'Вот предложенный вариант текста.';
 
   return res.json({ ok: true, chatResponse, proposedText });
+}));
+
+/**
+ * POST /api/ai/structure-bio
+ * body: { text: "длинный сырой текст истории", context?: { name?, dates? } }
+ *
+ * Возвращает структурированные блоки, которые фронт может сразу применить
+ * к редактору страницы памяти.
+ */
+router.post('/structure-bio', requireAuth, aiGenerationLimiter, wrap(async (req, res) => {
+  const { text, context = {} } = req.body || {};
+  if (!text || typeof text !== 'string' || text.trim().length < 30) {
+    throw ApiError.badRequest('Нужно надиктовать или написать более длинный текст истории');
+  }
+
+  const cleanText = text.trim().slice(0, 15000);
+  const personName = context.name || '';
+  const personDates = context.dates || '';
+
+  // profanity guard on input
+  if (containsProfanity(cleanText)) {
+    return res.json({
+      ok: true,
+      bio: '',
+      blocks: [],
+      chatResponse: 'Пожалуйста, переформулируйте без нецензурных слов. Мы хотим сохранить уважительный тон страницы памяти.'
+    });
+  }
+
+  let result;
+  try {
+    result = await aiService.structureFullBiography(cleanText, { name: personName, dates: personDates });
+  } catch (e) {
+    console.error('[ai/structure-bio]', e.message);
+    throw ApiError.internal('Не удалось обработать текст с помощью ИИ. Попробуйте позже.');
+  }
+
+  // light cleanup on output
+  if (result.bio && containsProfanity(result.bio)) result.bio = cleanProfanity(result.bio);
+  result.blocks = (result.blocks || []).map(b => {
+    if (b.text && containsProfanity(b.text)) b.text = cleanProfanity(b.text);
+    return b;
+  });
+
+  return res.json({
+    ok: true,
+    bio: result.bio || '',
+    blocks: result.blocks || [],
+    chatResponse: 'ИИ проанализировал вашу историю и распределил её по разделам страницы памяти. Проверьте и отредактируйте блоки при необходимости.'
+  });
 }));
 
 module.exports = router;

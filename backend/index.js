@@ -36,9 +36,6 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-/* ─── Trust proxy (Caddy впереди) ─────────────────────── */
-// Чтобы req.ip и rate limit видели реальный клиентский IP из X-Forwarded-For
-app.set('trust proxy', 1);
 /* ─── HTTP access log ─────────────────────────────────── */
 // Кастомный токен — реальный IP клиента (через X-Forwarded-For)
 morgan.token('real-ip', (req) => req.ip);
@@ -70,7 +67,7 @@ app.use(cors({
     // Без Origin (curl, same-origin запросы через Caddy) — пропускаем
     if (!origin) return cb(null, true);
     if (corsAllowlist.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS: origin not allowed: ' + origin));
+    return cb(null, false); // do not throw, just disallow
   },
   credentials: true,
 }));

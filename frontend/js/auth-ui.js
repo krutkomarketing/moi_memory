@@ -224,7 +224,7 @@
             <input class="auth-modal__input" type="text" name="name" placeholder="Имя" required autocomplete="name"/>
           </div>` : ''}
           <div class="auth-modal__field">
-            <input class="auth-modal__input" type="${mode === 'login' ? 'text' : 'email'}" name="email" placeholder="${mode === 'login' ? 'Email или Логин' : 'Email'}" required autocomplete="email"/>
+            <input class="auth-modal__input" type="email" name="email" placeholder="Email" required autocomplete="email"/>
           </div>
           <div class="auth-modal__field">
             <input class="auth-modal__input" type="password" name="password" placeholder="Пароль" required minlength="6" autocomplete="current-password"/>

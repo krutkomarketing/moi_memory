@@ -7,8 +7,24 @@
   const main = document.getElementById('person-main');
   if (!main) return;
 
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
+  let id = params.get('id');
+  if (!id) {
+    // Support direct access via canonical /p/{slug} (used by QR plaques, sitemap, shared links).
+    // The early normalize script in person.html may have already rewritten, but we handle the path as fallback
+    // so the address bar can stay clean and /p/ works as a first-class entry point.
+    const m = location.pathname.match(/\/p\/([^/?#]+)/i);
+    if (m) id = decodeURIComponent(m[1]);
+  }
   if (!id) { showNotFound(); return; }
 
   const personSVG = (typeof PERSON_SVG !== 'undefined') ? PERSON_SVG :
@@ -382,7 +398,7 @@ async function loadProfileWithAccess() {
     const media = Array.isArray(person.media) ? person.media : [];
 
     const photoHtml = person.photo
-      ? `<img src="${API.resolveUrl(person.photo)}" alt="${person.name}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" data-p-fb="person-header"/>`
+      ? `<img src="${API.resolveUrl(person.photo)}" alt="${esc(person.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" data-p-fb="person-header"/>`
       : `<div class="person-header__photo-inner">${personSVG}</div>`;
 
     const burialPlace = person.burial || '';
@@ -397,16 +413,16 @@ async function loadProfileWithAccess() {
           <div class="person-header__photo">${photoHtml}</div>
           <div class="person-header__info" data-gender="${person.gender || ''}">
             <p class="person-header__eyebrow">Страница памяти</p>
-            <h1 class="person-header__name">${person.name}</h1>
+            <h1 class="person-header__name">${esc(person.name)}</h1>
             <p class="person-header__dates">${person.born}<span>—</span>${person.died || '...'}</p>
             ${age ? `<p class="person-header__age-badge">${age} лет</p>` : ''}
-            ${person.city ? `<p class="person-header__city">${person.city}</p>` : ''}
+            ${person.city ? `<p class="person-header__city">${esc(person.city)}</p>` : ''}
           </div>
         </div>
 
         ${person.bio ? `
         <div class="person-bio">
-          <p class="person-bio__text">${person.bio}</p>
+          <p class="person-bio__text">${esc(person.bio)}</p>
         </div>` : ''}
 
         <!-- BIO BLOCKS (зебра-вёрстка, 6 секций) -->
@@ -582,11 +598,11 @@ async function loadProfileWithAccess() {
         inner = `
           <div class="memory-card__text-only">
             ${badge}
-            <p class="memory-card__text">${item.text}</p>
+            <p class="memory-card__text">${esc(item.text)}</p>
             <div class="memory-card__audio-wrapper" style="margin: 12px 0;">
               <audio src="${API.resolveUrl(item.photoDataUrl)}" controls style="width: 100%;"></audio>
             </div>
-            <p class="memory-card__author">${item.author}</p>
+            <p class="memory-card__author">${esc(item.author)}</p>
           </div>`;
       } else if (item.reviewType === 'video' && item.photoDataUrl) {
         inner = `
@@ -608,16 +624,16 @@ async function loadProfileWithAccess() {
             </div>
             <div class="memory-card__split-info">
               ${badge}
-              <p class="memory-card__text">${item.text}</p>
-              <p class="memory-card__author">${item.author}</p>
+              <p class="memory-card__text">${esc(item.text)}</p>
+              <p class="memory-card__author">${esc(item.author)}</p>
             </div>
           </div>`;
       } else {
         inner = `
           <div class="memory-card__text-only">
             ${badge}
-            <p class="memory-card__text">${item.text}</p>
-            <p class="memory-card__author">${item.author}</p>
+            <p class="memory-card__text">${esc(item.text)}</p>
+            <p class="memory-card__author">${esc(item.author)}</p>
           </div>`;
       }
 

@@ -463,7 +463,8 @@ async function deleteHandler(req, res) {
 /* ── QR for memorial plates ─────────────────────────────
    GET /api/profiles/:idOrSlug/qr.png
    GET /api/profiles/:idOrSlug/qr.pdf
-   QR points to: {origin}/person.html?id={slugOrId}
+   QR points to the canonical public page: {origin}/p/{slug}
+   (clean URL for physical plaques, OG/SEO, sitemap, and direct scans).
 ──────────────────────────────────────────────────────── */
 router.get('/profiles/:idOrSlug/qr.png', requireAuth, wrap(async (req, res) => {
   const idOrSlug = req.params.idOrSlug;
@@ -475,7 +476,7 @@ router.get('/profiles/:idOrSlug/qr.png', requireAuth, wrap(async (req, res) => {
   const origin = (req.headers['x-forwarded-proto'] ? String(req.headers['x-forwarded-proto']) : req.protocol) +
     '://' + (req.headers['x-forwarded-host'] ? String(req.headers['x-forwarded-host']) : req.get('host'));
 
-  const url = origin + '/person.html?id=' + encodeURIComponent(slug);
+  const url = origin + '/p/' + encodeURIComponent(slug);
 
   const png = await QRCode.toBuffer(url, {
     type: 'png',
@@ -499,7 +500,7 @@ router.get('/profiles/:idOrSlug/qr.pdf', requireAuth, wrap(async (req, res) => {
   const origin = (req.headers['x-forwarded-proto'] ? String(req.headers['x-forwarded-proto']) : req.protocol) +
     '://' + (req.headers['x-forwarded-host'] ? String(req.headers['x-forwarded-host']) : req.get('host'));
 
-  const url = origin + '/person.html?id=' + encodeURIComponent(slug);
+  const url = origin + '/p/' + encodeURIComponent(slug);
 
   const qrPng = await QRCode.toBuffer(url, {
     type: 'png',

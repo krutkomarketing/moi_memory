@@ -65,6 +65,11 @@
 
     // Трансформируем блоки в инпуты
     transformToInputs();
+
+    // === НОВАЯ ФИЧА: единая диктовка всей истории ===
+    // Большой блок вверху редактора: человек надиктовывает длинный текст один раз,
+    // ИИ сам создаёт, называет и заполняет все тематические блоки.
+    initFullStoryDictationUI();
   }
 
   function exitEditMode() {
@@ -729,6 +734,454 @@
       openAiVoiceModal(textarea);
     }
   });
+
+  /* ============================================================
+     ЕДИНАЯ ДИКТОВКА ИСТОРИИ + АВТО-СТРУКТУРИРОВАНИЕ ИИ
+     ============================================================ */
+
+  function initFullStoryDictationUI() {
+    // Добавляем красивый блок в начало страницы (сразу после шапки редактирования)
+    const main = document.getElementById('person-main');
+    if (!main) return;
+
+    // Не дублируем, если уже есть
+    if (document.getElementById('full-story-dictation')) return;
+
+    const container = document.createElement('div');
+    container.id = 'full-story-dictation';
+    container.className = 'full-story-dictation';
+    container.innerHTML = `
+      <div class="full-story-card">
+        <div class="full-story-header">
+          <div class="full-story-icon">🎙️</div>
+          <div>
+            <h3 class="full-story-title">Расскажите историю целиком</h3>
+            <p class="full-story-subtitle">Нажмите на микрофон и наговорите всё, что помните. ИИ сам разобьёт текст на разделы, придумает названия и заполнит блоки страницы памяти.</p>
+          </div>
+        </div>
+
+        <div class="full-story-controls">
+          <button id="full-story-mic" class="ai-voice-mic-circle" title="Начать/остановить запись">
+            🎙️
+          </button>
+          <div class="full-story-status">
+            <span id="full-story-status-text">Нажмите микрофон и расскажите историю жизни</span>
+            <div id="full-story-waves" class="ai-voice-waves-container" style="display:none;">
+              <div class="ai-voice-wave-bar"></div>
+              <div class="ai-voice-wave-bar"></div>
+              <div class="ai-voice-wave-bar"></div>
+              <div class="ai-voice-wave-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="full-story-transcript-wrapper">
+          <textarea id="full-story-transcript" class="edit-textarea full-story-transcript" placeholder="Здесь появится расшифровка вашего рассказа. Можно править вручную перед отправкой в ИИ."></textarea>
+        </div>
+
+        <div class="full-story-actions">
+          <button id="full-story-process" class="ai-btn ai-btn--primary" disabled>
+            ✨ Обработать с помощью ИИ и заполнить блоки
+          </button>
+          <button id="full-story-clear" class="ai-btn ai-btn--secondary">Очистить</button>
+        </div>
+
+        <div id="full-story-result" class="full-story-result" style="display:none;">
+          <div class="full-story-result-text"></div>
+        </div>
+      </div>
+    `;
+
+    // Вставляем в самое начало редактируемой области
+    const firstChild = main.firstElementChild;
+    if (firstChild) {
+      main.insertBefore(container, firstChild);
+    } else {
+      main.appendChild(container);
+    }
+
+    // Привязываем логику
+    bindFullStoryDictation(container);
+  }
+
+  function bindFullStoryDictation(container) {
+    const micBtn = container.querySelector('#full-story-mic');
+    const statusText = container.querySelector('#full-story-status-text');
+    const waves = container.querySelector('#full-story-waves');
+    const transcriptEl = container.querySelector('#full-story-transcript');
+    const processBtn = container.querySelector('#full-story-process');
+    const clearBtn = container.querySelector('#full-story-clear');
+    const resultBox = container.querySelector('#full-story-result');
+
+    // === LocalStorage draft persistence for the full story dictation ===
+    const storageKey = `full_story_transcript_${id || 'unknown'}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved && !transcriptEl.value) {
+        transcriptEl.value = saved;
+        if (saved.trim().length > 30) processBtn.disabled = false;
+      }
+    } catch (e) {}
+
+    transcriptEl.addEventListener('input', () => {
+      try {
+        localStorage.setItem(storageKey, transcriptEl.value);
+      } catch (e) {}
+    });
+
+    let recognition = null;
+    let isRecording = false;
+    let finalTranscript = '';
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ru-RU';
+      recognition.interimResults = true;
+      recognition.continuous = true;
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        transcriptEl.value = (finalTranscript + interim).trim();
+      };
+
+      recognition.onerror = (e) => {
+        statusText.textContent = 'Ошибка распознавания: ' + (e.error || 'неизвестная');
+        stopRecording();
+      };
+
+      recognition.onend = () => {
+        stopRecording();
+      };
+    }
+
+    function startRecording() {
+      if (!recognition) {
+        alert('Голосовой ввод поддерживается только в Chrome, Edge или Safari.');
+        return;
+      }
+      finalTranscript = transcriptEl.value.trim() + ' ';
+      try {
+        recognition.start();
+        isRecording = true;
+        micBtn.classList.add('ai-voice-mic-circle--listening');
+        statusText.textContent = 'Слушаю... говорите';
+        statusText.classList.add('ai-voice-status-text--listening');
+        waves.style.display = 'flex';
+        processBtn.disabled = true;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function stopRecording() {
+      if (recognition && isRecording) {
+        try { recognition.stop(); } catch (_) {}
+      }
+      isRecording = false;
+      micBtn.classList.remove('ai-voice-mic-circle--listening');
+      statusText.classList.remove('ai-voice-status-text--listening');
+      waves.style.display = 'none';
+      statusText.textContent = 'Запись остановлена. Отредактируйте текст при необходимости.';
+
+      const hasText = transcriptEl.value.trim().length > 30;
+      processBtn.disabled = !hasText;
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    transcriptEl.addEventListener('input', () => {
+      const hasText = transcriptEl.value.trim().length > 30;
+      processBtn.disabled = !hasText || isRecording;
+    });
+
+    clearBtn.addEventListener('click', () => {
+      transcriptEl.value = '';
+      finalTranscript = '';
+      processBtn.disabled = true;
+      resultBox.style.display = 'none';
+      statusText.textContent = 'Нажмите микрофон и расскажите историю жизни';
+    });
+
+    // === Главная магия: отправляем в ИИ и применяем блоки ===
+    processBtn.addEventListener('click', async () => {
+      const text = transcriptEl.value.trim();
+      if (text.length < 30) return;
+
+      processBtn.disabled = true;
+      processBtn.textContent = '⏳ ИИ структурирует историю...';
+      resultBox.style.display = 'none';
+
+      try {
+        // Собираем контекст человека (имя и даты)
+        const nameEl = document.querySelector('.person-header__name');
+        const datesEl = document.querySelector('.person-header__dates');
+        const context = {
+          name: nameEl ? nameEl.textContent.trim() : '',
+          dates: datesEl ? datesEl.textContent.trim() : ''
+        };
+
+        const res = await API.post('/api/ai/structure-bio', { text, context });
+
+        if (res && res.ok) {
+          applyStructuredBlocksToEditor(res);
+
+          resultBox.style.display = 'block';
+          resultBox.querySelector('.full-story-result-text').innerHTML = `
+            <strong>Готово!</strong> ИИ создал ${res.blocks?.length || 0} блоков (включая возможные дополнительные).
+            Ниже можно точно настроить, какие части рассказа в какие блоки попали.
+          `;
+
+          // === Интерактивное сопоставление источника (докрутка фичи) ===
+          const originalTranscript = transcriptEl.value.trim();
+          renderRefinementMapping(resultBox, originalTranscript, res);
+
+          statusText.textContent = 'Блоки заполнены. Используйте панель ниже для точной подгонки.';
+        } else {
+          throw new Error(res?.error || 'Не удалось структурировать');
+        }
+      } catch (err) {
+        alert('Ошибка обработки ИИ: ' + (err.message || err));
+        statusText.textContent = 'Произошла ошибка. Попробуйте ещё раз.';
+      } finally {
+        processBtn.textContent = '✨ Обработать с помощью ИИ и заполнить блоки';
+        processBtn.disabled = false;
+      }
+    });
+  }
+
+  /**
+   * Применяет результат /api/ai/structure-bio к текущим редактируемым полям.
+   * Заполняет короткое bio + стандартные и кастомные блоки.
+   * Дополнительно: сохраняет excerpts для отображения источника.
+   */
+  let lastStructuredResult = null; // храним для refinement UI
+
+  function applyStructuredBlocksToEditor(structured) {
+    if (!structured) return;
+    lastStructuredResult = structured;
+
+    // 1. Короткая биография (hero)
+    if (structured.bio) {
+      const bioTextarea = document.querySelector('textarea[data-field="bio"]');
+      if (bioTextarea) bioTextarea.value = structured.bio;
+    }
+
+    const blocks = Array.isArray(structured.blocks) ? structured.blocks : [];
+    const blockElements = Array.from(document.querySelectorAll('.bio-block'));
+
+    blocks.forEach((b) => {
+      if (!b || !b.text) return;
+
+      const key = (b.key || '').toLowerCase();
+      const desiredTitle = b.title || '';
+      const desiredText = b.text;
+
+      let targetBlock = null;
+
+      if (key && !key.startsWith('custom')) {
+        targetBlock = blockElements.find(el => {
+          const blockAttr = el.dataset.block || '';
+          const titleInput = el.querySelector('.edit-input--block-title');
+          return blockAttr.includes(key) ||
+                 (titleInput && titleInput.value.toLowerCase().includes(key));
+        });
+      }
+
+      if (!targetBlock) {
+        targetBlock = blockElements.find(el => {
+          const titleInput = el.querySelector('.edit-input--block-title');
+          return titleInput && titleInput.value.trim() === '' && el.classList.contains('bio-block--custom-new');
+        }) || blockElements.find(el => {
+          const titleInput = el.querySelector('.edit-input--block-title');
+          return titleInput && desiredTitle &&
+                 titleInput.value.toLowerCase().includes(desiredTitle.toLowerCase().slice(0, 6));
+        });
+      }
+
+      if (targetBlock) {
+        const titleInput = targetBlock.querySelector('.edit-input--block-title');
+        if (titleInput && desiredTitle) titleInput.value = desiredTitle;
+
+        const textArea = targetBlock.querySelector('textarea[data-field="text"], textarea[data-block]');
+        if (textArea) textArea.value = desiredText;
+
+        // Добавляем маленькую подсказку-источник (excerpt), если пришла от ИИ
+        if (b.excerpt) {
+          let note = targetBlock.querySelector('.ai-source-note');
+          if (!note) {
+            note = document.createElement('div');
+            note.className = 'ai-source-note';
+            note.style.cssText = 'font-size:11px;opacity:0.6;margin-top:4px;font-style:italic;';
+            targetBlock.appendChild(note);
+          }
+          note.textContent = 'Основано на: «' + b.excerpt.slice(0, 110) + (b.excerpt.length > 110 ? '...' : '') + '»';
+        }
+      } else {
+        const container = document.getElementById('bio-blocks-container');
+        if (container) {
+          const bioBlocks = container.querySelector('.bio-blocks') || container;
+          const newBlock = createCustomBlockElement(desiredTitle, desiredText);
+          bioBlocks.appendChild(newBlock);
+        }
+      }
+    });
+  }
+
+  function createCustomBlockElement(title, text) {
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    const section = document.createElement('section');
+    section.className = 'bio-block bio-block--custom-new';
+    section.dataset.block = 'custom_' + Date.now();
+    section.innerHTML = `
+      <input class="edit-input edit-input--block-title" data-field="custom-title" value="${esc(title || 'Дополнительный раздел')}">
+      <div class="bio-block__row">
+        <div class="bio-block__text">
+          <div class="edit-textarea-wrapper">
+            <textarea class="edit-textarea" data-field="text">${esc(text || '')}</textarea>
+            <button type="button" class="ai-voice-btn" title="Голосовой ИИ-помощник">🎙️</button>
+            <button type="button" class="ai-assistant-btn" title="AI помощник">AI</button>
+          </div>
+        </div>
+        <div class="bio-block__photo bio-block__photo--empty-edit" style="position:relative;"></div>
+      </div>
+    `;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'edit-insert-btn edit-insert-btn--delete';
+    delBtn.textContent = '🗑 Удалить блок';
+    delBtn.addEventListener('click', () => section.remove());
+    section.appendChild(delBtn);
+
+    return section;
+  }
+
+  /**
+   * Интерактивная панель сопоставления источника (одна из ключевых докруток).
+   * Позволяет пользователю видеть, какие части рассказа куда попали,
+   * и вручную "добавить этот кусок в блок".
+   */
+  function renderRefinementMapping(resultContainer, originalText, structured) {
+    if (!originalText || !structured) return;
+
+    let mappingArea = resultContainer.querySelector('.refinement-mapping');
+    if (mappingArea) mappingArea.remove();
+
+    mappingArea = document.createElement('div');
+    mappingArea.className = 'refinement-mapping';
+    mappingArea.style.cssText = 'margin-top:18px;border-top:1px solid rgba(200,168,75,0.15);padding-top:16px;';
+
+    const blocks = structured.blocks || [];
+    const blockTitles = blocks.map(b => b.title || b.key).filter(Boolean);
+
+    // Разбиваем оригинальный текст на осмысленные куски
+    const chunks = originalText
+      .split(/\n\s*\n|(?<=[\.\!\?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 12);
+
+    let html = `<div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Точная подгонка источника</div>`;
+    html += `<div style="font-size:0.8rem;opacity:0.7;margin-bottom:10px;">Нажмите кнопку под куском текста, чтобы добавить его в нужный блок (или создать новый custom).</div>`;
+
+    html += `<div class="source-chunks">`;
+
+    chunks.forEach((chunk, idx) => {
+      const safeChunk = chunk.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html += `
+        <div class="source-chunk" style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:8px;">
+          <div style="font-size:13px;line-height:1.4;margin-bottom:6px;">${safeChunk}</div>
+          <div class="chunk-actions" style="display:flex;flex-wrap:wrap;gap:4px;">
+      `;
+
+      // Кнопки для существующих блоков от ИИ
+      blocks.forEach((b, bIdx) => {
+        const label = (b.title || b.key || 'Блок').slice(0, 22);
+        html += `<button class="chunk-assign-btn" data-chunk="${idx}" data-target="${bIdx}" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid rgba(200,168,75,0.3);background:transparent;cursor:pointer;">${label}</button>`;
+      });
+
+      // Кнопка для нового custom
+      html += `<button class="chunk-assign-btn new-custom" data-chunk="${idx}" style="font-size:11px;padding:2px 7px;border-radius:6px;border:1px dashed rgba(200,168,75,0.5);background:transparent;cursor:pointer;">+ Новый блок</button>`;
+
+      html += `</div></div>`;
+    });
+
+    html += `</div>`;
+    mappingArea.innerHTML = html;
+    resultContainer.appendChild(mappingArea);
+
+    // Привязываем обработчики назначения кусков
+    mappingArea.querySelectorAll('.chunk-assign-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const chunkIdx = parseInt(btn.dataset.chunk);
+        const chunkText = chunks[chunkIdx];
+        if (!chunkText) return;
+
+        if (btn.classList.contains('new-custom')) {
+          // Создаём новый custom блок и добавляем туда текст
+          const container = document.getElementById('bio-blocks-container');
+          if (container) {
+            const bioBlocks = container.querySelector('.bio-blocks') || container;
+            const newBlock = createCustomBlockElement('Дополнительный эпизод', chunkText);
+            bioBlocks.appendChild(newBlock);
+            btn.textContent = '✓ Добавлено';
+            btn.disabled = true;
+          }
+        } else {
+          const targetBlockIdx = parseInt(btn.dataset.target);
+          const targetBlockData = blocks[targetBlockIdx];
+          if (!targetBlockData) return;
+
+          // Ищем соответствующий редактируемый блок на странице и дописываем текст
+          const allBlocks = Array.from(document.querySelectorAll('.bio-block'));
+          let found = false;
+
+          allBlocks.forEach(el => {
+            const titleInput = el.querySelector('.edit-input--block-title');
+            const textArea = el.querySelector('textarea[data-field="text"], textarea[data-block]');
+
+            if (titleInput && textArea) {
+              const currentTitle = (titleInput.value || '').toLowerCase();
+              const targetTitle = (targetBlockData.title || '').toLowerCase();
+
+              if (currentTitle.includes(targetTitle.slice(0, 8)) || currentTitle.includes(targetBlockData.key)) {
+                const separator = textArea.value.trim() ? '\n\n' : '';
+                textArea.value = (textArea.value + separator + chunkText).trim();
+                found = true;
+                btn.textContent = '✓ Добавлено';
+                btn.disabled = true;
+              }
+            }
+          });
+
+          if (!found) {
+            // Fallback: создаём custom
+            const container = document.getElementById('bio-blocks-container');
+            if (container) {
+              const bioBlocks = container.querySelector('.bio-blocks') || container;
+              const newBlock = createCustomBlockElement(targetBlockData.title || 'Из рассказа', chunkText);
+              bioBlocks.appendChild(newBlock);
+              btn.textContent = '✓ В новый блок';
+              btn.disabled = true;
+            }
+          }
+        }
+      });
+    });
+  }
 
   /* ── AI Voice Assistant Popup Modal ── */
   function openAiVoiceModal(textarea) {

@@ -4,16 +4,22 @@
   <meta name="google-site-verification" content="XZ1l0f_nu02uk7tS2ID2xVgUC91dXNQa16LdUJihGEM" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>/* __OG_NORMALIZE_PATH__ */
+  <script>/* __OG_NORMALIZE_PATH__ (legacy support) */
+    /* 
+       When the page is served via the canonical /p/{slug} (QR plaques on monuments, sitemap, shared links, OG),
+       we no longer force a history.replaceState to /person.html?id=...
+       Reason: we want the address bar to stay on the clean, memorable /p/slug URL after scanning a physical plaque.
+       The loader in person.js now extracts the slug from pathname as a fallback, so direct /p/ access works
+       and the pretty URL remains visible and shareable.
+       Old direct links with ?id= on person.html continue to work.
+       OG crawlers never execute this; they see the SSR-injected metas from the backend /p/ handler.
+    */
     (function(){
       try {
         if (location.pathname.indexOf("/p/") === 0) {
-          var slug = decodeURIComponent(location.pathname.slice(3).split("/")[0]);
-          if (slug) {
-            var s = location.search ? (location.search + "&id=" + encodeURIComponent(slug))
-                                    : ("?id=" + encodeURIComponent(slug));
-            history.replaceState(null, "", "/person.html" + s + (location.hash || ""));
-          }
+          // No longer rewriting the visible path. Loader (person.js) + backend SSR handle /p/ as first-class.
+          // If any legacy code strictly needs ?id= in search, we could append query without changing path here,
+          // but the updated extraction makes that unnecessary.
         }
       } catch(e){}
     })();

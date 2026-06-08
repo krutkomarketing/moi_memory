@@ -1,15 +1,13 @@
 // __PASSWORD_RESET_ROUTES_V2__
 const express = require("express");
 const crypto = require("node:crypto");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { hashPassword } = require("../auth");
 const { sendMail } = require("../lib/mailer");
-
-const prisma = new PrismaClient();
 const router = express.Router();
 
 const TOKEN_TTL_MS = 60 * 60 * 1000;
-const RESET_URL_BASE = process.env.PUBLIC_BASE_URL || "http://localhost";
+const RESET_URL_BASE = process.env.SITE_URL || process.env.PUBLIC_BASE_URL || "http://localhost";
 
 const rlStore = new Map();
 function rateLimit(ip) {

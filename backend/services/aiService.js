@@ -354,6 +354,149 @@ function generateTextFromScratch(topic, keywords, field, lastInstruction, isRedo
   return text;
 }
 
+/**
+ * New capability for the "one dictation → structured blocks" feature.
+ * Takes a long raw spoken narrative and asks the model to intelligently
+ * split it into the site's standard biography sections (with good titles).
+ */
+async function structureFullBiography(rawText, context = {}) {
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length < 20) {
+    throw new Error('Текст для структурирования слишком короткий');
+  }
+
+  const personName = context.name || '';
+  const personDates = context.dates || '';
+
+  const system = [
+    'Ты — деликатный и профессиональный редактор мемориального сайта «Память».',
+    'Пользователь наговорил (или написал) длинный сырой рассказ о жизни близкого человека.',
+    'Твоя задача — внимательно проанализировать весь текст и аккуратно разложить его по смысловым разделам страницы памяти.',
+    '',
+    'Стандартные разделы (используй эти ключи):',
+    '- childhood: Детство и юность',
+    '- education: Образование и становление',
+    '- career: Профессиональный путь',
+    '- family: Семья и близкие',
+    '- hobbies: Хобби, увлечения, характер',
+    '- legacy: Наследие, чем запомнился',
+    '',
+    'Правила:',
+    '1. Для каждого раздела, в котором есть достаточно материала, придумай естественное, тёплое и уважительное название (не обязательно точно «Детство и юность», а то, что лучше отражает содержание).',
+    '2. Напиши coherentный, красивый текст для блока (1–4 абзаца). Перефразируй, улучши стиль, убери повторы и разговорные шероховатости, но сохрани факты, имена, атмосферу и смысл оригинала.',
+    '3. Если в рассказе есть сильная вводная часть — верни короткое bio (2–4 предложения, как эпитафия).',
+    '4. **Будь агрессивным в создании custom-блоков**: если в рассказе есть яркие уникальные темы (военная служба, хобби-страсть, переезд в другой город, важное событие, характерная черта и т.д.), которые не вписываются идеально в 6 стандартных — смело создавай дополнительные custom_ блоки. Лучше 2–3 хороших custom, чем пытаться впихнуть всё в стандартные.',
+    '5. Не выдумывай факты. Если чего-то не хватает — не добавляй.',
+    '6. Отвечай строго на русском языке.',
+    '',
+    'Для каждого блока ОБЯЗАТЕЛЬНО включи короткую цитату-выдержку из оригинального текста пользователя (1–2 предложения), которая стала основой для этого блока. Это поможет пользователю понять, откуда взялся материал.',
+    '',
+    'ВАЖНО: верни ТОЛЬКО валидный JSON следующего вида (без лишнего текста):',
+    `{
+  "bio": "короткая вводная (или пустая строка)",
+  "blocks": [
+    { "key": "childhood", "title": "Название раздела", "text": "Текст блока...", "excerpt": "Короткая цитата из оригинала, на основе которой сделан блок" },
+    ...
+  ]
+}`,
+    '',
+    personName ? `Человек: ${personName}.` : '',
+    personDates ? `Даты жизни: ${personDates}.` : '',
+    '',
+    'Сырой текст истории, который нужно структурировать:',
+    '"""',
+    rawText.slice(0, 12000),
+    '"""'
+  ].filter(Boolean).join('\n');
+
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user', content: 'Пожалуйста, структурируй этот рассказ в блоки страницы памяти.' }
+  ];
+
+  let content;
+  try {
+    content = await require('./aiClient').chatCompletion(messages, {
+      temperature: 0.6,
+      maxTokens: 2200,
+      json: true
+    });
+  } catch (err) {
+    console.error('[structureFullBiography] AI error, falling back to mock');
+    return generateMockStructuredBio(rawText, personName);
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      bio: typeof parsed.bio === 'string' ? parsed.bio.trim() : '',
+      blocks: Array.isArray(parsed.blocks) ? parsed.blocks.filter(b => b && b.key && b.text).map(b => ({
+        key: String(b.key),
+        title: String(b.title || '').trim(),
+        text: String(b.text || '').trim()
+      })) : []
+    };
+  } catch (e) {
+    console.error('[structureFullBiography] bad JSON from model');
+    return generateMockStructuredBio(rawText, personName);
+  }
+}
+
+function generateMockStructuredBio(rawText, personName) {
+  // Very simple heuristic mock for when AI is not available
+  const lower = rawText.toLowerCase();
+  const name = personName || 'Человек';
+
+  const blocks = [];
+
+  if (lower.includes('детств') || lower.includes('школ') || lower.includes('мама') || lower.includes('бабушк') || lower.includes('детство')) {
+    blocks.push({
+      key: 'childhood',
+      title: 'Детство и юность',
+      text: (rawText.split(/[.!?]/).slice(0, 3).join('. ') + '. ').slice(0, 380) + 'В эти годы закладывались основные черты характера.',
+      excerpt: shortExcerpt
+    });
+  }
+  if (lower.includes('учеб') || lower.includes('институт') || lower.includes('университет') || lower.includes('школ')) {
+    blocks.push({
+      key: 'education',
+      title: 'Образование',
+      text: 'Образование стало важной вехой. ' + name + ' проявлял любопытство и старательность в учёбе.'
+    });
+  }
+  if (lower.includes('работ') || lower.includes('карьер') || lower.includes('завод') || lower.includes('служб')) {
+    blocks.push({
+      key: 'career',
+      title: 'Профессиональный путь',
+      text: 'На работе ' + name + ' был уважаем за ответственность и мастерство. Многие годы посвятил своему делу.'
+    });
+  }
+  if (lower.includes('жен') || lower.includes('муж') || lower.includes('дети') || lower.includes('семь') || lower.includes('внук')) {
+    blocks.push({
+      key: 'family',
+      title: 'Семья и близкие',
+      text: 'Семья была для него настоящей опорой и источником счастья. Он очень любил своих близких.'
+    });
+  }
+  if (lower.includes('хобб') || lower.includes('увлеч') || lower.includes('сад') || lower.includes('рыбалк') || lower.includes('книг')) {
+    blocks.push({
+      key: 'hobbies',
+      title: 'Хобби и увлечения',
+      text: 'В свободное время увлекался тем, что приносило радость и вдохновение.'
+    });
+  }
+  blocks.push({
+    key: 'legacy',
+    title: 'Наследие',
+    text: 'Светлая память о ' + name + ' навсегда останется в сердцах тех, кто его знал. Его доброта, трудолюбие и любовь к жизни продолжают жить в нас.'
+  });
+
+  return {
+    bio: 'Человек, чья жизнь была наполнена смыслом, заботой о близких и верностью своим принципам.',
+    blocks
+  };
+}
+
 module.exports = {
-  chat
+  chat,
+  structureFullBiography
 };

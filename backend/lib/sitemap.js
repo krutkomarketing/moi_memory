@@ -11,8 +11,10 @@
  * поменяй PROFILE_URL_TEMPLATE ниже.
  */
 
-// ВАЖНО: публичная каноническая страница памяти — это /p/<slug> (SSR Open Graph + редирект
-// на person.html). Раньше тут был /profile/<slug> — несуществующий URL → 404 в выдаче.
+// ВАЖНО: публичная каноническая страница памяти — это /p/<slug> (SSR Open Graph via backend /p/ handler
+// which injects metas into the person.html shell + client loader supports the path directly).
+// This enables clean QR codes on physical plaques, good share previews, and sitemap entries.
+// (Previously /profile/<slug> caused 404s in search results.)
 const PROFILE_URL_TEMPLATE = (baseUrl, slug) => `${baseUrl}/p/${encodeURIComponent(slug)}`;
 
 // Публичные статические страницы для индексации (служебные/приватные НЕ включаем).
