@@ -56,11 +56,11 @@
       width: 100%;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
       font-family: var(--font-ui);
-      opacity: 0;
-      height: 0;
-      overflow: hidden;
-      display: none;
-      transform: translateY(-20px);
+      opacity: 1;
+      height: auto;
+      overflow: visible;
+      display: block;
+      transform: none;
     }
 
     .ai-control-header {
@@ -951,7 +951,8 @@
 
   <!-- Фиксированная панель кнопок режима редактирования (как в person-edit.js) -->
   <div class="edit-panel" id="edit-panel">
-    <button class="edit-panel__btn" id="edit-toggle-btn">Редактировать с ИИ</button>
+    <button class="edit-panel__btn edit-panel__btn--save" id="edit-save-btn">Сохранить</button>
+    <button class="edit-panel__btn edit-panel__btn--cancel" id="edit-cancel-btn">Отмена</button>
   </div>
 
   <!-- ГЛАВНЫЙ КОНТЕНТ СТРАНИЦЫ ПАМЯТИ -->
@@ -1065,19 +1066,19 @@
     <div class="bio-blocks" id="blocks-container">
 
       <!-- Блок Детство -->
-      <section class="bio-block" data-key="childhood">
-        <h4 class="bio-block__title">Детские годы</h4>
+      <section class="bio-block is-editing-mode" data-key="childhood" style="border-color: rgba(200, 168, 75, 0.35);">
+        <h4 class="bio-block__title" contenteditable="true">Детские годы</h4>
         <div class="bio-block__row">
           <div class="bio-block__text">
-            <span class="bio-block-key">childhood</span>
-            <div class="bio-block-text"></div>
+            <span class="bio-block-key" style="opacity: 1;">childhood</span>
+            <div class="bio-block-text" contenteditable="true"></div>
             <div class="ai-block-helper">
               <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'improve')">✨ Улучшить стиль (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'warm')">❤️ Сделать теплее (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'formal')">👔 Официальный тон (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
             </div>
-            <button class="delete-block-btn" onclick="deleteBlockLocally('childhood')">Удалить раздел</button>
+            <button class="delete-block-btn" style="display: inline-block; opacity: 0.8;" onclick="deleteBlockLocally('childhood')">Удалить раздел</button>
           </div>
           <div class="bio-block__photo">
             <div class="bio-block__photo-img-wrap"></div>
@@ -1093,19 +1094,19 @@
       </section>
 
       <!-- Блок Образование -->
-      <section class="bio-block" data-key="education">
-        <h4 class="bio-block__title">Образование и становление</h4>
+      <section class="bio-block is-editing-mode" data-key="education" style="border-color: rgba(200, 168, 75, 0.35);">
+        <h4 class="bio-block__title" contenteditable="true">Образование и становление</h4>
         <div class="bio-block__row">
           <div class="bio-block__text">
-            <span class="bio-block-key">education</span>
-            <div class="bio-block-text"></div>
+            <span class="bio-block-key" style="opacity: 1;">education</span>
+            <div class="bio-block-text" contenteditable="true"></div>
             <div class="ai-block-helper">
               <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'improve')">✨ Улучшить стиль (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'warm')">❤️ Сделать теплее (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'formal')">👔 Официальный тон (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
             </div>
-            <button class="delete-block-btn" onclick="deleteBlockLocally('education')">Удалить раздел</button>
+            <button class="delete-block-btn" style="display: inline-block; opacity: 0.8;" onclick="deleteBlockLocally('education')">Удалить раздел</button>
           </div>
           <div class="bio-block__photo">
             <div class="bio-block__photo-img-wrap"></div>
@@ -1121,19 +1122,19 @@
       </section>
 
       <!-- Блок Карьера -->
-      <section class="bio-block" data-key="career">
-        <h4 class="bio-block__title">Профессиональный путь</h4>
+      <section class="bio-block is-editing-mode" data-key="career" style="border-color: rgba(200, 168, 75, 0.35);">
+        <h4 class="bio-block__title" contenteditable="true">Профессиональный путь</h4>
         <div class="bio-block__row">
           <div class="bio-block__text">
-            <span class="bio-block-key">career</span>
-            <div class="bio-block-text"></div>
+            <span class="bio-block-key" style="opacity: 1;">career</span>
+            <div class="bio-block-text" contenteditable="true"></div>
             <div class="ai-block-helper">
               <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'improve')">✨ Улучшить стиль (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'warm')">❤️ Сделать теплее (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'formal')">👔 Официальный тон (ИИ)</button>
               <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
             </div>
-            <button class="delete-block-btn" onclick="deleteBlockLocally('career')">Удалить раздел</button>
+            <button class="delete-block-btn" style="display: inline-block; opacity: 0.8;" onclick="deleteBlockLocally('career')">Удалить раздел</button>
           </div>
           <div class="bio-block__photo">
             <div class="bio-block__photo-img-wrap"></div>
@@ -1188,7 +1189,7 @@
     let isRecording = false;
     let recognition = null;
     let finalTranscript = '';
-    let isEditingMode = false;
+    let isEditingMode = true;
 
     // База API: берём из общего клиента api.js (same-origin в проде, :3000 в dev)
     const API_BASE = (window.API && API.BASE) || '';
@@ -1510,7 +1511,7 @@
       });
     }
 
-    editToggleBtn.addEventListener('click', enterEditingMode);
+    if (editToggleBtn) editToggleBtn.addEventListener('click', enterEditingMode);
 
     // === Инициализация Web Speech API ===
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
