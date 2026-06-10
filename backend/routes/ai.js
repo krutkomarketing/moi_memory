@@ -6,7 +6,7 @@ const router = express.Router();
 const { wrap, ApiError } = require('../middleware/errors');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { aiGenerationLimiter } = require('../middleware/rateLimit');
-const { chatCompletion } = require('../lib/aiClient');
+const { chatCompletion, imageGeneration } = require('../lib/aiClient');
 const { buildSystemPrompt } = require('../lib/aiPrompt');
 const { containsProfanity, cleanProfanity } = require('../lib/profanity');
 const aiService = require('../services/aiService');
@@ -137,6 +137,97 @@ router.post('/structure-bio', requireAuth, aiGenerationLimiter, wrap(async (req,
     blocks: result.blocks || [],
     chatResponse: 'ИИ проанализировал вашу историю и распределил её по разделам страницы памяти. Проверьте и отредактируйте блоки при необходимости.'
   });
+}));
+
+/**
+ * POST /api/ai/generate-image
+ * body: { prompt: string }  — готовый мастер-промпт с фронта
+ *   либо { title, text, context?: { name?, dates? }, key? } — промпт соберём здесь.
+ * resp: { ok, image: "data:image/png;base64,..." }
+ *
+ * optionalAuth — тест-страница конструктора работает без JWT.
+ */
+router.post('/generate-image', optionalAuth, aiGenerationLimiter, wrap(async (req, res) => {
+  const body = req.body || {};
+
+  let prompt = typeof body.prompt === 'string' ? body.prompt.trim().slice(0, 2500) : '';
+
+  // Если готового промпта нет — собираем из данных блока
+  if (!prompt) {
+    const title = typeof body.title === 'string' ? body.title.slice(0, 200) : '';
+    const text = typeof body.text === 'string' ? body.text.slice(0, 1500) : '';
+    if (!title && !text) {
+      throw ApiError.badRequest('Нужен prompt либо title/text блока');
+    }
+    prompt = `A warm vintage memorial illustration. Depicting: ${title}. Soft emotional oil painting, nostalgic lighting, one single person. Context: "${text}". Timeless, respectful, no text in image.`;
+  }
+
+  if (containsProfanity(prompt)) {
+    throw ApiError.badRequest('Промпт содержит недопустимые слова');
+  }
+
+  // Референс лица (data URL); поддерживается провайдером gemini
+  let referenceImage = typeof body.referenceImage === 'string' ? body.referenceImage : '';
+  if (referenceImage && !/^data:image\/(png|jpe?g|webp);base64,/.test(referenceImage)) referenceImage = '';
+  if (referenceImage.length > 1800000) referenceImage = ''; // ~1.3MB бинарных данных
+
+  let result;
+  try {
+    result = await imageGeneration(prompt, { size: '1536x1024', referenceImage });
+  } catch (err) {
+    if (err.code === 'AI_NOT_CONFIGURED') {
+      throw ApiError.internal('ИИ не настроен на сервере (не задан AI_API_KEY)');
+    }
+    console.error('[ai/generate-image] upstream error:', err.message);
+    throw new ApiError('Сервис генерации изображений временно недоступен', 502, 'AI_UNAVAILABLE');
+  }
+
+  if (result.b64) {
+    return res.json({ ok: true, image: `data:${result.mime || 'image/png'};base64,${result.b64}` });
+  }
+  if (result.url) {
+    return res.json({ ok: true, image: result.url });
+  }
+  throw new ApiError('Модель не вернула изображение', 502, 'AI_EMPTY_IMAGE');
+}));
+
+/**
+ * POST /api/ai/reconstruct-page
+ * body: { text: string, currentBlocks: Array }
+ * resp: { ok: true, commands: Array }
+ */
+router.post('/reconstruct-page', optionalAuth, aiGenerationLimiter, wrap(async (req, res) => {
+  const { text, currentBlocks } = req.body || {};
+  if (!text || typeof text !== 'string') {
+    throw ApiError.badRequest('Нужен текст истории для анализа');
+  }
+
+  const cleanText = text.trim().slice(0, 15000);
+  const blocks = Array.isArray(currentBlocks) ? currentBlocks : [];
+
+  if (containsProfanity(cleanText)) {
+    return res.json({
+      ok: true,
+      commands: []
+    });
+  }
+
+  let result;
+  try {
+    result = await aiService.reconstructPage(cleanText, blocks);
+  } catch (err) {
+    console.error('[ai/reconstruct-page] error:', err.message);
+    throw ApiError.internal('Не удалось проанализировать страницу через ИИ.');
+  }
+
+  // Очистка от матов на выходе
+  const commands = (result.commands || []).map(cmd => {
+    if (cmd.title && containsProfanity(cmd.title)) cmd.title = cleanProfanity(cmd.title);
+    if (cmd.text && containsProfanity(cmd.text)) cmd.text = cleanProfanity(cmd.text);
+    return cmd;
+  });
+
+  return res.json({ ok: true, commands });
 }));
 
 module.exports = router;

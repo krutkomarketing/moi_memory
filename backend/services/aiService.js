@@ -415,7 +415,7 @@ async function structureFullBiography(rawText, context = {}) {
 
   let content;
   try {
-    content = await require('./aiClient').chatCompletion(messages, {
+    content = await require('../lib/aiClient').chatCompletion(messages, {
       temperature: 0.6,
       maxTokens: 2200,
       json: true
@@ -496,7 +496,67 @@ function generateMockStructuredBio(rawText, personName) {
   };
 }
 
+async function reconstructPage(rawText, currentBlocks) {
+  const system = [
+    'Ты — профессиональный ИИ-редактор мемориального сайта «Память».',
+    'Пользователь наговаривает (или пишет) изменения, которые он хочет внести в биографические разделы страницы памяти.',
+    'Твоя задача — проанализировать новые слова пользователя, сравнить их с текущими блоками страницы и вернуть список команд (конкретных действий) для обновления страницы.',
+    '',
+    'Текущие блоки на странице:',
+    JSON.stringify(currentBlocks, null, 2),
+    '',
+    'Доступные типы разделов (ключи):',
+    '- childhood: Детство и юность',
+    '- education: Образование и становление',
+    '- military: Военная служба',
+    '- career: Профессиональный путь',
+    '- family: Семья и близкие',
+    '- hobbies: Хобби, увлечения',
+    '- legacy: Наследие, чем запомнился',
+    '- custom_XXXX (где XXXX - случайные цифры): любой другой уникальный раздел',
+    '',
+    'Доступные действия (action):',
+    '1. ADD: создать новый раздел или обновить существующий с новым текстом. Если раздел с таким ключом уже есть, это обновит его контент.',
+    '2. UPDATE: обновить заголовок или текст существующего раздела на основе новых деталей.',
+    '3. DELETE: удалить раздел, если пользователь явно просит его убрать (например, "удали детство" или "сотри про армию").',
+    '',
+    'Правила составления текста:',
+    '- Напиши связный, красивый, уважительный текст на русском языке.',
+    '- Исправь орфографию и шероховатости речи.',
+    '- Сохраняй все факты, имена и даты.',
+    '- Не выдумывай новые факты, которых нет в речи пользователя.',
+    '- Если пользователь просит удалить все стартовые/изначальные блоки или очистить страницу, верни DELETE для childhood, education, career.',
+    '',
+    'Формат ответа — строго валидный JSON вида:',
+    `{
+  "commands": [
+    { "action": "ADD|UPDATE|DELETE", "key": "childhood|education|career|...", "title": "Заголовок", "text": "Текст..." }
+  ]
+}`
+  ].join('\n');
+
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user', content: `Вот новые слова пользователя: "${rawText}"` }
+  ];
+
+  let content;
+  try {
+    content = await require('../lib/aiClient').chatCompletion(messages, {
+      temperature: 0.5,
+      maxTokens: 1500,
+      json: true
+    });
+    const parsed = JSON.parse(content);
+    return { commands: parsed.commands || [] };
+  } catch (err) {
+    console.error('[reconstructPage] AI error:', err);
+    throw err;
+  }
+}
+
 module.exports = {
   chat,
-  structureFullBiography
+  structureFullBiography,
+  reconstructPage
 };

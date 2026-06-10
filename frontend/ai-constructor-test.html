@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ИИ-Конструктор Страницы Памяти — QR-Память</title>
+
+  <!-- Шрифты и иконки с оригинального сайта -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+
+  <!-- Подключение оригинальных стилей сайта -->
+  <link rel="stylesheet" href="styles/main.css?v=14" />
+  <link rel="stylesheet" href="styles/responsive.css?v=14" />
+  <link rel="stylesheet" href="styles/person.css?v=15" />
+  <link rel="stylesheet" href="styles/blocks.css?v=14" />
+  <link rel="stylesheet" href="styles/gallery.css?v=14" />
+
+  <!-- GSAP Core для анимаций переходов -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════
+       ГИБРИДНЫЙ ДИЗАЙН:
+       — контент страницы: мемориальная эстетика (родные классы person.css / blocks.css)
+       — ИИ-панель: сдержанный технологичный стиль (Inter, минимум украшений)
+       ═══════════════════════════════════════════════ */
+
+    /* ── Фото в шапке: родная рамка person.css + заполнение картинкой ── */
+    .person-header__photo {
+      overflow: hidden;
+    }
+    .person-header__photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 4px;
+    }
+
+    /* ═══════════ ИИ-ПАНЕЛЬ УПРАВЛЕНИЯ ═══════════ */
+    .ai-control-panel {
+      background: #0c0b0a;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px auto 56px;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+      font-family: var(--font-ui);
+      opacity: 0;
+      height: 0;
+      overflow: hidden;
+      display: none;
+      transform: translateY(-20px);
+    }
+
+    .ai-control-header {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .ai-status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #10b981;
+      margin-top: 5px;
+      flex-shrink: 0;
+      animation: dotPulse 2.6s infinite;
+    }
+
+    @keyframes dotPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+      70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .ai-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+
+    .ai-subtitle {
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--cream-dim);
+      line-height: 1.55;
+    }
+
+    /* ── Зона диктовки ── */
+    .dictation-wrapper {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .dictation-controls {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .mic-button-container {
+      position: relative;
+      width: 52px;
+      height: 52px;
+    }
+
+    .mic-button {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--cream);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.2s, background 0.3s, border-color 0.3s, color 0.3s;
+      outline: none;
+    }
+
+    .mic-button:hover {
+      border-color: rgba(200, 168, 75, 0.6);
+      color: var(--gold-light);
+    }
+
+    .mic-button.is-recording {
+      background: rgba(239, 68, 68, 0.14);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .mic-pulse-ring {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid #ef4444;
+      opacity: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .mic-button.is-recording + .mic-pulse-ring {
+      animation: pulseRing 1.5s infinite;
+    }
+
+    @keyframes pulseRing {
+      0%   { transform: scale(1);   opacity: 1; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    .mic-status-container {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--cream-dim);
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+    }
+
+    .status-text.recording {
+      color: #ef4444;
+      font-weight: 500;
+    }
+
+    .waves-container {
+      display: none;
+      align-items: center;
+      gap: 3px;
+      height: 18px;
+      margin-top: 6px;
+    }
+
+    .dictation-controls.is-recording .waves-container {
+      display: flex;
+    }
+
+    .wave-bar {
+      width: 2px;
+      height: 5px;
+      background: #ef4444;
+      border-radius: 2px;
+      animation: waveBounce 1.2s infinite ease-in-out;
+    }
+
+    .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.5s; }
+
+    @keyframes waveBounce {
+      0%, 100% { height: 5px; }
+      50%      { height: 18px; }
+    }
+
+    /* Текст рассказа — это контент, поэтому серифы */
+    .transcript-box {
+      width: 100%;
+      min-height: 110px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: var(--cream);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .transcript-box:focus {
+      border-color: rgba(200, 168, 75, 0.5);
+    }
+
+    .transcript-box::placeholder {
+      color: rgba(245, 239, 224, 0.35);
+      font-style: italic;
+    }
+
+    /* ── Настройки и действия ── */
+    .settings-row {
+      display: flex;
+      gap: 14px 28px;
+      flex-wrap: wrap;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 18px;
+    }
+
+    .ai-switches {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1 1 320px;
+    }
+
+    .ai-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .ai-switch input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .ai-switch__track {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      transition: background 0.25s;
+      flex-shrink: 0;
+    }
+
+    .ai-switch__track::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--cream);
+      transition: transform 0.25s;
+    }
+
+    .ai-switch input:checked + .ai-switch__track {
+      background: var(--gold);
+    }
+
+    .ai-switch input:checked + .ai-switch__track::after {
+      transform: translateX(16px);
+      background: #141210;
+    }
+
+    .ai-switch__label {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--cream-dim);
+      letter-spacing: 0.02em;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .btn-ai {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-ai:active {
+      transform: scale(0.97);
+    }
+
+    .btn-ai:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    .btn-ai-primary {
+      background: var(--gold);
+      color: #141210;
+    }
+
+    .btn-ai-primary:hover:not(:disabled) {
+      background: var(--gold-light);
+    }
+
+    .btn-ai-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--cream-dim);
+    }
+
+    .btn-ai-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      color: var(--cream);
+    }
+
+    /* ── Лог команд ── */
+    .ai-log-wrapper {
+      margin-top: 18px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: none;
+    }
+
+    .ai-log-title {
+      font-size: 10px;
+      color: var(--cream-dim);
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .ai-log-list {
+      font-family: monospace;
+      font-size: 12px;
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: var(--cream-dim);
+    }
+
+    .ai-log-item {
+      display: flex;
+      gap: 8px;
+    }
+
+    .log-action.add    { color: #60a5fa; }
+    .log-action.update { color: #fbbf24; }
+    .log-action.delete { color: #f87171; }
+
+    /* ── Точечная подгонка ── */
+    .refinement-container {
+      margin-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 16px;
+    }
+
+    .refinement-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--cream-dim);
+      margin-bottom: 12px;
+    }
+
+    .refinement-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .refinement-chunk {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .refinement-chunk-text {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--cream);
+      font-style: italic;
+      line-height: 1.55;
+    }
+
+    .refinement-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .refinement-btn {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: transparent;
+      color: var(--cream-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .refinement-btn:hover:not(:disabled) {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    /* ═══════════ РЕЖИМ РЕДАКТИРОВАНИЯ НА БЛОКАХ ═══════════ */
+    .bio-block-key {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--gold-dim);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 2px 7px;
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .bio-block.is-editing-mode .bio-block-key {
+      opacity: 1;
+    }
+
+    .bio-block {
+      transition: border-color 0.4s, background-color 0.4s;
+    }
+
+    .bio-block.is-editing-mode {
+      border: 1px dashed rgba(200, 168, 75, 0.3);
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.01);
+      position: relative;
+      padding: 20px;
+    }
+
+    .delete-block-btn {
+      margin-top: 14px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 120, 120, 0.85);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s;
+      display: none;
+      text-align: left;
+      padding: 0;
+    }
+
+    .bio-block.is-editing-mode .delete-block-btn {
+      display: inline-block;
+    }
+
+    .bio-block.is-editing-mode:hover .delete-block-btn {
+      opacity: 0.8;
+    }
+
+    .delete-block-btn:hover {
+      opacity: 1 !important;
+      text-decoration: underline;
+    }
+
+    /* ── Спиннер отрисовки иллюстрации ── */
+    .ai-spinner {
+      width: 22px;
+      height: 22px;
+      border: 2px solid rgba(200, 168, 75, 0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Плейсхолдер иллюстрации (мемориальный) ──
+       Генерация доступна только в режиме редактирования:
+       вне его — нейтральная заглушка без подсказки и курсора */
+    .bio-block__photo-placeholder {
+      cursor: default;
+      background: rgba(200, 168, 75, 0.03);
+      transition: background 0.3s;
+    }
+
+    .bio-block__photo-hint {
+      display: none;
+    }
+
+    .bio-block.is-editing-mode .bio-block__photo-hint {
+      display: block;
+    }
+
+    .bio-block.is-editing-mode .bio-block__photo-placeholder:hover {
+      background: rgba(200, 168, 75, 0.06);
+    }
+
+    /* Кнопки действий с фото — видны только в режиме редактирования */
+    .photo-actions {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .bio-block.is-editing-mode .photo-actions {
+      display: flex;
+    }
+
+    .photo-action-btn {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(200, 168, 75, 0.35);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--gold-light);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .photo-action-btn:hover {
+      background: rgba(200, 168, 75, 0.12);
+      border-color: var(--gold);
+    }
+
+    /* ── Тост оповещений ── */
+    .notification-toast {
+      background: var(--gold-dim);
+      border: 1px solid var(--gold);
+      color: var(--cream);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-style: italic;
+      z-index: 2000;
+    }
+
+    /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
+    /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
+    .bio-block-text[contenteditable="true"] {
+      outline: none;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin: -4px -8px;
+      transition: all 0.25s;
+    }
+
+    .bio-block.is-editing-mode .bio-block-text[contenteditable="true"] {
+      border: 1px dashed rgba(200, 168, 75, 0.25);
+    }
+
+    .bio-block.is-editing-mode .bio-block-text[contenteditable="true"]:focus {
+      border-color: var(--gold);
+      background: rgba(200, 168, 75, 0.04);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .bio-block__title[contenteditable="true"] {
+      outline: none;
+      border-bottom: 1px dashed transparent;
+      transition: border-bottom-color 0.2s;
+    }
+
+    .bio-block.is-editing-mode .bio-block__title[contenteditable="true"] {
+      border-bottom: 1px dashed rgba(200, 168, 75, 0.35);
+    }
+
+    .bio-block.is-editing-mode .bio-block__title[contenteditable="true"]:focus {
+      border-bottom-color: var(--gold);
+    }
+
+    /* AI действия на уровне блока */
+    .ai-block-helper {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      opacity: 0;
+      transform: translateY(4px);
+      animation: helperFadeIn 0.3s forwards;
+    }
+
+    .bio-block.is-editing-mode .ai-block-helper {
+      display: flex;
+    }
+
+    @keyframes helperFadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-helper-btn {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--cream-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ai-helper-btn:hover {
+      border-color: rgba(200, 168, 75, 0.45);
+      color: var(--gold-light);
+      background: rgba(200, 168, 75, 0.06);
+    }
+
+    .ai-helper-btn.loading {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .bio-block-text-loading {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .bio-block__photo {
+      position: relative;
+    }
+    
+    .bio-block__photo-img-wrap {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    
+    .bio-block__photo-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    
+    .bio-block__photo.has-image .bio-block__photo-img-wrap {
+      display: block;
+    }
+    
+    .bio-block__photo.has-image .bio-block__photo-placeholder {
+      display: none;
+    }
+
+    /* Оверлей управления фото в режиме редактирования */
+    .photo-actions-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(12, 11, 10, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+
+    /* В режиме редактирования оверлей появляется при ховере на фото */
+    .bio-block.is-editing-mode .bio-block__photo:hover .photo-actions-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Если фото пустое (плейсхолдер), оверлей виден сразу */
+    .bio-block.is-editing-mode .bio-block__photo-placeholder .photo-actions-overlay {
+      opacity: 1;
+      pointer-events: auto;
+      background: transparent;
+      position: static;
+    }
+
+    /* Спиннер загрузки для контейнера фото */
+    .bio-block__photo.is-loading .bio-block__photo-img-wrap,
+    .bio-block__photo.is-loading .bio-block__photo-placeholder,
+    .bio-block__photo.is-loading .photo-actions-overlay {
+      display: none !important;
+    }
+    
+    .bio-block__photo.is-loading {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      background: rgba(12, 11, 10, 0.8) !important;
+    }
+    
+    .bio-block__photo.is-loading::after {
+      content: '';
+      width: 28px;
+      height: 28px;
+      border: 2px solid rgba(200, 168, 75, 0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    /* ── СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-window {
+      background: #0d0c0a;
+      border: 1px solid rgba(200, 168, 75, 0.2);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 580px;
+      padding: 28px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+      font-family: var(--font-ui);
+    }
+
+    .modal-overlay.is-visible .modal-window {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      color: var(--gold-light);
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 10px;
+    }
+
+    .modal-form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modal-form-group label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cream-dim);
+      font-weight: 500;
+    }
+
+    .modal-input, .modal-select, .modal-textarea {
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--cream);
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal-input:focus, .modal-select:focus, .modal-textarea:focus {
+      border-color: rgba(200, 168, 75, 0.45);
+    }
+
+    .modal-select option {
+      background: #0d0c0a;
+      color: var(--cream);
+    }
+
+    .modal-textarea {
+      resize: vertical;
+      min-height: 90px;
+      font-family: var(--font-body);
+      line-height: 1.6;
+    }
+
+    .modal-ai-trigger-btn {
+      align-self: flex-start;
+      font-family: var(--font-ui);
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--gold-light);
+      background: rgba(200, 168, 75, 0.05);
+      border: 1px dashed rgba(200, 168, 75, 0.35);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .modal-ai-trigger-btn:hover {
+      background: rgba(200, 168, 75, 0.12);
+      border-style: solid;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* Кнопка ручного добавления секции */
+    .add-block-btn-wrap {
+      text-align: center;
+      margin: 40px auto 80px;
+      max-width: 1000px;
+      display: none; /* скрыта, показывается в режиме редактирования */
+    }
+
+    .btn-add-section {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      background: rgba(200, 168, 75, 0.03);
+      border: 1px dashed rgba(200, 168, 75, 0.35);
+      color: var(--gold-light);
+      padding: 12px 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .btn-add-section:hover {
+      background: rgba(200, 168, 75, 0.08);
+      border-style: solid;
+      color: var(--cream);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Навигационная панель с оригинального сайта -->
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="#" class="nav__logo">
+        <span class="nav__logo-script">QR-Память</span>
+      </a>
+      <ul class="nav__links">
+        <li><a href="#" class="nav__link">Главная</a></li>
+        <li><a href="#" class="nav__link nav__link--active">Страницы памяти</a></li>
+        <li><a href="#" class="nav__link">Древо семьи</a></li>
+        <li><a href="#" class="nav__link">Летопись</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Фиксированная панель кнопок режима редактирования (как в person-edit.js) -->
+  <div class="edit-panel" id="edit-panel">
+    <button class="edit-panel__btn" id="edit-toggle-btn">Редактировать с ИИ</button>
+  </div>
+
+  <!-- ГЛАВНЫЙ КОНТЕНТ СТРАНИЦЫ ПАМЯТИ -->
+  <main class="person-page">
+
+    <!-- Шапка страницы — родные классы person.css -->
+    <div class="person-header">
+      <div class="person-header__photo">
+        <img id="p-avatar" src="images/aleksandr_smirnov.png" alt="Александр Петрович Смирнов">
+      </div>
+
+      <div class="person-header__info">
+        <p class="person-header__eyebrow">Летопись жизни</p>
+        <h1 class="person-header__name" id="p-name">Александр Петрович Смирнов</h1>
+        <div class="person-header__dates" id="p-dates">
+          15.05.1945 <span>—</span> 24.11.2018
+        </div>
+        <p class="person-header__city">Минск</p>
+      </div>
+    </div>
+
+    <!-- Эпитафия -->
+    <div class="person-bio">
+      <p class="person-bio__text" id="p-bio">
+        «Человек с большим сердцем, талантливый инженер и любящий отец. Его жизнь была наполнена созиданием и заботой о близких.»
+      </p>
+    </div>
+
+    <!-- ИИ-ПАНЕЛЬ УПРАВЛЕНИЯ (скрыта по умолчанию, появляется при переходе в режим ИИ-редактора) -->
+    <section class="ai-control-panel" id="ai-control-panel">
+      <div class="ai-control-header">
+        <span class="ai-status-dot"></span>
+        <div>
+          <h3 class="ai-title">ИИ-помощник страницы памяти</h3>
+          <p class="ai-subtitle">Расскажите историю жизни голосом или текстом — разделы страницы будут созданы, обновлены или удалены автоматически.</p>
+        </div>
+      </div>
+
+      <div class="dictation-wrapper">
+        <div class="dictation-controls">
+          <div class="mic-button-container">
+            <button id="mic-btn" class="mic-button" title="Включить / выключить запись" aria-label="Запись голоса">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3"/>
+                <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+                <line x1="12" y1="18" x2="12" y2="22"/>
+              </svg>
+            </button>
+            <div class="mic-pulse-ring"></div>
+          </div>
+
+          <div class="mic-status-container">
+            <div id="status-label" class="status-text">Нажмите на микрофон и начните говорить</div>
+            <div class="waves-container">
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <textarea id="transcript-input" class="transcript-box" placeholder="Здесь отобразится расшифрованный текст вашего рассказа... Вы можете свободно отредактировать его вручную перед отправкой в ИИ."></textarea>
+      </div>
+
+      <div class="settings-row">
+        <div class="ai-switches">
+          <label class="ai-switch">
+            <input type="checkbox" id="sim-mode">
+            <span class="ai-switch__track"></span>
+            <span class="ai-switch__label">Оффлайн-симуляция ответов ИИ (тест без бэкенда)</span>
+          </label>
+          <label class="ai-switch">
+            <input type="checkbox" id="auto-photo-mode" checked>
+            <span class="ai-switch__track"></span>
+            <span class="ai-switch__label">Автоматически создавать иллюстрации для новых разделов</span>
+          </label>
+        </div>
+
+        <div class="action-buttons">
+          <button id="clear-btn" class="btn-ai btn-ai-secondary">Очистить</button>
+          <button id="process-btn" class="btn-ai btn-ai-primary">Обработать через ИИ</button>
+        </div>
+      </div>
+
+      <!-- Панель точечной подгонки (Refinement Mapping) -->
+      <div id="refinement-panel" class="refinement-container" style="display: none;">
+        <h4 class="refinement-title">Точечная подгонка фрагментов рассказа</h4>
+        <div id="refinement-list" class="refinement-list"></div>
+      </div>
+
+      <!-- Лог команд -->
+      <div id="ai-log-box" class="ai-log-wrapper">
+        <div class="ai-log-title">Выполненные команды перестройки страницы</div>
+        <ul id="ai-log-list" class="ai-log-list">
+          <!-- Заполняется JS -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- Сетка контентных блоков страницы (Target) -->
+    <h3 class="person-sec-title">Биография и летопись</h3>
+
+    <div class="bio-blocks" id="blocks-container">
+
+      <!-- Блок Детство -->
+      <section class="bio-block" data-key="childhood">
+        <h4 class="bio-block__title">Детские годы</h4>
+        <div class="bio-block__row">
+          <div class="bio-block__text">
+            <span class="bio-block-key">childhood</span>
+            <div class="bio-block-text">
+              Александр родился в послевоенном Минске. С самого раннего детства он проявлял живой интерес к технике и конструированию, собирая простейшие механизмы из подручных средств.
+            </div>
+            <div class="ai-block-helper">
+              <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'improve')">✨ Улучшить стиль (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'warm')">❤️ Сделать теплее (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'formal')">👔 Официальный тон (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('childhood', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
+            </div>
+            <button class="delete-block-btn" onclick="deleteBlockLocally('childhood')">Удалить раздел</button>
+          </div>
+          <div class="bio-block__photo">
+            <div class="bio-block__photo-img-wrap"></div>
+            <div class="bio-block__photo-placeholder">
+              <span class="bio-block__photo-icon">❧</span>
+            </div>
+            <div class="photo-actions-overlay">
+              <button class="photo-action-btn" onclick="generateBlockImage('childhood')">Создать ИИ-фото</button>
+              <button class="photo-action-btn" onclick="uploadBlockPhoto('childhood')">Загрузить своё</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Блок Образование -->
+      <section class="bio-block" data-key="education">
+        <h4 class="bio-block__title">Образование и становление</h4>
+        <div class="bio-block__row">
+          <div class="bio-block__text">
+            <span class="bio-block-key">education</span>
+            <div class="bio-block-text">
+              Окончил Белорусский политехнический институт по специальности инженера-механика в 1968 году. Учителя всегда отзывались о нем как о выдающемся и глубоком студенте.
+            </div>
+            <div class="ai-block-helper">
+              <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'improve')">✨ Улучшить стиль (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'warm')">❤️ Сделать теплее (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'formal')">👔 Официальный тон (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('education', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
+            </div>
+            <button class="delete-block-btn" onclick="deleteBlockLocally('education')">Удалить раздел</button>
+          </div>
+          <div class="bio-block__photo">
+            <div class="bio-block__photo-img-wrap"></div>
+            <div class="bio-block__photo-placeholder">
+              <span class="bio-block__photo-icon">❧</span>
+            </div>
+            <div class="photo-actions-overlay">
+              <button class="photo-action-btn" onclick="generateBlockImage('education')">Создать ИИ-фото</button>
+              <button class="photo-action-btn" onclick="uploadBlockPhoto('education')">Загрузить своё</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Блок Карьера -->
+      <section class="bio-block" data-key="career">
+        <h4 class="bio-block__title">Профессиональный путь</h4>
+        <div class="bio-block__row">
+          <div class="bio-block__text">
+            <span class="bio-block-key">career</span>
+            <div class="bio-block-text">
+              Более 35 лет посвятил работе в конструкторском бюро, пройдя путь от рядового инженера до главного конструктора проектов. Автор нескольких запатентованных изобретений.
+            </div>
+            <div class="ai-block-helper">
+              <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'improve')">✨ Улучшить стиль (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'warm')">❤️ Сделать теплее (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'formal')">👔 Официальный тон (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('career', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
+            </div>
+            <button class="delete-block-btn" onclick="deleteBlockLocally('career')">Удалить раздел</button>
+          </div>
+          <div class="bio-block__photo">
+            <div class="bio-block__photo-img-wrap"></div>
+            <div class="bio-block__photo-placeholder">
+              <span class="bio-block__photo-icon">❧</span>
+            </div>
+            <div class="photo-actions-overlay">
+              <button class="photo-action-btn" onclick="generateBlockImage('career')">Создать ИИ-фото</button>
+              <button class="photo-action-btn" onclick="uploadBlockPhoto('career')">Загрузить своё</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Подвал сайта -->
+  <footer class="footer">
+    <div class="footer__top">
+      <div class="footer__logo-wrap">
+        <span class="footer__logo">Память</span>
+        <span class="footer__tagline">Хранители воспоминаний</span>
+      </div>
+      <nav class="footer__nav" aria-label="Навигация сайта">
+        <a href="#" class="footer__nav-link">Главная</a>
+        <a href="#" class="footer__nav-link">Страницы памяти</a>
+        <a href="#" class="footer__nav-link">Древо семьи</a>
+        <a href="#" class="footer__nav-link">Летопись</a>
+      </nav>
+      <p class="footer__quote">Пока мы помним —<br/>они живы.</p>
+    </div>
+    <div class="footer__bottom">
+      <div class="footer__inner">
+        <p class="footer__copy">© 2026 — Хранители воспоминаний</p>
+        <p class="footer__copy">Сайт создан с любовью к памяти</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Тост уведомлений -->
+  <div id="toast" class="notification-toast">Страница успешно обновлена!</div>
+
+  <!-- Скрытый input для загрузки своего фото в блок -->
+  <input type="file" id="photo-upload-input" accept="image/*" style="display: none;">
+
+  <!-- Скрипт логики конструктора -->
+  <script>
+    let isRecording = false;
+    let recognition = null;
+    let finalTranscript = '';
+    let isEditingMode = false;
+
+    // База API: с Live Server (5500 и т.п.) ходим на бэкенд напрямую, в проде — same-origin
+    const API_BASE = (location.port === '3000' || location.port === '') ? '' : 'http://localhost:3000';
+
+    // Элементы
+    const micBtn = document.getElementById('mic-btn');
+    const statusLabel = document.getElementById('status-label');
+    const transcriptInput = document.getElementById('transcript-input');
+    const clearBtn = document.getElementById('clear-btn');
+    const processBtn = document.getElementById('process-btn');
+    const simModeCheckbox = document.getElementById('sim-mode');
+    const autoPhotoMode = document.getElementById('auto-photo-mode');
+    const blocksContainer = document.getElementById('blocks-container');
+    const aiLogBox = document.getElementById('ai-log-box');
+    const aiLogList = document.getElementById('ai-log-list');
+    const toast = document.getElementById('toast');
+    const refinementPanel = document.getElementById('refinement-panel');
+    const refinementList = document.getElementById('refinement-list');
+    const editPanel = document.getElementById('edit-panel');
+    const editToggleBtn = document.getElementById('edit-toggle-btn');
+    const aiControlPanel = document.getElementById('ai-control-panel');
+    const dictationControls = document.querySelector('.dictation-controls');
+
+    // === ФУНКЦИЯ ЧЕРЕДОВАНИЯ БЛОКОВ (ЗЕБРА) ===
+    function updateZebraAlternation() {
+      const blocks = document.querySelectorAll('#blocks-container > .bio-block');
+      blocks.forEach((block, idx) => {
+        if (idx % 2 === 1) {
+          block.classList.add('bio-block--reverse');
+        } else {
+          block.classList.remove('bio-block--reverse');
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', updateZebraAlternation);
+
+    // === ЛОГИКА ПЕРЕХОДА В РЕЖИМ РЕДАКТИРОВАНИЯ ===
+    function enterEditingMode() {
+      isEditingMode = true;
+      editPanel.innerHTML = `
+        <button class="edit-panel__btn edit-panel__btn--save" id="edit-save-btn">Сохранить</button>
+        <button class="edit-panel__btn edit-panel__btn--cancel" id="edit-cancel-btn">Отмена</button>
+      `;
+      document.getElementById('edit-save-btn').addEventListener('click', saveChangesAndExit);
+      document.getElementById('edit-cancel-btn').addEventListener('click', exitEditingMode);
+
+      aiControlPanel.style.display = 'block';
+      gsap.fromTo(aiControlPanel,
+        { height: 0, opacity: 0, y: -20 },
+        { height: 'auto', opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }
+      );
+
+      // Показываем кнопку ручного добавления секции
+      const addBlockBtnWrap = document.getElementById('add-block-btn-wrap');
+      if (addBlockBtnWrap) {
+        addBlockBtnWrap.style.display = 'block';
+        gsap.fromTo(addBlockBtnWrap, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 });
+      }
+
+      const blocks = document.querySelectorAll('.bio-block');
+      blocks.forEach(block => {
+        block.classList.add('is-editing-mode');
+        gsap.fromTo(block,
+          { borderColor: 'rgba(200,168,75,0.1)' },
+          { borderColor: 'rgba(200,168,75,0.35)', duration: 0.4 }
+        );
+        const keyLabel = block.querySelector('.bio-block-key');
+        if (keyLabel) gsap.fromTo(keyLabel, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+
+        // Включаем инлайн-редактирование
+        const titleEl = block.querySelector('.bio-block__title');
+        const textEl = block.querySelector('.bio-block-text');
+        if (titleEl) titleEl.setAttribute('contenteditable', 'true');
+        if (textEl) textEl.setAttribute('contenteditable', 'true');
+      });
+
+      showToast('Включен режим ИИ-редактирования');
+    }
+
+    function exitEditingMode() {
+      isEditingMode = false;
+      if (isRecording) stopRecording();
+
+      editPanel.innerHTML = `<button class="edit-panel__btn" id="edit-toggle-btn">Редактировать с ИИ</button>`;
+      document.getElementById('edit-toggle-btn').addEventListener('click', enterEditingMode);
+
+      gsap.to(aiControlPanel, {
+        height: 0,
+        opacity: 0,
+        y: -20,
+        duration: 0.4,
+        ease: 'power3.in',
+        onComplete: () => {
+          aiControlPanel.style.display = 'none';
+          refinementPanel.style.display = 'none';
+          aiLogBox.style.display = 'none';
+        }
+      });
+
+      // Скрываем кнопку ручного добавления
+      const addBlockBtnWrap = document.getElementById('add-block-btn-wrap');
+      if (addBlockBtnWrap) {
+        gsap.to(addBlockBtnWrap, {
+          opacity: 0, y: 10, duration: 0.2, onComplete: () => {
+            addBlockBtnWrap.style.display = 'none';
+          }
+        });
+      }
+
+      const blocks = document.querySelectorAll('.bio-block');
+      blocks.forEach(block => {
+        block.classList.remove('is-editing-mode');
+        gsap.to(block, { borderColor: 'rgba(200,168,75,0.1)', duration: 0.4 });
+        const keyLabel = block.querySelector('.bio-block-key');
+        if (keyLabel) gsap.to(keyLabel, { opacity: 0, duration: 0.3 });
+
+        // Выключаем инлайн-редактирование
+        const titleEl = block.querySelector('.bio-block__title');
+        const textEl = block.querySelector('.bio-block-text');
+        if (titleEl) titleEl.removeAttribute('contenteditable');
+        if (textEl) textEl.removeAttribute('contenteditable');
+      });
+
+      showToast('Режим редактирования закрыт без сохранения');
+    }
+
+    function saveChangesAndExit() {
+      // Сохраняем значения contenteditable в DOM (они сохраняются автоматически в innerHTML, просто выключаем режим)
+      showToast('Изменения сохранены!', '#10b981', '#000');
+      
+      isEditingMode = false;
+      editPanel.innerHTML = `<button class="edit-panel__btn" id="edit-toggle-btn">Редактировать с ИИ</button>`;
+      document.getElementById('edit-toggle-btn').addEventListener('click', enterEditingMode);
+
+      gsap.to(aiControlPanel, {
+        height: 0,
+        opacity: 0,
+        y: -20,
+        duration: 0.4,
+        ease: 'power3.in',
+        onComplete: () => {
+          aiControlPanel.style.display = 'none';
+          refinementPanel.style.display = 'none';
+          aiLogBox.style.display = 'none';
+        }
+      });
+
+      const addBlockBtnWrap = document.getElementById('add-block-btn-wrap');
+      if (addBlockBtnWrap) {
+        gsap.to(addBlockBtnWrap, {
+          opacity: 0, y: 10, duration: 0.2, onComplete: () => {
+            addBlockBtnWrap.style.display = 'none';
+          }
+        });
+      }
+
+      const blocks = document.querySelectorAll('.bio-block');
+      blocks.forEach(block => {
+        block.classList.remove('is-editing-mode');
+        gsap.to(block, { borderColor: 'rgba(200,168,75,0.1)', duration: 0.4 });
+        const keyLabel = block.querySelector('.bio-block-key');
+        if (keyLabel) gsap.to(keyLabel, { opacity: 0, duration: 0.3 });
+
+        // Выключаем инлайн-редактирование
+        const titleEl = block.querySelector('.bio-block__title');
+        const textEl = block.querySelector('.bio-block-text');
+        if (titleEl) titleEl.removeAttribute('contenteditable');
+        if (textEl) textEl.removeAttribute('contenteditable');
+      });
+    }
+
+    editToggleBtn.addEventListener('click', enterEditingMode);
+
+    // === Инициализация Web Speech API ===
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ru-RU';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        transcriptInput.value = (finalTranscript + interimTranscript).trim();
+        transcriptInput.scrollTop = transcriptInput.scrollHeight;
+      };
+
+      recognition.onerror = (e) => {
+        console.error('Speech recognition error:', e.error);
+        if (e.error === 'not-allowed') {
+          showToast('Доступ к микрофону заблокирован!', '#ef4444', '#fff');
+        }
+        stopRecording();
+      };
+
+      recognition.onend = () => {
+        if (isRecording) {
+          try { recognition.start(); } catch (e) {}
+        }
+      };
+    } else {
+      statusLabel.textContent = 'Голосовой ввод не поддерживается вашим браузером';
+      micBtn.disabled = true;
+      micBtn.style.opacity = '0.4';
+    }
+
+    function startRecording() {
+      if (!recognition) return;
+      isRecording = true;
+      finalTranscript = transcriptInput.value ? transcriptInput.value + ' ' : '';
+      try {
+        recognition.start();
+        micBtn.classList.add('is-recording');
+        dictationControls.classList.add('is-recording');
+        statusLabel.textContent = 'Слушаю вас... Говорите историю';
+        statusLabel.classList.add('recording');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function stopRecording() {
+      if (!recognition) return;
+      isRecording = false;
+      try { recognition.stop(); } catch (e) {}
+      micBtn.classList.remove('is-recording');
+      dictationControls.classList.remove('is-recording');
+      statusLabel.textContent = 'Запись остановлена. Вы можете отредактировать текст';
+      statusLabel.classList.remove('recording');
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (isRecording) stopRecording();
+      else startRecording();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      transcriptInput.value = '';
+      finalTranscript = '';
+      if (isRecording) stopRecording();
+      refinementPanel.style.display = 'none';
+      refinementList.innerHTML = '';
+    });
+
+    // === УДАЛЕНИЕ БЛОКА ===
+    window.deleteBlockLocally = function(key) {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      if (el) {
+        el.removeAttribute('data-key');
+        gsap.to(el, {
+          height: 0,
+          paddingTop: 0,
+          paddingBottom: 0,
+          marginTop: 0,
+          marginBottom: 0,
+          opacity: 0,
+          scale: 0.95,
+          duration: 0.35,
+          ease: 'power2.in',
+          onComplete: () => {
+            el.remove();
+            showToast(`Раздел «${key}» удален`);
+            updateZebraAlternation();
+            updateRefinementButtons();
+          }
+        });
+      }
+    };
+
+    // === ЗАГРУЗКА СВОЕГО ФОТО В БЛОК ===
+    let pendingUploadKey = null;
+    const photoUploadInput = document.getElementById('photo-upload-input');
+
+    window.uploadBlockPhoto = function(key) {
+      if (!isEditingMode) return;
+      pendingUploadKey = key;
+      photoUploadInput.click();
+    };
+
+    photoUploadInput.addEventListener('change', () => {
+      const file = photoUploadInput.files[0];
+      photoUploadInput.value = '';
+      if (!file || !pendingUploadKey) return;
+
+      const el = document.querySelector(`[data-key="${pendingUploadKey}"]`);
+      pendingUploadKey = null;
+      if (!el) return;
+
+      const photoContainer = el.querySelector('.bio-block__photo');
+      const reader = new FileReader();
+      reader.onload = () => {
+        photoContainer.classList.remove('is-loading');
+        photoContainer.classList.add('has-image');
+        const imgWrap = photoContainer.querySelector('.bio-block__photo-img-wrap');
+        if (imgWrap) {
+          imgWrap.innerHTML = `<img src="${reader.result}" alt="Фотография из семейного архива">`;
+          const img = imgWrap.querySelector('img');
+          gsap.fromTo(img,
+            { opacity: 0, scale: 0.95 },
+            { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' }
+          );
+        }
+        showToast('Фотография добавлена');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // === РЕФЕРЕНС ЛИЦА: аватар покойного → base64 для ИИ ===
+    function getAvatarReference() {
+      try {
+        const avatar = document.getElementById('p-avatar');
+        if (!avatar || !avatar.complete || !avatar.naturalWidth) return null;
+        const MAX = 512;
+        const scale = Math.min(1, MAX / Math.max(avatar.naturalWidth, avatar.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(avatar.naturalWidth * scale);
+        canvas.height = Math.round(avatar.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(avatar, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+      } catch (e) {
+        console.warn('[avatar-reference] недоступен (CORS/404):', e);
+        return null;
+      }
+    }
+
+    // === УМНЫЙ МАСТЕР-ПРОМПТ И ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ ===
+    window.generateBlockImage = async function(key) {
+      if (!isEditingMode) return;
+
+      const el = document.querySelector(`[data-key="${key}"]`);
+      if (!el) return;
+
+      const photoContainer = el.querySelector('.bio-block__photo');
+      if (!photoContainer || photoContainer.classList.contains('is-loading')) return;
+
+      const textContent = el.querySelector('.bio-block-text')?.textContent || "";
+      const titleContent = el.querySelector('.bio-block__title')?.textContent || "";
+
+      photoContainer.classList.add('is-loading');
+
+      const personName = document.getElementById('p-name')?.textContent || '';
+
+      let genderDesc = "a person";
+      if (personName.match(/(ич\b|ович\b|евич\b|ович\s|евич\s)/i)) {
+        genderDesc = "an elderly man with kind eyes";
+        if (key === 'childhood') genderDesc = "a young boy with curious eyes";
+        else if (key === 'education' || key === 'military') genderDesc = "a young man in his early 20s";
+      } else if (personName.match(/(вна\b|овна\b|евна\b|овна\s|евна\s)/i)) {
+        genderDesc = "an elderly woman with a warm smile";
+        if (key === 'childhood') genderDesc = "a young girl";
+        else if (key === 'education') genderDesc = "a young woman in her early 20s";
+      }
+
+      const datesText = document.getElementById('p-dates')?.textContent || '';
+      const birthYearMatch = datesText.match(/\b\d{4}\b/);
+      const birthYear = birthYearMatch ? parseInt(birthYearMatch[0], 10) : 1945;
+
+      let eraYear = birthYear;
+      if (key === 'childhood') eraYear += 8;
+      else if (key === 'education' || key === 'military') eraYear += 20;
+      else if (key === 'career') eraYear += 35;
+      else eraYear += 50;
+
+      const decade = Math.floor(eraYear / 10) * 10;
+      const eraString = `${decade}s era`;
+
+      const masterPrompt = `An authentic candid photograph from the ${eraString}, shot on period film camera. Natural everyday lighting, soft film grain, slightly muted era-appropriate colors${decade < 1960 ? ' (black and white or sepia, as photos of that time)' : ''}, realistic documentary photo, NOT staged, NOT illustration, NOT painting. Chapter of life: "${titleContent}". Scene based on this story fragment: "${textContent.trim().slice(0, 600)}". Subject: one single person (${genderDesc}) as the main character. Strictly do NOT include other people unless explicitly mentioned in the story. Historically accurate clothing, objects and interiors of the ${eraString}. Respectful, no text or captions in the image.`;
+
+      console.log(`[Master-Prompt Imagen 4.0 for block "${key}"]:`, masterPrompt);
+
+      const useSimulation = simModeCheckbox.checked;
+
+      if (!useSimulation) {
+        // ── РЕАЛЬНАЯ ГЕНЕРАЦИЯ ЧЕРЕЗ БЭКЕНД ──
+        try {
+          const referenceImage = getAvatarReference();
+          const finalPrompt = referenceImage
+            ? masterPrompt + ' CRITICAL: a reference photo of this exact person is attached. The face and appearance of the main character MUST match the attached reference photo as closely and accurately as possible — same facial features, only adjusted to the age of the depicted era.'
+            : masterPrompt;
+
+          const resp = await fetch(`${API_BASE}/api/ai/generate-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: finalPrompt, referenceImage })
+          });
+
+          if (!resp.ok) {
+            const errBody = await resp.json().catch(() => ({}));
+            throw new Error(errBody.error || `HTTP ${resp.status}`);
+          }
+
+          const data = await resp.json();
+          if (!data.ok || !data.image) throw new Error('Пустой ответ модели');
+
+          photoContainer.classList.remove('is-loading');
+          photoContainer.classList.add('has-image');
+          const imgWrap = photoContainer.querySelector('.bio-block__photo-img-wrap');
+          if (imgWrap) {
+            imgWrap.innerHTML = `<img src="${data.image}" alt="${titleContent}">`;
+            const img = imgWrap.querySelector('img');
+            gsap.fromTo(img,
+              { opacity: 0, scale: 0.95 },
+              { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' }
+            );
+          }
+          showToast(`ИИ-иллюстрация создана (эпоха ${decade}-х)!`);
+        } catch (err) {
+          console.error('[generate-image] backend failed:', err);
+          photoContainer.classList.remove('is-loading');
+          showToast('Генерация не удалась: ' + err.message, '#ef4444', '#fff');
+        }
+        return;
+      }
+
+      if (useSimulation) {
+        setTimeout(() => {
+          const titleLower = titleContent.toLowerCase();
+          const textLower = textContent.toLowerCase();
+          let src = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80";
+
+          if (titleLower.includes('рыбалк') || textLower.includes('рыбачит') || textLower.includes('удочк')) {
+            src = "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=400&q=80";
+          } else if (titleLower.includes('воен') || textLower.includes('служб') || textLower.includes('арми') || textLower.includes('вс рб')) {
+            src = "https://images.unsplash.com/photo-1590247813693-5541f1c609fd?auto=format&fit=crop&w=400&q=80";
+          } else if (titleLower.includes('образован') || textLower.includes('учеб') || textLower.includes('бнту') || textLower.includes('институт')) {
+            src = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=400&q=80";
+          } else if (titleLower.includes('семь') || textLower.includes('родител') || textLower.includes('братья')) {
+            src = "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=400&q=80";
+          } else if (titleLower.includes('детств') || textLower.includes('родился') || textLower.includes('маленький')) {
+            src = "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=400&q=80";
+          } else if (titleLower.includes('карьер') || titleLower.includes('профессиональн') || textLower.includes('работал') || textLower.includes('конструктор')) {
+            src = "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=400&q=80";
+          }
+
+          photoContainer.classList.remove('is-loading');
+          photoContainer.classList.add('has-image');
+          const imgWrap = photoContainer.querySelector('.bio-block__photo-img-wrap');
+          if (imgWrap) {
+            imgWrap.innerHTML = `<img src="${src}" alt="${titleContent}" onerror="this.src='https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80'">`;
+            const img = imgWrap.querySelector('img');
+            gsap.fromTo(img,
+              { opacity: 0, scale: 0.95 },
+              { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' }
+            );
+          }
+          showToast(`Иллюстрация создана для эпохи ${decade}-х годов!`);
+        }, 1200);
+      }
+    };
+
+    // === БЛОЧНЫЙ ИИ-ПОМОЩНИК ===
+    window.callAIBlockAction = async function(key, action) {
+      const blockEl = document.querySelector(`[data-key="${key}"]`);
+      if (!blockEl) return;
+      const textEl = blockEl.querySelector('.bio-block-text');
+      if (!textEl) return;
+      
+      const currentText = textEl.textContent.trim();
+      const titleEl = blockEl.querySelector('.bio-block__title');
+      const titleText = titleEl ? titleEl.textContent.trim() : '';
+      
+      const buttons = blockEl.querySelectorAll('.ai-helper-btn');
+      buttons.forEach(btn => btn.classList.add('loading'));
+      textEl.classList.add('bio-block-text-loading');
+      
+      const useSimulation = simModeCheckbox.checked;
+      
+      if (useSimulation) {
+        setTimeout(() => {
+          let resultText = currentText;
+          if (action === 'improve') {
+            resultText = currentText + " (текст был стилистически переработан ИИ для лучшего художественного звучания)";
+          } else if (action === 'warm') {
+            resultText = currentText + " Он всегда согревал близких своим душевным теплом и оставлял след в сердцах всех, кто его знал.";
+          } else if (action === 'formal') {
+            resultText = currentText + " Данный жизненный этап характеризуется высокой продуктивностью и приверженностью профессиональным и личным идеалам.";
+          } else if (action === 'continue') {
+            resultText = currentText + " Впоследствии эти качества помогли ему преодолеть многие трудности и внести значительный вклад в общее дело.";
+          }
+          
+          textEl.textContent = resultText;
+          textEl.classList.remove('bio-block-text-loading');
+          buttons.forEach(btn => btn.classList.remove('loading'));
+          showToast('Текст обновлен симуляцией ИИ!');
+        }, 1000);
+      } else {
+        try {
+          const personName = document.getElementById('p-name')?.textContent || '';
+          const personDates = document.getElementById('p-dates')?.textContent || '';
+          
+          let instructionPrompt = '';
+          if (action === 'improve') {
+            instructionPrompt = 'Пожалуйста, улучши стиль этого текста, исправив речевые ошибки и сделав слог более благородным, уважительным и гладким.';
+          } else if (action === 'warm') {
+            instructionPrompt = 'Пожалуйста, перепиши или дополни этот текст, сделав его более тёплым, душевным, нежным и эмоциональным.';
+          } else if (action === 'formal') {
+            instructionPrompt = 'Пожалуйста, перепиши этот текст в строгом, сдержанном, официальном и уважительном биографическом тоне.';
+          } else if (action === 'continue') {
+            instructionPrompt = 'Пожалуйста, продолжи этот текст логически, добавив ещё один связный абзац о человеке.';
+          }
+          
+          const response = await fetch(`${API_BASE}/api/ai/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: instructionPrompt }],
+              context: {
+                field: key,
+                originalText: currentText,
+                name: personName,
+                dates: personDates
+              }
+            })
+          });
+          
+          if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+          const data = await response.json();
+          if (data.ok && data.proposedText) {
+            textEl.textContent = data.proposedText;
+            showToast('Текст раздела изменен ИИ!');
+          } else {
+            throw new Error(data.chatResponse || 'ИИ не вернул вариант текста');
+          }
+        } catch (err) {
+          console.error('[ai-block-action] failed:', err);
+          showToast('Ошибка ИИ: ' + err.message, '#ef4444', '#fff');
+        } finally {
+          textEl.classList.remove('bio-block-text-loading');
+          buttons.forEach(btn => btn.classList.remove('loading'));
+        }
+      }
+    };
+
+    // === УПРАВЛЕНИЕ МОДАЛЬНЫМ ОКНОМ ===
+    window.showAddBlockModal = function() {
+      const modal = document.getElementById('add-block-modal');
+      document.getElementById('modal-block-key').value = 'custom_' + Date.now().toString().slice(-4);
+      document.getElementById('modal-block-title').value = '';
+      document.getElementById('modal-block-prompt').value = '';
+      document.getElementById('modal-block-text').value = '';
+      
+      modal.classList.add('is-visible');
+      gsap.fromTo(modal.querySelector('.modal-window'), 
+        { scale: 0.8, opacity: 0 }, 
+        { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.7)' }
+      );
+    };
+
+    window.closeAddBlockModal = function() {
+      const modal = document.getElementById('add-block-modal');
+      gsap.to(modal.querySelector('.modal-window'), {
+        scale: 0.8,
+        opacity: 0,
+        duration: 0.25,
+        ease: 'power2.in',
+        onComplete: () => {
+          modal.classList.remove('is-visible');
+        }
+      });
+    };
+
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeAddBlockModal);
+    
+    document.getElementById('modal-submit-btn').addEventListener('click', () => {
+      const key = document.getElementById('modal-block-key').value.trim();
+      const title = document.getElementById('modal-block-title').value.trim();
+      const text = document.getElementById('modal-block-text').value.trim();
+      
+      if (!key || !title || !text) {
+        showToast('Заполните ключевые поля: ID, название и текст', '#ef4444', '#fff');
+        return;
+      }
+      
+      createNewBlock(key, title, text);
+      closeAddBlockModal();
+      showToast(`Раздел «${title}» добавлен!`);
+    });
+
+    document.getElementById('modal-ai-gen-btn').addEventListener('click', async () => {
+      const prompt = document.getElementById('modal-block-prompt').value.trim();
+      if (!prompt) {
+        showToast('Введите ИИ-запрос для генерации текста', '#ef4444', '#fff');
+        return;
+      }
+      
+      const genBtn = document.getElementById('modal-ai-gen-btn');
+      genBtn.disabled = true;
+      genBtn.textContent = 'Генерирую...';
+      
+      const useSimulation = simModeCheckbox.checked;
+      
+      if (useSimulation) {
+        setTimeout(() => {
+          document.getElementById('modal-block-text').value = `Александр Петрович Смирнов был человеком удивительной судьбы. На основе вашего запроса: "${prompt}", ИИ воссоздал эту историю. Его преданность своему увлечению вдохновляла всех вокруг.`;
+          if (!document.getElementById('modal-block-title').value.trim()) {
+            document.getElementById('modal-block-title').value = 'Новая история';
+          }
+          genBtn.disabled = false;
+          genBtn.textContent = '✨ Сгенерировать текст с ИИ';
+          showToast('Текст успешно сгенерирован ИИ!');
+        }, 1200);
+      } else {
+        try {
+          const personName = document.getElementById('p-name')?.textContent || '';
+          const personDates = document.getElementById('p-dates')?.textContent || '';
+          
+          const response = await fetch(`${API_BASE}/api/ai/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: `Напиши биографический абзац на основе следующего запроса: "${prompt}".` }],
+              context: {
+                field: document.getElementById('modal-block-key').value.trim() || 'custom',
+                name: personName,
+                dates: personDates
+              }
+            })
+          });
+          
+          if (!response.ok) throw new Error('Ошибка сервера');
+          const data = await response.json();
+          if (data.ok) {
+            document.getElementById('modal-block-text').value = data.proposedText || data.chatResponse;
+            if (!document.getElementById('modal-block-title').value.trim()) {
+              document.getElementById('modal-block-title').value = 'Событие';
+            }
+            showToast('Текст сгенерирован ИИ!');
+          } else {
+            throw new Error(data.chatResponse || 'Пустой ответ');
+          }
+        } catch (err) {
+          console.error('[modal-ai-gen] failed:', err);
+          showToast('Ошибка ИИ: ' + err.message, '#ef4444', '#fff');
+        } finally {
+          genBtn.disabled = false;
+          genBtn.textContent = '✨ Сгенерировать текст с ИИ';
+        }
+      }
+    });
+
+    // === КЛИЕНТСКИЙ СИМУЛЯТОР ОТВЕТОВ GEMINI ===
+    function simulateAIResponse(text) {
+      const lowerText = text.toLowerCase();
+      const commands = [];
+
+      // Шаг 1. Команды на ручное или полное удаление блоков
+      if (
+        lowerText.includes('удали все изначальные') ||
+        lowerText.includes('удали все стартовые') ||
+        lowerText.includes('очисти страницу') ||
+        lowerText.includes('удали изначальные')
+      ) {
+        commands.push({ action: 'DELETE', key: 'childhood' });
+        commands.push({ action: 'DELETE', key: 'education' });
+        commands.push({ action: 'DELETE', key: 'career' });
+      } else {
+        if (lowerText.includes('удали') && (lowerText.includes('детство') || lowerText.includes('детские'))) {
+          commands.push({ action: 'DELETE', key: 'childhood' });
+        }
+        if (lowerText.includes('удали') && (lowerText.includes('образование') || lowerText.includes('учебу'))) {
+          commands.push({ action: 'DELETE', key: 'education' });
+        }
+        if (lowerText.includes('удали') && (lowerText.includes('карьер') || lowerText.includes('работу'))) {
+          commands.push({ action: 'DELETE', key: 'career' });
+        }
+      }
+
+      // Шаг 2. Разбираем БНТУ (Образование)
+      if (
+        lowerText.includes('учился') ||
+        lowerText.includes('бнту') ||
+        lowerText.includes('образование') ||
+        lowerText.includes('институт') ||
+        lowerText.includes('политех')
+      ) {
+        let eduText = "Обучался в Белорусском политехническом институте (БНТУ).";
+
+        let years = "2020–2024";
+        if (lowerText.includes('двадцать четвертый') || lowerText.includes('двадцать четвёртый') || lowerText.includes('2024')) {
+          years = "2020–2024";
+        } else if (lowerText.includes('1968') || lowerText.includes('тысяча девятьсот шестьдесят восьмой')) {
+          years = "1963–1968";
+        }
+
+        let prof = "инженера";
+        if (lowerText.includes('инженер')) prof = "инженера";
+
+        eduText = `Успешно окончил БНТУ (Белорусский национальный технический университет, ранее политехнический институт) в ${years.split('–')[1]} году, получив квалификацию ${prof}. Во время обучения проявил выдающиеся способности к техническим расчетам и моделированию, заложив прочную основу для будущей конструкторской деятельности.`;
+
+        if (!commands.some(c => c.action === 'DELETE' && c.key === 'education')) {
+          commands.push({
+            action: 'ADD',
+            key: 'education',
+            title: 'Образование и становление',
+            text: eduText
+          });
+        }
+      }
+
+      // Шаг 3. Разбираем Армию (Военная служба)
+      if (
+        lowerText.includes('служил') ||
+        lowerText.includes('вс рб') ||
+        lowerText.includes('арми') ||
+        lowerText.includes('сержант') ||
+        lowerText.includes('армейку')
+      ) {
+        let textMil = "Проходил срочную военную службу в Вооруженных Силах.";
+
+        let years = "2024–2026";
+        if (lowerText.includes('2024') || lowerText.includes('двадцать четвертого') || lowerText.includes('двадцать четвёртого')) {
+          years = "2024–2026";
+        }
+
+        let rank = "";
+        if (lowerText.includes('сержант')) {
+          rank = "За образцовое выполнение обязанностей и дисциплину получил звание сержанта, успешно командовал личным составом отделения.";
+        }
+
+        textMil = `Проходил службу в рядах Вооруженных Сил Республики Беларусь (ВС РБ) в период с ${years.replace('–', ' по ')} годы. ${rank} Армейские годы воспитали в нем твердый характер, стойкость духа и развили лидерские качества.`;
+
+        commands.push({
+          action: 'ADD',
+          key: 'military',
+          title: 'Военная служба',
+          text: textMil
+        });
+      }
+
+      // Шаг 4. Разбираем Семью
+      if (
+        lowerText.includes('семье') ||
+        lowerText.includes('семья') ||
+        lowerText.includes('родител') ||
+        lowerText.includes('брат') ||
+        lowerText.includes('папа') ||
+        lowerText.includes('мама') ||
+        lowerText.includes('ваня')
+      ) {
+        let familyText = "Семья и близкие всегда были для него важнейшей жизненной опорой.";
+        const relatives = [];
+        if (lowerText.includes('виталик')) relatives.push("отец Виталий");
+        if (lowerText.includes('лен')) relatives.push("мать Елена");
+
+        let brothers = [];
+        if (lowerText.includes('егор')) brothers.push("Егор");
+        if (lowerText.includes('максим')) brothers.push("Максим");
+
+        familyText = `Рос в теплой и дружной семье. Родители — ${relatives.join(' и ')} — окружили его заботой. Огромное значение имели отношения с братьями — ${brothers.join(' и ')}, с которыми они были неразлучны с самого детства и пронесли крепкую дружбу сквозь года.`;
+
+        commands.push({
+          action: 'ADD',
+          key: 'family',
+          title: 'Семья и близкие',
+          text: familyText
+        });
+      }
+
+      // Шаг 5. Разбираем Рыбалку
+      if (
+        lowerText.includes('рыбалк') ||
+        lowerText.includes('рыбачит') ||
+        lowerText.includes('рыб') ||
+        lowerText.includes('сож') ||
+        lowerText.includes('припять')
+      ) {
+        let textFish = "Рыбалка была его тихим хобби, дарившим покой и уединение на природе.";
+
+        let rivers = [];
+        if (lowerText.includes('сож')) rivers.push("Сож");
+        if (lowerText.includes('припять')) rivers.push("Припять");
+
+        let riversStr = rivers.length > 0 ? `на реках ${rivers.join(' и ')}` : "на живописных водоемах";
+
+        textFish = `Рыбалка была его огромной страстью и душевным увлечением. Он обожал проводить выходные с палатками ${riversStr}, ловить карасей на фидер и спиннинг. Встречая рассветы у костра, он находил в этом покой, черпал вдохновение и силу природы.`;
+
+        commands.push({
+          action: 'ADD',
+          key: 'fishing',
+          title: 'Рыбалка и увлечения',
+          text: textFish
+        });
+      }
+
+      // Если ничего не распознано вообще
+      if (commands.length === 0) {
+        commands.push({
+          action: 'ADD',
+          key: 'custom_' + Date.now().toString().slice(-4),
+          title: 'Рассказ из жизни',
+          text: `Со слов близких: "${text}"`
+        });
+      }
+
+      return { commands };
+    }
+
+    // === ВЫПОЛНЕНИЕ КОМАНД И ПЕРЕСТРОЙКА DOM ===
+    function executePageCommands(data) {
+      if (!data || !Array.isArray(data.commands)) return;
+
+      aiLogList.innerHTML = '';
+      aiLogBox.style.display = 'block';
+
+      data.commands.forEach((cmd) => {
+        const logItem = document.createElement('li');
+        logItem.className = 'ai-log-item';
+        logItem.innerHTML = `<span class="log-action ${cmd.action.toLowerCase()}">[${cmd.action}]</span> <span>блок: "${cmd.key}" ${cmd.title ? `— ${cmd.title}` : ''}</span>`;
+        aiLogList.appendChild(logItem);
+
+        const existingElement = document.querySelector(`[data-key="${cmd.key}"]`);
+
+        if (cmd.action === 'DELETE') {
+          if (existingElement) {
+            existingElement.removeAttribute('data-key');
+            deleteBlockLocally(cmd.key);
+          }
+        }
+        else if (cmd.action === 'ADD') {
+          if (existingElement) {
+            updateBlockContent(existingElement, cmd.title, cmd.text);
+          } else {
+            createNewBlock(cmd.key, cmd.title, cmd.text);
+          }
+        }
+        else if (cmd.action === 'UPDATE') {
+          if (existingElement) {
+            updateBlockContent(existingElement, cmd.title, cmd.text);
+          } else {
+            createNewBlock(cmd.key, cmd.title || 'Раздел', cmd.text);
+          }
+        }
+      });
+
+      updateZebraAlternation();
+      showToast('Страница успешно перестроена ИИ!');
+    }
+
+    function createNewBlock(key, title, text) {
+      const article = document.createElement('section');
+      article.className = 'bio-block';
+      if (isEditingMode) article.classList.add('is-editing-mode');
+      article.setAttribute('data-key', key);
+      article.innerHTML = `
+        <h4 class="bio-block__title" ${isEditingMode ? 'contenteditable="true"' : ''}>${title}</h4>
+        <div class="bio-block__row">
+          <div class="bio-block__text">
+            <span class="bio-block-key" style="${isEditingMode ? 'opacity: 1;' : ''}">${key}</span>
+            <div class="bio-block-text" ${isEditingMode ? 'contenteditable="true"' : ''}>${text}</div>
+            <div class="ai-block-helper">
+              <button class="ai-helper-btn" onclick="callAIBlockAction('${key}', 'improve')">✨ Улучшить стиль (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('${key}', 'warm')">❤️ Сделать теплее (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('${key}', 'formal')">👔 Официальный тон (ИИ)</button>
+              <button class="ai-helper-btn" onclick="callAIBlockAction('${key}', 'continue')">✍️ Продолжить рассказ (ИИ)</button>
+            </div>
+            <button class="delete-block-btn" style="${isEditingMode ? 'display: inline-block; opacity: 0.8;' : ''}" onclick="deleteBlockLocally('${key}')">Удалить раздел</button>
+          </div>
+          <div class="bio-block__photo">
+            <div class="bio-block__photo-img-wrap"></div>
+            <div class="bio-block__photo-placeholder">
+              <span class="bio-block__photo-icon">❧</span>
+            </div>
+            <div class="photo-actions-overlay">
+              <button class="photo-action-btn" onclick="generateBlockImage('${key}')">Создать ИИ-фото</button>
+              <button class="photo-action-btn" onclick="uploadBlockPhoto('${key}')">Загрузить своё</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      blocksContainer.appendChild(article);
+
+      gsap.fromTo(article,
+        { height: 0, opacity: 0, scale: 0.96, overflow: 'hidden' },
+        {
+          height: 'auto',
+          opacity: 1,
+          scale: 1,
+          duration: 0.45,
+          ease: 'power3.out',
+          clearProps: 'height,overflow',
+          onComplete: () => {
+            if (autoPhotoMode.checked) {
+              generateBlockImage(key);
+            }
+            updateZebraAlternation();
+            updateRefinementButtons();
+          }
+        }
+      );
+    }
+
+    function updateBlockContent(el, title, text) {
+      const titleEl = el.querySelector('.bio-block__title');
+      const textEl = el.querySelector('.bio-block-text');
+
+      if (titleEl && title) titleEl.textContent = title;
+      if (textEl && text) textEl.textContent = text;
+
+      gsap.fromTo(el,
+        { borderColor: 'rgba(200, 168, 75, 1)', backgroundColor: 'rgba(200, 168, 75, 0.08)' },
+        { borderColor: isEditingMode ? 'rgba(200, 168, 75, 0.25)' : 'rgba(200, 168, 75, 0.1)', backgroundColor: 'transparent', duration: 1.2, ease: 'power2.out' }
+      );
+    }
+
+    // === ТОЧЕЧНАЯ ПОДГОНКА (УМНОЕ РАЗБИЕНИЕ БЕЗ ЗНАКОВ ПРЕПИНАНИЯ) ===
+    function buildRefinementUI(text) {
+      if (!text || text.trim().length < 15) {
+        refinementPanel.style.display = 'none';
+        return;
+      }
+
+      refinementList.innerHTML = '';
+      refinementPanel.style.display = 'block';
+
+      let sentences = [];
+      if (/[.!?]/.test(text)) {
+        sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 8);
+      } else {
+        const words = text.split(/\s+/);
+        const chunkSize = 12;
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunk = words.slice(i, i + chunkSize).join(' ');
+          if (chunk.length > 5) sentences.push(chunk);
+        }
+      }
+
+      sentences.forEach((sentence, idx) => {
+        const chunk = document.createElement('div');
+        chunk.className = 'refinement-chunk';
+        chunk.innerHTML = `
+          <div class="refinement-chunk-text">«${sentence}»</div>
+          <div class="refinement-actions" data-sentence-index="${idx}"></div>
+        `;
+
+        refinementList.appendChild(chunk);
+      });
+
+      updateRefinementButtons();
+    }
+
+    function updateRefinementButtons() {
+      const blocks = Array.from(document.querySelectorAll('.bio-block'));
+      const actionContainers = document.querySelectorAll('.refinement-actions');
+
+      actionContainers.forEach((container) => {
+        const sentenceIdx = container.getAttribute('data-sentence-index');
+        const sentenceText = refinementList.querySelectorAll('.refinement-chunk-text')[sentenceIdx].textContent.replace(/[«»]/g, '');
+
+        let html = '';
+        blocks.forEach((block) => {
+          const key = block.getAttribute('data-key');
+          const title = block.querySelector('.bio-block__title')?.textContent || key;
+          html += `<button class="refinement-btn" onclick="appendSentenceToBlock('${key}', '${sentenceText.replace(/'/g, "\\'")}', this)">+ ${title.slice(0, 15)}...</button>`;
+        });
+
+        html += `<button class="refinement-btn" style="border-style: dashed; color: #60a5fa;" onclick="createNewBlockFromSentence('${sentenceText.replace(/'/g, "\\'")}', this)">+ Создать блок</button>`;
+
+        container.innerHTML = html;
+      });
+    }
+
+    window.appendSentenceToBlock = function(key, sentence, buttonEl) {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      if (!el) return;
+
+      const textEl = el.querySelector('.bio-block-text');
+      if (textEl) {
+        const separator = textEl.textContent.trim() ? '\n\n' : '';
+        textEl.textContent = (textEl.textContent + separator + sentence).trim();
+
+        buttonEl.textContent = '✓ Добавлено';
+        buttonEl.disabled = true;
+        buttonEl.style.borderColor = '#10b981';
+        buttonEl.style.color = '#34d399';
+
+        gsap.fromTo(el,
+          { borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)' },
+          { borderColor: isEditingMode ? 'rgba(200, 168, 75, 0.25)' : 'rgba(200, 168, 75, 0.1)', backgroundColor: 'transparent', duration: 1.0, ease: 'power2.out' }
+        );
+      }
+    };
+
+    window.createNewBlockFromSentence = function(sentence, buttonEl) {
+      const key = 'custom_' + Date.now().toString().slice(-4);
+      createNewBlock(key, 'Дополнительный эпизод', sentence);
+
+      buttonEl.textContent = '✓ Блок создан';
+      buttonEl.disabled = true;
+      buttonEl.style.borderColor = '#60a5fa';
+      buttonEl.style.color = '#93c5fd';
+    };
+
+    // === ОБРАБОТЧИК ДЛЯ КНОПКИ «ОБРАБОТАТЬ ЧЕРЕЗ ИИ» ===
+    processBtn.addEventListener('click', async () => {
+      const text = transcriptInput.value.trim();
+      if (!text) {
+        showToast('Пожалуйста, введите или надиктуйте текст', '#ef4444', '#fff');
+        return;
+      }
+
+      processBtn.disabled = true;
+      processBtn.textContent = 'Обработка...';
+
+      const useSimulation = simModeCheckbox.checked;
+
+      if (useSimulation) {
+        setTimeout(() => {
+          const result = simulateAIResponse(text);
+          executePageCommands(result);
+          buildRefinementUI(text);
+
+          processBtn.disabled = false;
+          processBtn.textContent = 'Обработать через ИИ';
+        }, 1500);
+      } else {
+        try {
+          const currentBlocks = Array.from(document.querySelectorAll('.bio-block')).map((el) => ({
+            key: el.getAttribute('data-key'),
+            title: el.querySelector('.bio-block__title')?.textContent || '',
+            text: el.querySelector('.bio-block-text')?.textContent || ''
+          }));
+
+          const response = await fetch(`${API_BASE}/api/ai/reconstruct-page`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, currentBlocks })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok && data.commands) {
+              executePageCommands(data);
+              buildRefinementUI(text);
+            }
+          } else {
+            throw new Error('404 эндпоинт отсутствует');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Бэкенд недоступен. Запуск симуляции ИИ!', '#fbbf24', '#000');
+          setTimeout(() => {
+            const result = simulateAIResponse(text);
+            executePageCommands(result);
+            buildRefinementUI(text);
+          }, 800);
+        } finally {
+          processBtn.disabled = false;
+          processBtn.textContent = 'Обработать через ИИ';
+        }
+      }
+    });
+
+    function showToast(message, bgColor = 'var(--gold-dim)', textColor = 'var(--cream)') {
+      toast.textContent = message;
+      toast.style.background = bgColor;
+      toast.style.borderColor = 'var(--gold)';
+      toast.style.color = textColor;
+
+      gsap.killTweensOf(toast);
+      gsap.fromTo(toast,
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.35,
+          ease: 'power2.out',
+          onComplete: () => {
+            gsap.to(toast, { opacity: 0, y: 10, delay: 2.5, duration: 0.3, ease: 'power2.in' });
+          }
+        }
+      );
+    }
+  </script>
+</body>
+</html>
