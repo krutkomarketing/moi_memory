@@ -1984,84 +1984,91 @@
       });
     };
 
-    document.getElementById('modal-cancel-btn').addEventListener('click', closeAddBlockModal);
+    const mCancel = document.getElementById('modal-cancel-btn');
+    if (mCancel) mCancel.addEventListener('click', closeAddBlockModal);
     
-    document.getElementById('modal-submit-btn').addEventListener('click', () => {
-      const key = document.getElementById('modal-block-key').value.trim();
-      const title = document.getElementById('modal-block-title').value.trim();
-      const text = document.getElementById('modal-block-text').value.trim();
-      
-      if (!key || !title || !text) {
-        showToast('Заполните ключевые поля: ID, название и текст', '#ef4444', '#fff');
-        return;
-      }
-      
-      createNewBlock(key, title, text);
-      closeAddBlockModal();
-      showToast(`Раздел «${title}» добавлен!`);
-    });
-
-    document.getElementById('modal-ai-gen-btn').addEventListener('click', async () => {
-      const prompt = document.getElementById('modal-block-prompt').value.trim();
-      if (!prompt) {
-        showToast('Введите ИИ-запрос для генерации текста', '#ef4444', '#fff');
-        return;
-      }
-      
-      const genBtn = document.getElementById('modal-ai-gen-btn');
-      genBtn.disabled = true;
-      genBtn.textContent = 'Генерирую...';
-      
-      const useSimulation = simModeCheckbox.checked;
-      
-      if (useSimulation) {
-        setTimeout(() => {
-          document.getElementById('modal-block-text').value = `Александр Петрович Смирнов был человеком удивительной судьбы. На основе вашего запроса: "${prompt}", ИИ воссоздал эту историю. Его преданность своему увлечению вдохновляла всех вокруг.`;
-          if (!document.getElementById('modal-block-title').value.trim()) {
-            document.getElementById('modal-block-title').value = 'Новая история';
-          }
-          genBtn.disabled = false;
-          genBtn.textContent = '✨ Сгенерировать текст с ИИ';
-          showToast('Текст успешно сгенерирован ИИ!');
-        }, 1200);
-      } else {
-        try {
-          const personName = document.getElementById('p-name')?.textContent || '';
-          const personDates = document.getElementById('p-dates')?.textContent || '';
-          
-          const response = await fetch(`${API_BASE}/api/ai/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: [{ role: 'user', content: `Напиши биографический абзац на основе следующего запроса: "${prompt}".` }],
-              context: {
-                field: document.getElementById('modal-block-key').value.trim() || 'custom',
-                name: personName,
-                dates: personDates
-              }
-            })
-          });
-          
-          if (!response.ok) throw new Error('Ошибка сервера');
-          const data = await response.json();
-          if (data.ok) {
-            document.getElementById('modal-block-text').value = data.proposedText || data.chatResponse;
-            if (!document.getElementById('modal-block-title').value.trim()) {
-              document.getElementById('modal-block-title').value = 'Событие';
-            }
-            showToast('Текст сгенерирован ИИ!');
-          } else {
-            throw new Error(data.chatResponse || 'Пустой ответ');
-          }
-        } catch (err) {
-          console.error('[modal-ai-gen] failed:', err);
-          showToast('Ошибка ИИ: ' + err.message, '#ef4444', '#fff');
-        } finally {
-          genBtn.disabled = false;
-          genBtn.textContent = '✨ Сгенерировать текст с ИИ';
+    const mSubmit = document.getElementById('modal-submit-btn');
+    if (mSubmit) {
+      mSubmit.addEventListener('click', () => {
+        const key = document.getElementById('modal-block-key').value.trim();
+        const title = document.getElementById('modal-block-title').value.trim();
+        const text = document.getElementById('modal-block-text').value.trim();
+        
+        if (!key || !title || !text) {
+          showToast('Заполните ключевые поля: ID, название и текст', '#ef4444', '#fff');
+          return;
         }
-      }
-    });
+        
+        createNewBlock(key, title, text);
+        closeAddBlockModal();
+        showToast(`Раздел «${title}» добавлен!`);
+      });
+    }
+
+    const mAiGen = document.getElementById('modal-ai-gen-btn');
+    if (mAiGen) {
+      mAiGen.addEventListener('click', async () => {
+        const prompt = document.getElementById('modal-block-prompt').value.trim();
+        if (!prompt) {
+          showToast('Введите ИИ-запрос для генерации текста', '#ef4444', '#fff');
+          return;
+        }
+        
+        const genBtn = document.getElementById('modal-ai-gen-btn');
+        genBtn.disabled = true;
+        genBtn.textContent = 'Генерирую...';
+        
+        const useSimulation = simModeCheckbox.checked;
+        
+        if (useSimulation) {
+          setTimeout(() => {
+            document.getElementById('modal-block-text').value = `Александр Петрович Смирнов был человеком удивительной судьбы. На основе вашего запроса: "${prompt}", ИИ воссоздал эту историю. Его преданность своему увлечению вдохновляла всех вокруг.`;
+            if (!document.getElementById('modal-block-title').value.trim()) {
+              document.getElementById('modal-block-title').value = 'Новая история';
+            }
+            genBtn.disabled = false;
+            genBtn.textContent = '✨ Сгенерировать текст с ИИ';
+            showToast('Текст успешно сгенерирован ИИ!');
+          }, 1200);
+        } else {
+          try {
+            const personName = document.getElementById('p-name')?.textContent || '';
+            const personDates = document.getElementById('p-dates')?.textContent || '';
+            
+            const response = await fetch(`${API_BASE}/api/ai/chat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messages: [{ role: 'user', content: `Напиши биографический абзац на основе следующего запроса: "${prompt}".` }],
+                context: {
+                  field: document.getElementById('modal-block-key').value.trim() || 'custom',
+                  name: personName,
+                  dates: personDates
+                }
+              })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка сервера');
+            const data = await response.json();
+            if (data.ok) {
+              document.getElementById('modal-block-text').value = data.proposedText || data.chatResponse;
+              if (!document.getElementById('modal-block-title').value.trim()) {
+                document.getElementById('modal-block-title').value = 'Событие';
+              }
+              showToast('Текст сгенерирован ИИ!');
+            } else {
+              throw new Error(data.chatResponse || 'Пустой ответ');
+            }
+          } catch (err) {
+            console.error('[modal-ai-gen] failed:', err);
+            showToast('Ошибка ИИ: ' + err.message, '#ef4444', '#fff');
+          } finally {
+            genBtn.disabled = false;
+            genBtn.textContent = '✨ Сгенерировать текст с ИИ';
+          }
+        }
+      });
+    }
 
     // === КЛИЕНТСКИЙ СИМУЛЯТОР ОТВЕТОВ GEMINI ===
     function simulateAIResponse(text) {
