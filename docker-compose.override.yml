@@ -33,6 +33,8 @@ services:
       - ./frontend/index.html:/srv/index.html
       - ./frontend/about.html:/srv/about.html
       - ./frontend/faq.html:/srv/faq.html
+      - ./frontend/ai-constructor.html:/srv/ai-constructor.html
+      - ./frontend/ai-constructor-test.html:/srv/ai-constructor-test.html
       - ./frontend/ai-mockup.html:/srv/ai-mockup.html
       - ./frontend/person.html:/srv/person.html
       - ./frontend/family-tree.html:/srv/family-tree.html

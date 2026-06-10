@@ -19,7 +19,6 @@ const accessCodeService = require('./services/accessCodeService');
 const auditService    = require('./services/auditService');
 const legacyContactService = require('./services/legacyContactService');
 const tgLoginService  = require('./services/tgLoginService');
-const aiService       = require('./services/aiService');
 const prisma          = require('./lib/prisma');
 const pkg             = require('./package.json');
 
@@ -658,14 +657,9 @@ router.post('/candles/light', optionalAuth, wrap(async (req, res) => {
 }));
 
 /* ═══════════════════════════════════════════════════════ */
-/*  AI ASSISTANT                                           */
+/*  AI ASSISTANT — обслуживается в routes/ai.js (/api/ai/*)
+    с aiGenerationLimiter. Дубликат без лимитера удалён.   */
 /* ═══════════════════════════════════════════════════════ */
-router.post('/ai/chat', optionalAuth, wrap(async (req, res) => {
-    const { messages, context } = req.body || {};
-    if (!Array.isArray(messages)) return err(res, 400, 'messages array required');
-    const result = await aiService.chat({ messages, context });
-    return ok(res, result);
-}));
 
 /* ═══════════════════════════════════════════════════════ */
 /*  MEDIA UPLOADS                                          */

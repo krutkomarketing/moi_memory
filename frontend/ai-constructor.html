@@ -1237,27 +1237,47 @@
       document.getElementById('edit-cancel-btn').addEventListener('click', exitEditingMode);
 
       aiControlPanel.style.display = 'block';
-      gsap.fromTo(aiControlPanel,
-        { height: 0, opacity: 0, y: -20 },
-        { height: 'auto', opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }
-      );
+      if (typeof gsap !== 'undefined') {
+        gsap.fromTo(aiControlPanel,
+          { height: 0, opacity: 0, y: -20 },
+          { height: 'auto', opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }
+        );
+      } else {
+        aiControlPanel.style.height = 'auto';
+        aiControlPanel.style.opacity = '1';
+        aiControlPanel.style.transform = 'none';
+      }
 
       // Показываем кнопку ручного добавления секции
       const addBlockBtnWrap = document.getElementById('add-block-btn-wrap');
       if (addBlockBtnWrap) {
         addBlockBtnWrap.style.display = 'block';
-        gsap.fromTo(addBlockBtnWrap, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 });
+        if (typeof gsap !== 'undefined') {
+          gsap.fromTo(addBlockBtnWrap, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 });
+        } else {
+          addBlockBtnWrap.style.opacity = '1';
+        }
       }
 
       const blocks = document.querySelectorAll('.bio-block');
       blocks.forEach(block => {
         block.classList.add('is-editing-mode');
-        gsap.fromTo(block,
-          { borderColor: 'rgba(200,168,75,0.1)' },
-          { borderColor: 'rgba(200,168,75,0.35)', duration: 0.4 }
-        );
+        if (typeof gsap !== 'undefined') {
+          gsap.fromTo(block,
+            { borderColor: 'rgba(200,168,75,0.1)' },
+            { borderColor: 'rgba(200,168,75,0.35)', duration: 0.4 }
+          );
+        } else {
+          block.style.borderColor = 'rgba(200,168,75,0.35)';
+        }
         const keyLabel = block.querySelector('.bio-block-key');
-        if (keyLabel) gsap.fromTo(keyLabel, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+        if (keyLabel) {
+          if (typeof gsap !== 'undefined') {
+            gsap.fromTo(keyLabel, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+          } else {
+            keyLabel.style.opacity = '1';
+          }
+        }
 
         // Включаем инлайн-редактирование
         const titleEl = block.querySelector('.bio-block__title');
@@ -1276,35 +1296,55 @@
       editPanel.innerHTML = `<button class="edit-panel__btn" id="edit-toggle-btn">Редактировать с ИИ</button>`;
       document.getElementById('edit-toggle-btn').addEventListener('click', enterEditingMode);
 
-      gsap.to(aiControlPanel, {
-        height: 0,
-        opacity: 0,
-        y: -20,
-        duration: 0.4,
-        ease: 'power3.in',
-        onComplete: () => {
-          aiControlPanel.style.display = 'none';
-          refinementPanel.style.display = 'none';
-          aiLogBox.style.display = 'none';
-        }
-      });
+      if (typeof gsap !== 'undefined') {
+        gsap.to(aiControlPanel, {
+          height: 0,
+          opacity: 0,
+          y: -20,
+          duration: 0.4,
+          ease: 'power3.in',
+          onComplete: () => {
+            aiControlPanel.style.display = 'none';
+            refinementPanel.style.display = 'none';
+            aiLogBox.style.display = 'none';
+          }
+        });
+      } else {
+        aiControlPanel.style.display = 'none';
+        refinementPanel.style.display = 'none';
+        aiLogBox.style.display = 'none';
+      }
 
       // Скрываем кнопку ручного добавления
       const addBlockBtnWrap = document.getElementById('add-block-btn-wrap');
       if (addBlockBtnWrap) {
-        gsap.to(addBlockBtnWrap, {
-          opacity: 0, y: 10, duration: 0.2, onComplete: () => {
-            addBlockBtnWrap.style.display = 'none';
-          }
-        });
+        if (typeof gsap !== 'undefined') {
+          gsap.to(addBlockBtnWrap, {
+            opacity: 0, y: 10, duration: 0.2, onComplete: () => {
+              addBlockBtnWrap.style.display = 'none';
+            }
+          });
+        } else {
+          addBlockBtnWrap.style.display = 'none';
+        }
       }
 
       const blocks = document.querySelectorAll('.bio-block');
       blocks.forEach(block => {
         block.classList.remove('is-editing-mode');
-        gsap.to(block, { borderColor: 'rgba(200,168,75,0.1)', duration: 0.4 });
+        if (typeof gsap !== 'undefined') {
+          gsap.to(block, { borderColor: 'rgba(200,168,75,0.1)', duration: 0.4 });
+        } else {
+          block.style.borderColor = 'rgba(200,168,75,0.1)';
+        }
         const keyLabel = block.querySelector('.bio-block-key');
-        if (keyLabel) gsap.to(keyLabel, { opacity: 0, duration: 0.3 });
+        if (keyLabel) {
+          if (typeof gsap !== 'undefined') {
+            gsap.to(keyLabel, { opacity: 0, duration: 0.3 });
+          } else {
+            keyLabel.style.opacity = '0';
+          }
+        }
 
         // Выключаем инлайн-редактирование
         const titleEl = block.querySelector('.bio-block__title');
@@ -2409,10 +2449,9 @@
       // без отдельного клика по «Редактировать с ИИ».
       try {
         enterEditingMode();
+        console.log('[ai-constructor] редактор запущен сразу');
       } catch (e) {
         console.error('[ai-constructor] автозапуск редактора не удался:', e);
-        // запасной вариант — повторить после полной загрузки
-        window.addEventListener('load', () => { try { enterEditingMode(); } catch (_) {} }, { once: true });
       }
       if (window.API && !API.isLoggedIn()) {
         setTimeout(() => {

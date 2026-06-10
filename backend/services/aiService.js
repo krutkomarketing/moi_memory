@@ -27,8 +27,37 @@ const SYSTEM_PROMPT = `Ты — профессиональный ИИ-помощ
 
 /**
  * Main entry point for AI chat requests.
+ * Единый путь: OpenAI-совместимый провайдер из .env (AI_BASE_URL / AI_API_KEY / AI_MODEL),
+ * как и у structureFullBiography/reconstructPage. Легаси-ветки (прямой Google/OpenAI)
+ * остаются только как фолбэк, если основной провайдер не настроен или упал.
  */
 async function chat({ messages, context }) {
+  try {
+    const { chatCompletion } = require('../lib/aiClient');
+    const userMessages = (messages || []).map((m) => ({ role: m.role, content: m.content }));
+    // Контекст — в хвост последнего сообщения (как в callGemini)
+    if (context && userMessages.length > 0) {
+      let contextStr = '\n\n[Контекст: ';
+      if (context.originalText) contextStr += `Оригинальный текст: "${context.originalText}". `;
+      if (context.topic)        contextStr += `Тема: "${context.topic}". `;
+      if (context.keywords)     contextStr += `Ключевые слова/факты: "${context.keywords}". `;
+      if (context.field)        contextStr += `Раздел страницы: "${context.field}". `;
+      contextStr += ']';
+      userMessages[userMessages.length - 1].content += contextStr;
+    }
+    const content = await chatCompletion(
+      [{ role: 'system', content: SYSTEM_PROMPT }, ...userMessages],
+      { temperature: 0.7, maxTokens: 900, json: true },
+    );
+    try {
+      return JSON.parse(String(content).trim());
+    } catch (_) {
+      return { chatResponse: 'Готово! Вот предложенный вариант.', proposedText: String(content || '').trim() };
+    }
+  } catch (err) {
+    console.warn('[aiService.chat] основной провайдер недоступен, фолбэк:', err.message);
+  }
+
   if (GEMINI_API_KEY) {
     return callGemini(messages, context);
   } else if (OPENAI_API_KEY) {

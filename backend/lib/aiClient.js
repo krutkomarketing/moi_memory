@@ -11,6 +11,9 @@ const AI_API_KEY = process.env.AI_API_KEY || '';
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 const AI_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '30000', 10);
 const AI_IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gpt-image-2-free';
+// Отдельный ключ для картинок (если токен провайдера ограничен по моделям).
+// Не задан — используется общий AI_API_KEY.
+const AI_IMAGE_API_KEY = process.env.AI_IMAGE_API_KEY || process.env.AI_API_KEY || '';
 const AI_IMAGE_TIMEOUT_MS = parseInt(process.env.AI_IMAGE_TIMEOUT_MS || '120000', 10);
 const AI_IMAGE_PROVIDER = (process.env.AI_IMAGE_PROVIDER || 'openai').toLowerCase();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -441,7 +444,7 @@ async function imageGeneration(prompt, opts = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + AI_API_KEY,
+        Authorization: 'Bearer ' + AI_IMAGE_API_KEY,
       },
       body: JSON.stringify({
         model: AI_IMAGE_MODEL,
