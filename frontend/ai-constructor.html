@@ -609,7 +609,83 @@
     }
 
     /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
-    /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
+    /* ── Стили редактирования полей шапки (имя, даты, город, эпитафия) ── */
+    #p-name[contenteditable="true"],
+    #p-dates[contenteditable="true"],
+    #p-city[contenteditable="true"],
+    #p-bio[contenteditable="true"] {
+      outline: none;
+      transition: all 0.25s ease;
+      border: 1px dashed rgba(200, 168, 75, 0.25);
+      border-radius: 6px;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.01);
+      display: inline-block;
+    }
+
+    #p-name[contenteditable="true"] {
+      display: block;
+      width: fit-content;
+      margin-left: 0;
+      margin-bottom: 14px;
+    }
+
+    #p-dates[contenteditable="true"] {
+      display: inline-block;
+      min-width: 150px;
+      margin-bottom: 14px;
+    }
+
+    #p-city[contenteditable="true"] {
+      display: inline-block;
+      min-width: 100px;
+    }
+
+    #p-bio[contenteditable="true"] {
+      display: block;
+      width: 100%;
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    #p-name[contenteditable="true"]:hover,
+    #p-dates[contenteditable="true"]:hover,
+    #p-city[contenteditable="true"]:hover,
+    #p-bio[contenteditable="true"]:hover {
+      border-color: rgba(200, 168, 75, 0.55);
+      background: rgba(200, 168, 75, 0.02);
+    }
+
+    #p-name[contenteditable="true"]:focus,
+    #p-dates[contenteditable="true"]:focus,
+    #p-city[contenteditable="true"]:focus,
+    #p-bio[contenteditable="true"]:focus {
+      border-color: var(--gold);
+      border-style: solid;
+      background: rgba(200, 168, 75, 0.05);
+      box-shadow: 0 0 12px rgba(200, 168, 75, 0.15);
+    }
+
+    /* Рамка аватара при наведении в конструкторе */
+    #p-avatar-wrap {
+      border: 1px dashed rgba(200, 168, 75, 0.2);
+      transition: all 0.3s ease;
+    }
+    #p-avatar-wrap:hover {
+      border-color: var(--gold) !important;
+      background: rgba(200, 168, 75, 0.04);
+      box-shadow: 0 0 15px rgba(200, 168, 75, 0.1);
+    }
+
+    /* Поддержка data-placeholder для contenteditable */
+    [contenteditable="true"]:empty::before {
+      content: attr(data-placeholder);
+      color: rgba(245, 239, 224, 0.35) !important;
+      font-style: italic;
+      pointer-events: none;
+      display: inline-block;
+    }
+
     .bio-block-text[contenteditable="true"] {
       outline: none;
       border: 1px solid transparent;
@@ -971,16 +1047,16 @@
       <div class="person-header__info">
         <p class="person-header__eyebrow">Летопись жизни</p>
         <h1 class="person-header__name" id="p-name" contenteditable="true" data-placeholder="Имя Отчество Фамилия">Имя Отчество Фамилия</h1>
-        <div class="person-header__dates" id="p-dates" contenteditable="true" title="Например: 15.05.1945 — 24.11.2018">
+        <div class="person-header__dates" id="p-dates" contenteditable="true" data-placeholder="ГГГГ — ГГГГ" title="Например: 15.05.1945 — 24.11.2018">
           ГГГГ <span>—</span> ГГГГ
         </div>
-        <p class="person-header__city" id="p-city" contenteditable="true" title="Город / место захоронения">Город</p>
+        <p class="person-header__city" id="p-city" contenteditable="true" data-placeholder="Город" title="Город / место захоронения">Город</p>
       </div>
     </div>
 
     <!-- Эпитафия -->
     <div class="person-bio">
-      <p class="person-bio__text" id="p-bio" contenteditable="true">
+      <p class="person-bio__text" id="p-bio" contenteditable="true" data-placeholder="«Несколько тёплых слов о близком человеке — эпитафия появится здесь»">
         «Несколько тёплых слов о близком человеке — эпитафия появится здесь.»
       </p>
     </div>
