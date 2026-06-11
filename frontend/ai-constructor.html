@@ -2546,18 +2546,18 @@
             if (data.ok && data.commands) {
               executePageCommands(data);
               buildRefinementUI(text);
+            } else {
+              throw new Error(data.error || 'ИИ вернул пустой ответ');
             }
           } else {
-            throw new Error('404 эндпоинт отсутствует');
+            const errBody = await response.json().catch(() => ({}));
+            throw new Error(errBody.error || `HTTP ${response.status}`);
           }
         } catch (err) {
-          console.error(err);
-          showToast('Бэкенд недоступен. Запуск симуляции ИИ!', '#fbbf24', '#000');
-          setTimeout(() => {
-            const result = simulateAIResponse(text);
-            executePageCommands(result);
-            buildRefinementUI(text);
-          }, 800);
+          // Никаких тихих симуляций: показываем реальную причину,
+          // иначе на странице появляются шаблонные тексты-заглушки.
+          console.error('[reconstruct-page] failed:', err);
+          showToast('ИИ недоступен: ' + (err.message || 'ошибка сети'), '#ef4444', '#fff');
         } finally {
           processBtn.disabled = false;
           processBtn.textContent = 'Обработать через ИИ';

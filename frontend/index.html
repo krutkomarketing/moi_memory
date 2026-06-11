@@ -140,7 +140,7 @@
         </div>
         <div class="showcase__preview">
           <div class="feature-image-container">
-            <img src="images/feature_memory.png" alt="Цифровая мемориальная страница памяти" class="feature-image" />
+            <img src="images/feature_memory.png" alt="Цифровая мемориальная страница памяти" class="feature-image" loading="lazy" decoding="async" />
             <div class="feature-image-glare"></div>
             <div class="feature-image-glow"></div>
           </div>
@@ -230,7 +230,7 @@
 
                     <div class="memui__page">
                       <div class="memui__person">
-                        <img src="images/avatar_nadezhda.webp" alt="Надежда Корнеева" class="memui__portrait" />
+                        <img src="images/avatar_nadezhda.webp" alt="Надежда Корнеева" class="memui__portrait" loading="lazy" decoding="async" />
                         <span class="memui__name">Надежда Корнеева</span>
                         <span class="memui__dates">1937 — 2015</span>
                       </div>
@@ -347,7 +347,7 @@
         </div>
         <div class="showcase__preview">
           <div class="feature-image-container">
-            <img src="images/feature_tree.png" alt="Генеалогическое древо семьи" class="feature-image" />
+            <img src="images/feature_tree.png" alt="Генеалогическое древо семьи" class="feature-image" loading="lazy" decoding="async" />
             <div class="feature-image-glare"></div>
             <div class="feature-image-glow"></div>
           </div>
@@ -366,7 +366,7 @@
         </div>
         <div class="showcase__preview">
           <div class="feature-image-container">
-            <img src="images/feature_timeline.png" alt="Летопись и хроника событий" class="feature-image" />
+            <img src="images/feature_timeline.png" alt="Летопись и хроника событий" class="feature-image" loading="lazy" decoding="async" />
             <div class="feature-image-glare"></div>
             <div class="feature-image-glow"></div>
           </div>
@@ -385,7 +385,7 @@
         </div>
         <div class="showcase__preview">
           <div class="feature-image-container">
-            <img src="images/feature_plaque.png" alt="Металлическая мемориальная QR-табличка" class="feature-image" />
+            <img src="images/feature_plaque.png" alt="Металлическая мемориальная QR-табличка" class="feature-image" loading="lazy" decoding="async" />
             <div class="feature-image-glare"></div>
             <div class="feature-image-glow"></div>
           </div>
@@ -462,7 +462,7 @@
         <div class="testimonial-card">
           <div class="testimonial-card__quote-mark">“</div>
           <div class="testimonial-card__header">
-            <img src="/uploads/avatar_alena_g3.webp" alt="Елена Ковалёва" class="testimonial-card__avatar" />
+            <img loading="lazy" decoding="async" src="/uploads/avatar_alena_g3.webp" alt="Елена Ковалёва" class="testimonial-card__avatar" />
             <div class="testimonial-card__meta">
               <span class="testimonial-card__name">Елена Ковалёва</span>
               <span class="testimonial-card__city">г. Минск</span>
@@ -477,7 +477,7 @@
         <div class="testimonial-card">
           <div class="testimonial-card__quote-mark">“</div>
           <div class="testimonial-card__header">
-            <img src="/uploads/avatar_sergey_g1.webp" alt="Сергей Морозов" class="testimonial-card__avatar" />
+            <img loading="lazy" decoding="async" src="/uploads/avatar_sergey_g1.webp" alt="Сергей Морозов" class="testimonial-card__avatar" />
             <div class="testimonial-card__meta">
               <span class="testimonial-card__name">Сергей Морозов</span>
               <span class="testimonial-card__city">г. Брест</span>
@@ -492,7 +492,7 @@
         <div class="testimonial-card">
           <div class="testimonial-card__quote-mark">“</div>
           <div class="testimonial-card__header">
-            <img src="/uploads/avatar_tatiana_g1.webp" alt="Татьяна Сазонова" class="testimonial-card__avatar" />
+            <img loading="lazy" decoding="async" src="/uploads/avatar_tatiana_g1.webp" alt="Татьяна Сазонова" class="testimonial-card__avatar" />
             <div class="testimonial-card__meta">
               <span class="testimonial-card__name">Татьяна Сазонова</span>
               <span class="testimonial-card__city">г. Могилёв</span>
@@ -588,29 +588,51 @@
     </div>
   </div>
 
-  <!-- 3D Hero Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-  <script src="js/hero-3d.js?v=19"></script>
+  <!-- 3D Hero: лениво, после полной загрузки страницы и в простое браузера.
+       three.js (~600КБ) больше не блокирует первый рендер — мобильный LCP/FCP. -->
+  <script>
+    (function () {
+      function load(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = src; s.onload = resolve; s.onerror = reject;
+          document.body.appendChild(s);
+        });
+      }
+      function boot() {
+        load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js')
+          .then(function () { return load('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'); })
+          .then(function () { return load('https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js'); })
+          .then(function () { return load('js/hero-3d.js?v=19'); })
+          .catch(function (e) { console.warn('[hero-3d] не загрузился:', e); });
+      }
+      if (document.readyState === 'complete') {
+        (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(boot);
+      } else {
+        window.addEventListener('load', function () {
+          (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(boot);
+        }, { once: true });
+      }
+    })();
+  </script>
 
-  <!-- GSAP Core & Plugins -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="https://assets.codepen.io/16327/ScrollSmoother.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
-  <script src="https://assets.codepen.io/16327/ScrambleTextPlugin.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
-  <script src="js/gsap-effects.js?v=19"></script>
+  <!-- GSAP Core & Plugins (defer: порядок сохраняется, парсинг не блокируется) -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script defer src="https://assets.codepen.io/16327/ScrollSmoother.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+  <script defer src="https://assets.codepen.io/16327/ScrambleTextPlugin.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
+  <script defer src="js/gsap-effects.js?v=19"></script>
 
-  <script src="js/particles.js?v=19"></script>
-  <script src="js/favicon.js?v=19"></script>
-  <script src="js/api.js?v=19"></script>
-  <script src="js/auth-ui.js?v=19"></script>
-  <script src="js/data.js?v=19"></script>
-  <script src="js/home.js?v=19"></script>
-  <script src="js/nav.js?v=19"></script>
-<script src="js/transitions.js?v=19"></script>
-<script src="js/ambient.js?v=19"></script>
+  <script defer src="js/particles.js?v=19"></script>
+  <script defer src="js/favicon.js?v=19"></script>
+  <script defer src="js/api.js?v=19"></script>
+  <script defer src="js/auth-ui.js?v=19"></script>
+  <script defer src="js/data.js?v=19"></script>
+  <script defer src="js/home.js?v=19"></script>
+  <script defer src="js/nav.js?v=19"></script>
+  <script defer src="js/transitions.js?v=19"></script>
+  <script defer src="js/ambient.js?v=19"></script>
 </body>
 </html>
