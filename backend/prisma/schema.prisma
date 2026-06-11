@@ -16,24 +16,70 @@ datasource db {
 //  ENUMS
 // ============================================================
 
+enum UserRole {
+  USER
+  EDITOR
+  ADMIN
+}
 
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
 
+enum Visibility {
+  PUBLIC
+  UNLISTED
+  PASSWORD
+  PRIVATE
+}
 
+enum BlockType {
+  HERO
+  CHILDHOOD
+  EDUCATION
+  CAREER
+  FAMILY
+  HOBBIES
+  LEGACY
+  CUSTOM
+}
 
+enum MemoryType {
+  TEXT
+  PHOTO
+  AUDIO
+  VIDEO
+}
 
+enum RelationType {
+  PARENT
+  SPOUSE
+  ADOPTIVE
+  STEP
+}
+
+enum TimelineCategory {
+  BIRTH
+  DEATH
+  MARRIAGE
+  EDUCATION
+  CAREER
+  RELOCATION
+  AWARD
+  HISTORICAL
+  CUSTOM
+}
+
+enum MediaKind {
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+}
 
 // Типизация 6 дефолтных блоков биографии (п. 1.4)
-
-
-
-
-
-
-
-
-
-
-// ============================================================
 //  AUTH / USERS
 // ============================================================
 
@@ -44,7 +90,7 @@ model User {
   passwordHash String
   jwtVersion   Int      @default(0)
   displayName  String?
-  role         String @default("USER")
+  role         UserRole @default(USER)
   telegramId   BigInt?  @unique // привязка к боту (объединение bot.db)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -95,10 +141,10 @@ model Profile {
   bio          String?    // короткое intro (hero subtitle)
   coverPhotoId String?   @unique
   coverPhoto   Media?    @relation("ProfileCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
-  gender       String    @default("UNKNOWN")
+  gender       Gender    @default(UNKNOWN)
 
   // Видимость и защита
-  visibility String @default("PUBLIC")
+  visibility Visibility @default(PUBLIC)
   // Пароль страницы: PBKDF2 в том же формате "iterations:saltHex:hashHex".
   // NULL если visibility != PASSWORD
   accessHash String?
@@ -162,7 +208,7 @@ model ContentBlock {
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  type    String // жёстко типизирован enum
+  type    BlockType
   title   String? // кастомный заголовок (для CUSTOM)
   body    String     // основной текст
   // Опциональное иллюстративное фото (одно — в зебра-вёрстке слева/справа)
@@ -213,7 +259,7 @@ model GuestMemory {
   authorUser   User?   @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   authorName   String // имя, отображаемое на карточке (может отличаться)
 
-  type    String @default("TEXT")
+  type    MemoryType @default(TEXT)
   text    String?    
   mediaId String?
   media   Media?     @relation("MemoryMedia", fields: [mediaId], references: [id], onDelete: SetNull)
@@ -262,7 +308,7 @@ model FamilyTree {
   name        String // «Род Петровых»
   description String?    
   ownerId     String
-  visibility  String @default("UNLISTED")
+  visibility  Visibility @default(UNLISTED)
   accessHash  String?
 
   nodes FamilyNode[]
@@ -306,7 +352,7 @@ model FamilyNode {
   maidenName String?
   birthDate  DateTime?
   deathDate  DateTime?
-  gender     String    @default("UNKNOWN")
+  gender     Gender    @default(UNKNOWN)
   photoId    String?
   photo      Media?    @relation("NodePhoto", fields: [photoId], references: [id], onDelete: SetNull)
 
@@ -346,7 +392,7 @@ model FamilyConnection {
   toNodeId   String
   toNode     FamilyNode @relation("Child", fields: [toNodeId], references: [id], onDelete: Cascade)
 
-  type      String
+  type      RelationType
   // Для SPOUSE: даты брака/развода
   startDate DateTime?
   endDate   DateTime?
@@ -375,7 +421,7 @@ model TimelineEvent {
   profileId    String?
   profile      Profile?    @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  category     String
+  category     TimelineCategory
   title        String
   description  String?          
   date         DateTime // точная дата
@@ -408,7 +454,7 @@ model TimelineEvent {
 
 model Media {
   id           String    @id @default(cuid())
-  kind         String
+  kind         MediaKind
   url          String // путь относительно /uploads/
   originalName String?
   mimeType     String
