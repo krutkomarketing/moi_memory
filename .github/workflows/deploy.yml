@@ -1,24 +1,42 @@
 name: Deploy to Production
 
+# При каждом пуше в main: SSH на сервер → ./deploy.sh
+# (git pull, backup БД, build, prisma migrate, up -d, healthcheck,
+#  отчёт в Telegram — всё внутри deploy.sh)
+
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:   # ручной запуск из вкладки Actions
+
+# Не запускать два деплоя одновременно; новый ждёт окончания текущего
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy using deploy.sh
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 130.49.141.252
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 40m
           script: |
+            set -euo pipefail
             cd ~/site
+
+            # Защита от параллельного запуска (если деплоят руками в этот момент)
+            exec 9>/tmp/memory-deploy.lock
+            if ! flock -n 9; then
+              echo "❌ Другой деплой уже идёт (lock занят). Выходим."
+              exit 1
+            fi
+
             echo "🚀 Starting deploy via deploy.sh..."
             ./deploy.sh
