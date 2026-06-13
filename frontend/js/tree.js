@@ -11,7 +11,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentTreeId = urlParams.get('tree') || 'cmpx2xehh0000pa313hbd9znu';
 
 
-  const BASE = (window.location.port === '3000' || window.location.port === '5500') ? '' : 'http://localhost:3000';
+  const isLocalDev = window.location.port && window.location.port !== '80' && window.location.port !== '443' && window.location.port !== '5500';
+  const BASE = isLocalDev ? 'http://localhost:3000' : '';
   
   // Pan and Zoom State Variables
   let zoom = 1.0;

@@ -30,7 +30,8 @@
     });
   }
 
-  const BASE = (window.location.port === '3000' || window.location.port === '5500') ? '' : 'http://localhost:3000';
+  const isLocalDev = window.location.port && window.location.port !== '80' && window.location.port !== '443' && window.location.port !== '5500';
+  const BASE = isLocalDev ? 'http://localhost:3000' : '';
   const resolveUrl = path => {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
