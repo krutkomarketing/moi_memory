@@ -14,7 +14,7 @@
   // Transparent Tree Selection: redirect user to their rootTreeId if they are on default
   if (typeof API !== 'undefined') {
     const user = API.getUser();
-    if (user && user.rootTreeId && user.rootTreeId !== 'default' && (currentTreeId === 'default' || currentTreeId === 'cmpx2xehh0000pa313hbd9znu')) {
+    if (user && user.rootTreeId && user.rootTreeId !== 'default' && !urlParams.has('tree')) {
       window.location.replace("family-tree.html?tree=" + encodeURIComponent(user.rootTreeId));
       return;
     }
@@ -1776,7 +1776,7 @@
       const val = e.target.value;
       transitionToNewTree(val === 'default' ? null : val);
       setTimeout(() => {
-        window.location.href = val === 'default' ? 'family-tree.html' : `family-tree.html?tree=${encodeURIComponent(val)}`;
+        window.location.href = val === 'default' ? 'family-tree.html?tree=default' : `family-tree.html?tree=${encodeURIComponent(val)}`;
       }, 10);
     });
   })();
