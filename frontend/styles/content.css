@@ -1,0 +1,121 @@
+/* ============================================================
+   content.css — оформление контентных страниц QR-Память:
+   блог (индекс), статьи, FAQ. Тёмная тема, золотой акцент,
+   серифные заголовки (Playfair Display) — в стиле сайта.
+   ============================================================ */
+
+:root {
+  --gold: #c8a84b;
+  --gold-bright: #e6cf86;
+  --ink: rgba(255, 255, 255, 0.86);
+  --ink-soft: rgba(255, 255, 255, 0.7);
+  --ink-faint: rgba(255, 255, 255, 0.5);
+  --card: rgba(255, 255, 255, 0.035);
+  --card-bd: rgba(255, 255, 255, 0.09);
+}
+
+/* плейсхолдер шапки резервирует высоту — нет скачка вёрстки */
+#site-header { display: block; min-height: 62px; }
+#site-footer { display: block; }
+
+/* ---------- Hero контентных страниц ---------- */
+.page-hero { max-width: 880px; margin: 0 auto; padding: 4.5rem 1.5rem 0.5rem; text-align: center; }
+.page-hero__eyebrow { display: inline-block; font-size: .78rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; }
+.page-hero__title { font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: clamp(2rem, 4vw, 2.9rem); line-height: 1.14; margin: 0 0 1rem; }
+.page-hero__title em { font-style: italic; color: var(--gold-bright); }
+.page-hero__sub { font-size: 1.1rem; color: var(--ink-soft); max-width: 640px; margin: 0 auto; line-height: 1.7; }
+.page-hero__divider { width: 64px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin: 2rem auto 0; }
+
+/* ---------- Блог: сетка карточек ---------- */
+.blog-wrap { max-width: 1080px; margin: 0 auto; padding: 1.8rem 1.5rem 4.5rem; }
+.blog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4rem; }
+.blog-card { position: relative; display: flex; flex-direction: column; text-decoration: none; background: var(--card); border: 1px solid var(--card-bd); border-radius: 16px; padding: 1.7rem 1.8rem; overflow: hidden; transition: border-color .25s, transform .25s, box-shadow .25s; }
+.blog-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); transform: scaleX(0); transform-origin: left; transition: transform .3s; }
+.blog-card:hover { border-color: rgba(200, 168, 75, .45); transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0, 0, 0, .3); }
+.blog-card:hover::before { transform: scaleX(1); }
+.blog-card--feature { grid-column: 1 / -1; background: linear-gradient(135deg, rgba(200,168,75,.08), rgba(255,255,255,.03)); }
+.blog-card__tag { font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.blog-card__title { font-family: "Playfair Display", Georgia, serif; font-size: 1.3rem; line-height: 1.3; color: #fff; margin: .6rem 0 .6rem; }
+.blog-card--feature .blog-card__title { font-size: 1.9rem; }
+.blog-card__excerpt { font-size: .96rem; color: var(--ink-soft); line-height: 1.65; flex: 1; }
+.blog-card__more { display: inline-block; margin-top: 1.1rem; color: var(--gold-bright); font-size: .92rem; font-weight: 500; }
+
+/* ---------- FAQ ---------- */
+.faq-wrap { max-width: 800px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.faq-cat { margin-top: 2.6rem; }
+.faq-cat__title { font-family: "Playfair Display", Georgia, serif; font-size: 1.3rem; color: #fff; margin: 0 0 1rem; padding-bottom: .6rem; border-bottom: 1px solid rgba(200, 168, 75, .25); }
+.faq-q { border: 1px solid var(--card-bd); border-radius: 12px; margin-bottom: .7rem; background: rgba(255, 255, 255, .03); transition: border-color .2s, background .2s; }
+.faq-q[open] { border-color: rgba(200, 168, 75, .35); background: rgba(200, 168, 75, .05); }
+.faq-q:hover { border-color: rgba(200, 168, 75, .3); }
+.faq-q > summary { cursor: pointer; padding: 1.1rem 1.4rem; font-size: 1.02rem; font-weight: 500; color: #fff; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.faq-q > summary::-webkit-details-marker { display: none; }
+.faq-q > summary::after { content: '+'; color: var(--gold); font-size: 1.45rem; line-height: 1; flex: none; }
+.faq-q[open] > summary::after { content: '−'; }
+.faq-q__a { padding: 0 1.4rem 1.2rem; color: var(--ink); font-size: .97rem; line-height: 1.7; }
+
+/* HowTo блок */
+.howto-box { background: rgba(255, 255, 255, .04); border: 1px solid var(--card-bd); border-left: 3px solid var(--gold); border-radius: 12px; padding: 1.3rem 1.7rem; margin: 1.2rem 0 1.5rem; }
+.howto-box__title { color: var(--gold-bright); font-weight: 600; margin: 0 0 .4rem; }
+.howto-box ol { padding-left: 1.3rem; margin: .4rem 0 0; }
+.howto-box li { font-size: .96rem; color: var(--ink); margin-bottom: .5rem; line-height: 1.6; }
+
+/* «остались вопросы» / CTA-бокс */
+.ask-box { text-align: center; background: linear-gradient(135deg, rgba(200,168,75,.1), rgba(200,168,75,.03)); border: 1px solid rgba(200, 168, 75, .28); border-radius: 16px; padding: 2.1rem; margin-top: 2.8rem; }
+.ask-box h3 { margin: 0 0 .5rem; color: #fff; font-size: 1.25rem; }
+.ask-box p { margin: 0 0 1.2rem; color: var(--ink-soft); }
+
+/* ---------- Статья ---------- */
+.article { max-width: 760px; margin: 0 auto; padding: 2.4rem 1.5rem 4rem; }
+.article__crumbs { font-size: .85rem; color: var(--ink-faint); margin-bottom: 1.4rem; }
+.article__crumbs a { color: var(--ink-soft); text-decoration: none; }
+.article__crumbs a:hover { color: var(--gold); }
+.article__title { font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: clamp(1.9rem, 3.6vw, 2.5rem); line-height: 1.2; margin: .2rem 0 .7rem; }
+.article__meta { font-size: .85rem; color: var(--ink-faint); margin-bottom: 2.2rem; padding-bottom: 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.article__body { line-height: 1.85; }
+.article__body p, .article__body li { font-size: 1.04rem; color: var(--ink); }
+.article__lead { font-size: 1.2rem; color: rgba(255, 255, 255, .82); margin-bottom: 1.8rem; }
+.article__body h2 { font-family: "Playfair Display", Georgia, serif; font-size: 1.55rem; color: #fff; margin: 2.6rem 0 .9rem; }
+.article__body h2::before { content: ""; display: block; width: 44px; height: 2px; background: var(--gold); margin-bottom: .9rem; }
+.article__body h3 { font-size: 1.2rem; color: var(--gold-bright); margin: 1.9rem 0 .5rem; }
+.article__body ul, .article__body ol { padding-left: 1.3rem; margin: .6rem 0 1.3rem; }
+.article__body li { margin-bottom: .55rem; }
+.article__body strong { color: #fff; }
+.article__body a { color: var(--gold-bright); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(230, 207, 134, .4); }
+.article__body a:hover { text-decoration-color: var(--gold-bright); }
+
+.article__cta { background: linear-gradient(135deg, rgba(200,168,75,.13), rgba(200,168,75,.04)); border: 1px solid rgba(200, 168, 75, .3); border-radius: 16px; padding: 1.7rem 1.9rem; margin: 2.6rem 0; }
+.article__cta h3 { margin: 0 0 .4rem; color: #fff; font-size: 1.2rem; }
+.article__cta p { margin: 0 0 1rem; color: var(--ink-soft); }
+
+.article__also { margin-top: 3rem; padding-top: 1.6rem; border-top: 1px solid rgba(255, 255, 255, .1); }
+.article__also-title { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: .8rem; }
+.article__also a { display: block; color: var(--ink); text-decoration: none; padding: .65rem 0; border-bottom: 1px solid rgba(255, 255, 255, .06); transition: color .2s, padding-left .2s; }
+.article__also a:hover { color: var(--gold-bright); padding-left: .4rem; }
+
+/* ---------- Общие мелочи ---------- */
+.content-back { display: inline-block; margin-top: 2.5rem; color: var(--ink-soft); text-decoration: none; }
+.content-back:hover { color: var(--gold); }
+.footer__copy-link { color: rgba(255, 255, 255, .55); text-decoration: none; }
+.footer__copy-link:hover { color: var(--gold); }
+
+@media (max-width: 760px) {
+  .blog-grid { grid-template-columns: 1fr; }
+  .blog-card--feature .blog-card__title { font-size: 1.5rem; }
+  .page-hero { padding-top: 3.2rem; }
+}
+
+/* ---------- Сравнительная таблица ---------- */
+.cmp-wrap { overflow-x: auto; margin: 1.3rem 0 1.9rem; -webkit-overflow-scrolling: touch; border: 1px solid var(--card-bd); border-radius: 12px; }
+.cmp { width: 100%; border-collapse: collapse; font-size: .96rem; min-width: 520px; }
+.cmp th, .cmp td { padding: .85rem 1.1rem; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, .07); vertical-align: top; }
+.cmp thead th { color: #fff; font-family: "Playfair Display", Georgia, serif; font-size: 1.02rem; border-bottom: 1px solid rgba(200, 168, 75, .4); }
+.cmp th:first-child { width: 44%; }
+.cmp tbody td:first-child { color: var(--ink); font-weight: 500; }
+.cmp .cmp-us { background: rgba(200, 168, 75, .07); }
+.cmp .cmp-yes { color: var(--gold-bright); font-weight: 600; }
+.cmp tbody tr:last-child td { border-bottom: none; }
+
+/* --- Кнопки внутри статей/CTA: не перекрашиваются правилами ссылок (.article a) --- */
+.article a.btn, .article__body a.btn { text-decoration: none; }
+.article a.btn--primary, .article__body a.btn--primary { color: var(--black); }
+.article a.btn--ghost, .article__body a.btn--ghost { color: var(--gold-light); }

@@ -26,6 +26,7 @@ const STATIC_PATHS = [
     { path: '/about.html',       changefreq: 'monthly', priority: '0.7' },
     { path: '/faq.html',         changefreq: 'monthly', priority: '0.7' },
     { path: '/blog.html',        changefreq: 'weekly',  priority: '0.7' },
+    { path: '/qr-memory-vs-analogi.html',                          changefreq: 'monthly', priority: '0.7' },
     { path: '/blog-pochemu-zabyvayut-korni.html',                  changefreq: 'monthly', priority: '0.6' },
     { path: '/blog-qr-tablichka-na-pamyatnik.html',                changefreq: 'monthly', priority: '0.6' },
     { path: '/blog-qr-kod-kak-rabotaet.html',                      changefreq: 'monthly', priority: '0.6' },
