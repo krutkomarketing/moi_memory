@@ -649,7 +649,7 @@ const currentTreeId = urlParams.get('tree') || 'cmpx2xehh0000pa313hbd9znu';
   }
 
   // Asynchronous Loader from database
-  ensureTreeSelector();
+  // ensureTreeSelector(); // Obsolete, tree-edit.js provides the styled tree-switcher-select instead
 
     async function loadDataFromDb() {
     try {
