@@ -6,5 +6,8 @@
   "scripts": {
     "dev": "open http://localhost && docker compose up",
     "stop": "docker compose down"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
   }
 }

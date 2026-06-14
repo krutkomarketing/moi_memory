@@ -39,7 +39,7 @@
   breadcrumb.setAttribute('aria-label', 'Навигация');
   breadcrumb.innerHTML = `
     <ol class="breadcrumb__list">
-      <li class="breadcrumb__item"><a href="index.html" class="breadcrumb__link">Главная</a></li>
+      <li class="breadcrumb__item"><a href="/" class="breadcrumb__link">Главная</a></li>
       <li class="breadcrumb__item"><a href="memory.html" class="breadcrumb__link">Страницы памяти</a></li>
       <li class="breadcrumb__item"><span class="breadcrumb__current" id="breadcrumb-name">…</span></li>
     </ol>`;

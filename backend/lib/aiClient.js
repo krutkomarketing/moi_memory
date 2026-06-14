@@ -407,8 +407,83 @@ async function pixazoImageGeneration(prompt, opts = {}) {
 }
 
 /**
+ * Генерация изображения через OpenRouter API.
+ * POST https://openrouter.ai/api/v1/chat/completions
+ * Тело запроса содержит "modalities": ["image"] и модель AI_IMAGE_MODEL.
+ */
+async function openrouterImageGeneration(prompt, opts = {}) {
+  if (!AI_IMAGE_API_KEY) {
+    const e = new Error('AI_IMAGE_API_KEY is not set');
+    e.code = 'AI_NOT_CONFIGURED';
+    throw e;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_IMAGE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + AI_IMAGE_API_KEY,
+      },
+      body: JSON.stringify({
+        model: AI_IMAGE_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        modalities: ['image'],
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      const e = new Error(`OpenRouter image upstream ${res.status}: ${body.slice(0, 300)}`);
+      e.code = 'AI_UPSTREAM';
+      e.status = res.status;
+      throw e;
+    }
+
+    const data = await res.json();
+    const images = data?.choices?.[0]?.message?.images || [];
+    const firstImage = images[0]?.image_url?.url || '';
+
+    if (!firstImage) {
+      const e = new Error('OpenRouter: no image returned in choices[0].message.images');
+      e.code = 'AI_UPSTREAM';
+      throw e;
+    }
+
+    const match = firstImage.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/s);
+    if (match) {
+      return {
+        b64: match[2],
+        mime: match[1],
+        url: null,
+      };
+    }
+
+    // Otherwise download the image URL
+    try {
+      const img = await downloadImageAsB64(firstImage, controller.signal);
+      return { ...img, url: firstImage };
+    } catch (e) {
+      console.warn('[openrouterImageGeneration] failed to download image URL:', e.message);
+      return { b64: null, mime: 'image/png', url: firstImage };
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Генерация изображения по текстовому промпту.
- * Провайдер выбирается через env AI_IMAGE_PROVIDER: gemini | openai | pollinations | pixazo.
+ * Провайдер выбирается через env AI_IMAGE_PROVIDER: gemini | openai | pollinations | pixazo | openrouter.
  * openai-ветка: POST {AI_BASE_URL}/images/generations (aihubmix-совместимо).
  * Возвращает { b64, mime, url }.
  */
@@ -426,6 +501,9 @@ async function imageGeneration(prompt, opts = {}) {
   }
   if (AI_IMAGE_PROVIDER === 'pixazo') {
     return pixazoImageGeneration(prompt, opts);
+  }
+  if (AI_IMAGE_PROVIDER === 'openrouter') {
+    return openrouterImageGeneration(prompt, opts);
   }
 
   const { size = '1536x1024', quality = 'auto', n = 1 } = opts;

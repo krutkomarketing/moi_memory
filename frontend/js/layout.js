@@ -14,12 +14,12 @@
 
   var HEADER =
     '<nav class="nav"><div class="nav__inner">' +
-      '<a href="index.html" class="nav__logo" aria-label="QR-Память — на главную">' +
+      '<a href="/" class="nav__logo" aria-label="QR-Память — на главную">' +
         '<img src="assets-v2/logo-tree-cut.webp" alt="" width="360" height="369" />' +
         '<span class="nav__logo-script">QR-Память</span>' +
       '</a>' +
       '<ul class="nav__links">' +
-        '<li><a href="index.html" class="nav__link" data-path="index.html">Главная</a></li>' +
+        '<li><a href="/" class="nav__link" data-path="index.html">Главная</a></li>' +
         '<li><a href="memory.html" class="nav__link" data-path="memory.html">Страницы памяти</a></li>' +
         '<li><a href="family-tree.html?tree=default" class="nav__link" data-path="family-tree.html">Древо семьи</a></li>' +
         '<li><a href="timeline.html" class="nav__link" data-path="timeline.html">Летопись</a></li>' +
@@ -35,7 +35,7 @@
         '<span class="footer__tagline">Пронесём историю вашей семьи сквозь века</span>' +
       '</div>' +
       '<nav class="footer__nav" aria-label="Навигация сайта">' +
-        '<a href="index.html" class="footer__nav-link">Главная</a>' +
+        '<a href="/" class="footer__nav-link">Главная</a>' +
         '<a href="memory.html" class="footer__nav-link">Страницы памяти</a>' +
         '<a href="family-tree.html?tree=default" class="footer__nav-link">Древо семьи</a>' +
         '<a href="timeline.html" class="footer__nav-link">Летопись</a>' +

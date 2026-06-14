@@ -60,6 +60,8 @@ backend/uploads/
 server/
 
 # === Scratch / temp files ===
+scratch/
+**/scratch/
 scratch_*.js
 scratch_*.txt
 backend/scratch_*.js

@@ -40,6 +40,11 @@
 		reverse_proxy backend:3000
 	}
 
+	# === /index.html → / (канонический корень сайта, 301) ===
+	handle /index.html {
+		redir / permanent
+	}
+
 	# === Статика фронта + fallback на .html ===
 	handle {
 		# __CACHE_CONTROL_V1__

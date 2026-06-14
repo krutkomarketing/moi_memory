@@ -1043,6 +1043,12 @@
     window.generateBlockImage = async function(key) {
       if (!isEditingMode) return;
 
+      const referenceImage = getAvatarReference();
+      if (!referenceImage) {
+        showToast('Пожалуйста, сначала загрузите главное фото (аватарку) страницы памяти. Она нужна ИИ как референс лица.', '#ef4444', '#fff');
+        return;
+      }
+
       const el = document.querySelector(`[data-key="${key}"]`);
       if (!el) return;
 
@@ -1080,7 +1086,7 @@
       const decade = Math.floor(eraYear / 10) * 10;
       const eraString = `${decade}s era`;
 
-      const masterPrompt = `An authentic candid photograph from the ${eraString}, shot on period film camera. Natural everyday lighting, soft film grain, slightly muted era-appropriate colors${decade < 1960 ? ' (black and white or sepia, as photos of that time)' : ''}, realistic documentary photo, NOT staged, NOT illustration, NOT painting. Chapter of life: "${titleContent}". Scene based on this story fragment: "${textContent.trim().slice(0, 600)}". Subject: one single person (${genderDesc}) as the main character. Strictly do NOT include other people unless explicitly mentioned in the story. Historically accurate clothing, objects and interiors of the ${eraString}. Respectful, no text or captions in the image.`;
+      const masterPrompt = `An authentic candid photograph from the ${eraString}, shot on period film camera. Natural everyday lighting, soft film grain, slightly muted era-appropriate colors${decade < 1960 ? ' (black and white or sepia, as photos of that time)' : ''}, realistic documentary photo, NOT staged, NOT illustration, NOT painting. Chapter of life: "${titleContent}". Scene based on this story fragment: "${textContent.trim().slice(0, 600)}". Subject: one single person (${genderDesc}) as the main character. Absolutely only ONE person must be in the frame. Do NOT include any other people, background crowds, family members, or strangers under any circumstances, unless the story fragment explicitly mentions multiple people. Historically accurate clothing, objects and interiors of the ${eraString}. Respectful, no text or captions in the image.`;
 
       console.log(`[Master-Prompt Imagen 4.0 for block "${key}"]:`, masterPrompt);
 

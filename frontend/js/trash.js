@@ -24,7 +24,7 @@
           <div class="trash-empty__icon">🔒</div>
           <h2 class="trash-empty__title">Нужен вход</h2>
           <p class="trash-empty__sub">Чтобы открыть корзину, войдите в свой аккаунт.</p>
-          <a href="index.html" class="btn btn--primary">На главную</a>
+          <a href="/" class="btn btn--primary">На главную</a>
         </div>`;
       return false;
     }
