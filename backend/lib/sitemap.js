@@ -149,6 +149,7 @@ const DISALLOWED_PATHS = [
     '/forgot-password.html',
     '/reset-password.html',
     '/ai-mockup.html',          // дизайн-макет, не для индекса
+    '/ai-constructor-test.html', // тестовая страница, не для индекса
 ];
 
 // ИИ-краулеры, которым явно разрешаем публичный контент.

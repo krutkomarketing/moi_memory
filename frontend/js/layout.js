@@ -21,7 +21,7 @@
       '<ul class="nav__links">' +
         '<li><a href="index.html" class="nav__link" data-path="index.html">Главная</a></li>' +
         '<li><a href="memory.html" class="nav__link" data-path="memory.html">Страницы памяти</a></li>' +
-        '<li><a href="family-tree.html" class="nav__link" data-path="family-tree.html">Древо семьи</a></li>' +
+        '<li><a href="family-tree.html?tree=default" class="nav__link" data-path="family-tree.html">Древо семьи</a></li>' +
         '<li><a href="timeline.html" class="nav__link" data-path="timeline.html">Летопись</a></li>' +
         '<li><a href="blog.html" class="nav__link" data-path="blog.html">Блог</a></li>' +
         '<li><a href="faq.html" class="nav__link" data-path="faq.html">Вопросы</a></li>' +
@@ -37,7 +37,7 @@
       '<nav class="footer__nav" aria-label="Навигация сайта">' +
         '<a href="index.html" class="footer__nav-link">Главная</a>' +
         '<a href="memory.html" class="footer__nav-link">Страницы памяти</a>' +
-        '<a href="family-tree.html" class="footer__nav-link">Древо семьи</a>' +
+        '<a href="family-tree.html?tree=default" class="footer__nav-link">Древо семьи</a>' +
         '<a href="timeline.html" class="footer__nav-link">Летопись</a>' +
         '<a href="blog.html" class="footer__nav-link">Блог</a>' +
         '<a href="faq.html" class="footer__nav-link">Вопросы и ответы</a>' +

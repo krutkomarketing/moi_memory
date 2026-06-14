@@ -34,7 +34,7 @@
       <ul class="nav__links">
         <li><a href="index.html" class="nav__link">Главная</a></li>
         <li><a href="memory.html" class="nav__link">Страницы памяти</a></li>
-        <li><a href="family-tree.html" class="nav__link nav__link--active">Древо семьи</a></li>
+        <li><a href="family-tree.html?tree=default" class="nav__link nav__link--active">Древо семьи</a></li>
         <li><a href="timeline.html" class="nav__link">Летопись</a></li>
       </ul>
     </div>
@@ -54,9 +54,10 @@
     <div class="clan-legend" id="tree-clan-legend">
       <!-- injected by tree.js -->
     </div>
-    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px;">
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
       <button class="tree-edit-btn" id="tree-edit-btn" style="margin-top: 0;">✏️ Редактировать дерево</button>
       <button class="tree-edit-btn" id="tree-print-btn" style="margin-top: 0;">🖨️ Распечатать дерево</button>
+      <button class="tree-edit-btn" id="tree-example-btn" style="margin-top: 0;" onclick="location.href='family-tree.html?tree=default'">👁️ Посмотреть пример</button>
     </div>
   </div>
 
@@ -110,7 +111,7 @@
       <nav class="footer__nav" aria-label="Навигация сайта">
         <a href="index.html" class="footer__nav-link">Главная</a>
         <a href="memory.html" class="footer__nav-link">Страницы памяти</a>
-        <a href="family-tree.html" class="footer__nav-link">Древо семьи</a>
+        <a href="family-tree.html?tree=default" class="footer__nav-link">Древо семьи</a>
         <a href="timeline.html" class="footer__nav-link">Летопись</a>
       </nav>
       <p class="footer__quote">Пока мы помним —<br/>они живы.</p>
@@ -129,6 +130,23 @@
     if (treeParam) {
       document.body.classList.add('tree-page--entering');
       setTimeout(() => document.body.classList.remove('tree-page--entering'), 800);
+    }
+    /* Режим «пример»: default-дерево показываем только для просмотра */
+    if (treeParam === 'default') {
+      document.body.classList.add('tree-example');
+      const heroInner = document.querySelector('.tree-hero__inner');
+      if (heroInner && !heroInner.querySelector('.tree-example-note')) {
+        const note = document.createElement('p');
+        note.className = 'tree-example-note';
+        note.textContent = 'Пример семейного дерева, которое вы можете создать для своей семьи.';
+        note.style.cssText = 'color:#e6cf86;margin-top:1rem;font-size:1.05rem;font-weight:500;';
+        heroInner.appendChild(note);
+      }
+      ['tree-edit-btn','tree-print-btn','tree-example-btn','tree-toolbar'].forEach((id) => {
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
+      });
+      const searchWrap = document.querySelector('.tree-search-wrap');
+      if (searchWrap) searchWrap.style.display = 'none';
     }
   </script>
 
