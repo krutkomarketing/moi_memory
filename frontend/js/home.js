@@ -295,18 +295,45 @@
     });
   });
 
-  /* ── VIDEO INTERSECTION OBSERVER ── */
+  /* ── VIDEO HOVER / INTERSECTION PLAY ── */
+  const isDesktop = window.matchMedia('(hover: hover)').matches;
+
   const videoIo = new IntersectionObserver((entries) => {
     entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.play().catch(() => {});
-      } else {
-        e.target.pause();
+      if (!isDesktop) {
+        if (e.isIntersecting) {
+          e.target.play().catch(() => {});
+        } else {
+          e.target.pause();
+        }
       }
     });
   }, { threshold: 0.25 });
-  document.querySelectorAll('video.bg').forEach(v => videoIo.observe(v));
+  document.querySelectorAll('video.bg').forEach(video => {
+    // Disable looping to pause at the end and fix on the last frame
+    video.loop = false;
+    video.removeAttribute('loop');
 
+    if (isDesktop) {
+      video.removeAttribute('autoplay');
+      video.pause();
+
+      const hoverTarget = video.closest('.showcase__item') || video;
+      hoverTarget.addEventListener('mouseenter', () => {
+        if (video.ended) {
+          video.currentTime = 0;
+        }
+        video.play().catch(() => {});
+      });
+      hoverTarget.addEventListener('mouseleave', () => {
+        if (!video.ended) {
+          video.pause();
+        }
+      });
+    } else {
+      videoIo.observe(video);
+    }
+  });
 })();
 
 

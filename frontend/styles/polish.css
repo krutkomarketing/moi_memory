@@ -123,7 +123,6 @@ button:focus-visible,
   transition:transform .5s cubic-bezier(.4,0,.2,1), box-shadow .5s, border-color .5s;
 }
 .showcase__item:hover .feature-image-container{
-  transform:translateY(-6px);
   border-color:rgba(200,168,75,.3);
   box-shadow:0 40px 90px rgba(0,0,0,.6);
 }
