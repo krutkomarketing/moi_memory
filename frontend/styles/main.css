@@ -2542,25 +2542,19 @@ select option:hover {
   line-height: 1.8;
   margin-bottom: 28px;
 }
-
 .showcase__preview {
   width: 100%;
   max-width: 420px;
   height: 280px;
-  background: rgba(255, 255, 255, 0.015);
-  border: 1px solid rgba(200, 168, 75, 0.12);
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  transition: border-color var(--transition), transform var(--transition);
+  overflow: visible;
+  transition: transform var(--transition);
 }
 
 .showcase__item:hover .showcase__preview {
-  border-color: rgba(200, 168, 75, 0.28);
   transform: translateY(-4px);
 }
 

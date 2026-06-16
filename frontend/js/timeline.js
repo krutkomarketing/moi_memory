@@ -17,6 +17,7 @@
   let dbNodes = [];
   let dbCustomEvents = [];
   let dbHistoricalEvents = [];  
+  let dbProfiles = [];
 
   /* ── БЕЛОРУССКИЕ И СОВЕТСКИЕ ИСТОРИЧЕСКИЕ СОБЫТИЯ ── */
   const HISTORY = [
@@ -159,8 +160,9 @@
   function buildEvents() {
     const events = [];
 
-    /* From PEOPLE (static data.js) */
-    (typeof PEOPLE !== 'undefined' ? PEOPLE : []).forEach(p => {
+    /* From DB Profiles or fallback static data */
+    const sourcePeople = dbProfiles.length ? dbProfiles : (typeof PEOPLE !== 'undefined' ? PEOPLE : []);
+    sourcePeople.forEach(p => {
       const by = parseYear(p.born), dy = parseYear(p.died);
       const age = lifeYears(p.born, p.died);
       if (by) events.push({
@@ -252,15 +254,16 @@ function iconForHistorical(ev) {
     const list = [];
     const seenIds = new Set();
 
-    // 1. From static PEOPLE data
-    const staticPeople = typeof PEOPLE !== 'undefined' ? PEOPLE : [];
+    // 1. From DB Profiles or fallback static data
+    const staticPeople = dbProfiles.length ? dbProfiles : (typeof PEOPLE !== 'undefined' ? PEOPLE : []);
     staticPeople.forEach(p => {
       const by = parseYear(p.born);
       const dy = parseYear(p.died) || new Date().getFullYear();
       if (by && by <= year && dy >= year) {
         if (!seenIds.has(p.id)) {
           seenIds.add(p.id);
-          list.push({ id: p.id, name: p.name, years: `${p.born}–${p.died || '...'}` });
+          const yearsStr = p.years || `${p.born}–${p.died || '...'}`;
+          list.push({ id: p.id, name: p.name, years: yearsStr });
         }
       }
     });
@@ -941,8 +944,12 @@ if (e.type === 'history') {
         if (profilesRes?.data) list.push(...profilesRes.data);
         if (peopleRes?.data) list.push(...peopleRes.data);
         
+        const seen = new Set();
+        dbProfiles = [];
         list.forEach(p => {
-          if (p.id) {
+          if (p.id && !seen.has(p.id)) {
+            seen.add(p.id);
+            dbProfiles.push(p);
             photoMap[p.id] = p.photo || p.photo_url || '';
           }
         });

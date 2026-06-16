@@ -1,4 +1,4 @@
-# __CACHE_BUST_V1__
+# __CACHE_BUST_V2__  (content-hash)
 FROM caddy:2-alpine
 
 # GNU sed (надёжнее busybox для ERE)
@@ -18,13 +18,13 @@ COPY images /srv/images
 COPY assets-v2 /srv/assets-v2
 # Фавиконки лежат в корне frontend/ и не попадают под COPY выше
 COPY favicon*.png favicon.svg apple-touch-icon.png /srv/
+COPY letopis.webm letopis.mp4 tree.webm tree.mp4 /srv/
+
 
 # Тестовые/черновые страницы в прод не отдаём
 RUN rm -f /srv/ai-constructor-test.html /srv/ai-mockup.html
 
-# Cache-bust: ?v=${VERSION} на все локальные js/styles ссылки в HTML.
-# Идемпотентно: существующий ?v=... заменяется.
-RUN find /srv -maxdepth 1 -name '*.html' -exec sed -i -E \
-    "s#((src|href)=\"(js|styles)/[^\"?]+)(\?v=[^\"]*)?\"#\1?v=${VERSION}\"#g" {} + \
- && echo "[cache-bust] applied VERSION=${VERSION}" \
- && grep -h -oE '(src|href)="(js|styles)/[^"]+"' /srv/index.html | head -3
+# Cache-bust по хешу содержимого (см. cache-bust.sh).
+# ?v= меняется только у тех ассетов, чьё содержимое изменилось.
+COPY cache-bust.sh /usr/local/bin/cache-bust.sh
+RUN sh /usr/local/bin/cache-bust.sh

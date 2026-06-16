@@ -160,7 +160,7 @@ router.post('/generate-image', optionalAuth, aiGenerationLimiter, wrap(async (re
     if (!title && !text) {
       throw ApiError.badRequest('Нужен prompt либо title/text блока');
     }
-    prompt = `A warm vintage memorial illustration. Depicting: ${title}. Soft emotional oil painting, nostalgic lighting, one single person. Context: "${text}". Timeless, respectful, no text in image.`;
+    prompt = `A warm vintage memorial illustration. Depicting: ${title}. Soft emotional oil painting, nostalgic lighting, one single person of Slavic (Eastern European) appearance, no Asian or non-Slavic facial features. Context: "${text}". Timeless, respectful, no text in image.`;
   }
 
   if (containsProfanity(prompt)) {

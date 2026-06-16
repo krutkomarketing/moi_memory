@@ -1226,14 +1226,15 @@
 
       recognition.onresult = (event) => {
         let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let currentSessionFinal = '';
+        for (let i = 0; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
+            currentSessionFinal += event.results[i][0].transcript + ' ';
           } else {
             interimTranscript += event.results[i][0].transcript;
           }
         }
-        transcriptInput.value = (finalTranscript + interimTranscript).trim();
+        transcriptInput.value = (finalTranscript + currentSessionFinal + interimTranscript).trim().replace(/\s+/g, ' ');
         transcriptInput.scrollTop = transcriptInput.scrollHeight;
         updateProcessButtonState();
       };
@@ -1248,6 +1249,7 @@
 
       recognition.onend = () => {
         if (isRecording) {
+          finalTranscript = transcriptInput.value ? transcriptInput.value + ' ' : '';
           try { recognition.start(); } catch (e) {}
         }
       };
@@ -1431,7 +1433,7 @@
       const decade = Math.floor(eraYear / 10) * 10;
       const eraString = `${decade}s era`;
 
-      const masterPrompt = `An authentic candid photograph from the ${eraString}, shot on period film camera. Natural everyday lighting, soft film grain, slightly muted era-appropriate colors${decade < 1960 ? ' (black and white or sepia, as photos of that time)' : ''}, realistic documentary photo, NOT staged, NOT illustration, NOT painting. Chapter of life: "${titleContent}". Scene based on this story fragment: "${textContent.trim().slice(0, 600)}". Subject: one single person (${genderDesc}) as the main character. Absolutely only ONE person must be in the frame. Do NOT include any other people, background crowds, family members, or strangers under any circumstances, unless the story fragment explicitly mentions multiple people. Historically accurate clothing, objects and interiors of the ${eraString}. Respectful, no text or captions in the image.`;
+      const masterPrompt = `An authentic candid photograph from the ${eraString}, shot on period film camera. Natural everyday lighting, soft film grain, slightly muted era-appropriate colors${decade < 1960 ? ' (black and white or sepia, as photos of that time)' : ''}, realistic documentary photo, NOT staged, NOT illustration, NOT painting. Chapter of life: "${titleContent}". Scene based on this story fragment: "${textContent.trim().slice(0, 600)}". Subject: one single person (${genderDesc}) of Slavic (Belarusian / Eastern European) appearance as the main character. Avoid any East Asian, South Asian, Central Asian, or non-Slavic facial features and appearances under any circumstances. Absolutely only ONE person must be in the frame. Do NOT include any other people, background crowds, family members, or strangers under any circumstances, unless the story fragment explicitly mentions multiple people. Historically accurate clothing, objects and interiors of the ${eraString}. Respectful, no text or captions in the image.`;
 
       console.log(`[Master-Prompt Imagen 4.0 for block "${key}"]:`, masterPrompt);
 
