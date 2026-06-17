@@ -433,7 +433,12 @@ async function openrouterImageGeneration(prompt, opts = {}) {
         messages: [
           {
             role: 'user',
-            content: prompt,
+            content: opts.referenceImage
+              ? [
+                  { type: 'text', text: prompt },
+                  { type: 'image_url', image_url: { url: opts.referenceImage } }
+                ]
+              : prompt,
           },
         ],
         modalities: ['image'],
@@ -489,6 +494,7 @@ async function openrouterImageGeneration(prompt, opts = {}) {
  */
 async function imageGeneration(prompt, opts = {}) {
   const refSupported = AI_IMAGE_PROVIDER === 'gemini' ||
+    AI_IMAGE_PROVIDER === 'openrouter' ||
     (AI_IMAGE_PROVIDER === 'pixazo' && PIXAZO_EDIT_MODEL);
   if (opts.referenceImage && !refSupported) {
     console.warn(`[imageGeneration] провайдер "${AI_IMAGE_PROVIDER}" не поддерживает референс-фото — игнорирую`);
