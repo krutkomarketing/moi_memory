@@ -26,6 +26,7 @@
   // 3. Desktop drag scrubbing (only if hover pointer is supported)
   const isDesktop = window.matchMedia("(hover:hover)").matches;
   if (isDesktop) {
+    box.style.cursor = "grab";
     let startX = 0;
     let startY = 0;
     let startTime = 0;
