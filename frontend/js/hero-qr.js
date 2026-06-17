@@ -1,4 +1,17 @@
 (function () {
+  // Подстраховка автоплея для iOS: запускаем все приглушённые видео при первом тапе/клике
+  const forcePlayAll = () => {
+    document.querySelectorAll("video").forEach((video) => {
+      if (video.paused && video.muted) {
+        video.play().catch(() => {});
+      }
+    });
+    document.removeEventListener("touchstart", forcePlayAll);
+    document.removeEventListener("click", forcePlayAll);
+  };
+  document.addEventListener("touchstart", forcePlayAll, { passive: true });
+  document.addEventListener("click", forcePlayAll, { passive: true });
+
   const v = document.getElementById("hero-qr-video");
   const box = document.getElementById("hero-canvas-container");
   if (!v) return;

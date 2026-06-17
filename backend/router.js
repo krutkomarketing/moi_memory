@@ -158,6 +158,24 @@ router.get('/health', async (req, res) => {
 /* ═══════════════════════════════════════════════════════ */
 /*  AUTH                                                   */
 /* ═══════════════════════════════════════════════════════ */
+// JWT дополнительно кладём в httpOnly+SameSite cookie (defense-in-depth).
+// extractToken уже умеет читать cookie `token`. Bearer/localStorage продолжают
+// работать — это НЕ ломает текущий фронт.
+const AUTH_COOKIE_MAXAGE = 7 * 24 * 60 * 60 * 1000;
+function setAuthCookie(res, token) {
+    if (!token) return;
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: AUTH_COOKIE_MAXAGE,
+        path: '/',
+    });
+}
+function clearAuthCookie(res) {
+    res.clearCookie('token', { path: '/' });
+}
+
 router.post('/auth/register', registerLimiter, wrap(async (req, res) => {
     /* __GDPR_ROUTER_V1__ */
     const { name, displayName, email, password, accept } = req.body || {};
@@ -171,6 +189,7 @@ router.post('/auth/register', registerLimiter, wrap(async (req, res) => {
         accept: true,
         ip: clientIp,
     });
+    setAuthCookie(res, result.token);
     return ok(res, result, 201);
 }));
 
@@ -185,6 +204,7 @@ router.post('/auth/login', loginLimiter, wrap(async (req, res) => {
             metadata: { email },
             req,
         });
+        setAuthCookie(res, result.token);
         return ok(res, result);
     } catch (e) {
         await auditService.logAction({
@@ -210,6 +230,7 @@ router.post('/auth/logout', requireAuth, wrap(async (req, res) => {
         userId: req.user.id,
         req,
     });
+    clearAuthCookie(res);
     return ok(res, {});
 }));
 

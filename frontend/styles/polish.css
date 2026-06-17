@@ -75,9 +75,10 @@ button:focus-visible,
 .stats__inner{
   border-radius:16px;
   padding:34px 44px;
-  background:rgba(255,255,255,.028);
+  /* Статичная подложка вместо backdrop-filter:blur — размытие подложки
+     пересчитывалось каждый кадр поверх анимированного фона и грузило GPU. */
+  background:rgba(18,16,12,.55);
   box-shadow:0 24px 60px rgba(0,0,0,.28);
-  backdrop-filter:blur(6px);
 }
 .stat__num{ text-shadow:0 0 30px rgba(200,168,75,.18); }
 
