@@ -149,8 +149,16 @@ function serializeTree(t) {
 ─────────────────────────────────────────── */
 
 async function loadTreeOr404(treeId, { includeNodes = false } = {}) {
+    let resolvedId = treeId;
+    if (treeId === 'default') {
+        const exists = await prisma.familyTree.findUnique({ where: { id: 'default' } });
+        if (!exists) {
+            const firstTree = await prisma.familyTree.findFirst({ orderBy: { createdAt: 'asc' } });
+            if (firstTree) resolvedId = firstTree.id;
+        }
+    }
     const tree = await prisma.familyTree.findUnique({
-        where: { id: treeId },
+        where: { id: resolvedId },
         include: includeNodes
             ? {
                 nodes: {
@@ -199,7 +207,7 @@ async function getTree(treeId, actor) {
     const tree = await loadTreeOr404(treeId, { includeNodes: true });
     assertTreeAccess(tree, actor, 'view');
     const connections = await prisma.familyConnection.findMany({
-        where: { fromNode: { treeId } },
+        where: { fromNode: { treeId: tree.id } },
         orderBy: { createdAt: 'asc' },
     });
     return serializeTree({ ...tree, connections });
@@ -234,14 +242,14 @@ async function updateTree(treeId, input, actor) {
     if (input.visibility !== undefined && ['PUBLIC', 'UNLISTED', 'PASSWORD', 'PRIVATE'].includes(input.visibility)) {
         data.visibility = input.visibility;
     }
-    const updated = await prisma.familyTree.update({ where: { id: treeId }, data });
+    const updated = await prisma.familyTree.update({ where: { id: tree.id }, data });
     return serializeTree(updated);
 }
 
 async function deleteTree(treeId, actor) {
     const tree = await loadTreeOr404(treeId);
     assertTreeAccess(tree, actor, 'edit');
-    await prisma.familyTree.delete({ where: { id: treeId } });
+    await prisma.familyTree.delete({ where: { id: tree.id } });
     return { id: treeId };
 }
 
@@ -253,7 +261,7 @@ async function listClans(treeId, actor) {
     const tree = await loadTreeOr404(treeId);
     assertTreeAccess(tree, actor, 'view');
     const clans = await prisma.familyClan.findMany({
-        where: { treeId },
+        where: { treeId: tree.id },
         orderBy: { name: 'asc' },
     });
     return clans.map(serializeClan);
@@ -268,7 +276,7 @@ async function createClan(input, actor) {
     try {
         const clan = await prisma.familyClan.create({
             data: {
-                treeId,
+                treeId: tree.id,
                 name: String(name).trim(),
                 color: color || '#c8a84b',
                 icon: icon || '✦',
@@ -324,7 +332,7 @@ async function createNode(input, actor) {
 
     if (clanId) {
         const clan = await prisma.familyClan.findUnique({ where: { id: clanId } });
-        if (!clan || clan.treeId !== treeId) {
+        if (!clan || clan.treeId !== tree.id) {
             throw ApiError.badRequest('Род не принадлежит этому дереву');
         }
     }
@@ -347,7 +355,7 @@ async function createNode(input, actor) {
 
     const node = await prisma.familyNode.create({
         data: {
-            treeId,
+            treeId: tree.id,
             firstName: String(firstName).trim(),
             lastName: lastName ? String(lastName).trim() : null,
             maidenName: maidenName ? String(maidenName).trim() : null,
