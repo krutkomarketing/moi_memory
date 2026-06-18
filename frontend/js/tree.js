@@ -784,19 +784,10 @@ const currentTreeId = urlParams.get('tree') || 'default';
         console.log('Successfully loaded default tree clans and nodes from DB:', CLANS, GENERATIONS);
       }
     } else {
-        if (typeof API !== 'undefined' && API.isLoggedIn && API.isLoggedIn()) {
-          GENERATIONS = [];
-          CLANS = {};
-        } else {
-          console.log('No DB records or invalid formats. Falling back to hardcoded default data.');
-        }
+        console.log('No DB records or invalid formats. Falling back to hardcoded default data.');
       }
     } catch (err) {
       console.warn('Failed to load default tree from DB, falling back to static data:', err);
-      if (typeof API !== 'undefined' && API.isLoggedIn && API.isLoggedIn()) {
-        GENERATIONS = [];
-        CLANS = {};
-      }
     }
   }
 

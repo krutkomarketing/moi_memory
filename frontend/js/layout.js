@@ -12,6 +12,16 @@
 (function () {
   'use strict';
 
+  // Залогинен ли пользователь (токен кладёт auth-ui.js; логин/логаут делают reload,
+  // поэтому проверки на этапе загрузки достаточно).
+  var loggedIn = false;
+  try { loggedIn = !!localStorage.getItem('memory_jwt'); } catch (e) {}
+
+  // Блог и Вопросы показываем только гостям; залогиненным — не захламляем меню.
+  var GUEST_LINKS = loggedIn ? '' :
+    '<li><a href="blog.html" class="nav__link" data-path="blog.html">Блог</a></li>' +
+    '<li><a href="faq.html" class="nav__link" data-path="faq.html">Вопросы</a></li>';
+
   var HEADER =
     '<nav class="nav"><div class="nav__inner">' +
       '<a href="/" class="nav__logo" aria-label="QR-Память — на главную">' +
@@ -23,8 +33,7 @@
         '<li><a href="memory.html" class="nav__link" data-path="memory.html">Страницы памяти</a></li>' +
         '<li><a href="family-tree.html?tree=default" class="nav__link" data-path="family-tree.html">Древо семьи</a></li>' +
         '<li><a href="timeline.html" class="nav__link" data-path="timeline.html">Летопись</a></li>' +
-        '<li><a href="blog.html" class="nav__link" data-path="blog.html">Блог</a></li>' +
-        '<li><a href="faq.html" class="nav__link" data-path="faq.html">Вопросы</a></li>' +
+        GUEST_LINKS +
       '</ul>' +
     '</div></nav>';
 

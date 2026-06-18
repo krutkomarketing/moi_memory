@@ -33,6 +33,7 @@ function organization(baseUrl) {
     '@id': `${baseUrl}/#organization`,
     name: BRAND_NAME,
     legalName: BRAND_NAME,
+    alternateName: ['Куар-Память', 'Кьюар-Память', 'куар память', 'кьюар память', 'QR память'],
     url: `${baseUrl}/`,
     description: BRAND_DESC,
     areaServed: { '@type': 'Country', name: 'Беларусь' },

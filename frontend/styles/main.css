@@ -2999,15 +2999,11 @@ select option:hover {
   height: 468px;
   border-radius: 12px;
   overflow: hidden;
-  cursor: grab;
+  cursor: default;
   border: none;
   background: transparent;
   transition: transform var(--transition);
   touch-action: pan-y;
-}
-
-.hero-canvas-container:active {
-  cursor: grabbing;
 }
 
 .hero-canvas-container:hover {
@@ -3019,6 +3015,10 @@ select option:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* Приближаем табличку, чтобы обрезать пустые поля вокруг QR.
+     Контейнер с overflow:hidden кадрирует лишнее. */
+  transform: scale(1.35);
+  transform-origin: center center;
 }
 
 .hero-canvas-loader {

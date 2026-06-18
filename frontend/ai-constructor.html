@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-site-verification" content="XZ1l0f_nu02uk7tS2ID2xVgUC91dXNQa16LdUJihGEM" />
   <meta name="robots" content="noindex,follow" />
-  <title>ИИ-Конструктор v2 — QR-Память</title>
+  <title>ИИ-конструктор страницы памяти — QR-Память</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
   <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32"/>
   <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
@@ -302,7 +302,7 @@
 
   <!-- Навигационная панель с оригинального сайта -->
   <div id="site-header"></div>
-  <script src="js/layout.js?v=1"></script>
+  <script src="js/layout.js?v=2"></script>
 
   <!-- Фиксированная панель кнопок режима редактирования (как в person-edit.js) -->
   <div class="edit-panel" id="edit-panel">
@@ -400,7 +400,7 @@
       <div class="settings-row">
         <!-- Скрытые inputs для JS-совместимости -->
         <input type="checkbox" id="sim-mode" style="display:none;">
-        <input type="checkbox" id="auto-photo-mode" checked style="display:none;">
+        <input type="checkbox" id="auto-photo-mode" style="display:none;">
 
         <div class="action-buttons">
           <button id="onboarding-toggle-btn" class="btn-ai btn-ai-secondary btn-ai-instruction" title="Инструкция по использованию конструктора">Инструкция</button>
@@ -1954,10 +1954,8 @@
       if (!data || !Array.isArray(data.commands)) return;
 
       aiLogList.innerHTML = '';
-      aiLogBox.style.display = 'block';
-
-      // Автоматически открываем боковую панель для демонстрации логов ИИ
-      if (refinementDrawer) refinementDrawer.classList.add('is-open');
+      // Дебаг-логи команд и боковая панель скрыты от пользователей (демо-режим выключен).
+      aiLogBox.style.display = 'none';
 
       data.commands.forEach((cmd) => {
         const logItem = document.createElement('li');
