@@ -212,6 +212,12 @@ section { position: relative; z-index: 1; }
   font-weight: 500;
   letter-spacing: 0.03em;
   display: inline-block;
+  /* iOS Safari: background-clip:text родителя не клипает inline-block потомка —
+     «QR» становился прозрачным/нечитаемым. Даём ему собственный сплошной
+     золотой цвет, чтобы читался на всех устройствах. */
+  background: none;
+  color: var(--gold-light);
+  -webkit-text-fill-color: var(--gold-light);
 }
 
 .hero__subtitle {
@@ -2995,7 +3001,7 @@ select option:hover {
    ═══════════════════════════════════════════════ */
 .hero-canvas-container {
   position: relative;
-  width: 348px;
+  width: 430px;
   height: 468px;
   border-radius: 12px;
   overflow: hidden;
@@ -3013,11 +3019,11 @@ select option:hover {
 .hero-qr-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  /* Приближаем табличку, чтобы обрезать пустые поля вокруг QR.
-     Контейнер с overflow:hidden кадрирует лишнее. */
-  transform: scale(1.35);
+  /* Показываем QR целиком и с зазором по бокам. Раньше object-fit:cover + scale(1.35)
+     сильно приближали и срезали код слева/справа. */
+  transform: scale(1.05);
   transform-origin: center center;
 }
 
