@@ -9,14 +9,15 @@
  */
 async function updateRedirectFile(profileId, targetUrl) {
   const token = process.env.GITHUB_PAT;
-  const repo = process.env.GITHUB_REPO; // e.g., 'moggerrescure/qr-redirects'
+  const repo = process.env.GITHUB_REPO; // e.g., 'moggerrescure/site'
+  const repoDir = process.env.GITHUB_REPO_DIR || ''; // e.g., 'public/qr'
 
   if (!token || !repo) {
     // Silently skip if GitHub integration is not configured
     return;
   }
 
-  const path = `${profileId}.html`;
+  const path = repoDir ? `${repoDir}/${profileId}.html` : `${profileId}.html`;
   const url = `https://api.github.com/repos/${repo}/contents/${path}`;
 
   // Minimal HTML that redirects immediately
