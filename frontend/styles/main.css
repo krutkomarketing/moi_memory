@@ -95,7 +95,7 @@ body {
 }
 
 .nav__logo-script {
-  font-family: var(--font-script);
+  font-family: var(--font-display);
   font-size: 28px;
   color: var(--gold-light);
   letter-spacing: 0.02em;
