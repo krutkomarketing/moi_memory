@@ -88,6 +88,7 @@ function serializeNode(n) {
         clanId: n.clanId,
         clan: n.clan ? serializeClan(n.clan) : null,
         notes: n.notes || '',
+        description: n.notes || '',
         posX: n.posX,
         posY: n.posY,
         generation: n.generation,
@@ -320,7 +321,7 @@ async function deleteClan(clanId, actor) {
 async function createNode(input, actor) {
     const {
         treeId, firstName, lastName, maidenName,
-        birth, death, gender, clanId, notes,
+        birth, death, gender, clanId, notes, description,
         posX, posY, generation, photoId,
     } = input || {};
 
@@ -353,6 +354,8 @@ async function createNode(input, actor) {
         }
     }
 
+    const notesValue = notes !== undefined ? notes : description;
+
     const node = await prisma.familyNode.create({
         data: {
             treeId: tree.id,
@@ -364,7 +367,7 @@ async function createNode(input, actor) {
             gender: mapGender(gender),
             clanId: clanId || null,
             photoId: resolvedPhotoId,
-            notes: notes ? String(notes).trim() : null,
+            notes: notesValue ? String(notesValue).trim() : null,
             posX: typeof posX === 'number' ? posX : null,
             posY: typeof posY === 'number' ? posY : null,
             generation: typeof generation === 'number' ? generation : null,
@@ -388,7 +391,8 @@ async function updateNode(nodeId, input, actor) {
     if (input.birth !== undefined) data.birthDate = parseDate(input.birth).date;
     if (input.death !== undefined) data.deathDate = parseDate(input.death).date;
     if (input.gender !== undefined) data.gender = mapGender(input.gender);
-    if (input.notes !== undefined) data.notes = input.notes ? String(input.notes).trim() : null;
+    const notesInput = input.notes !== undefined ? input.notes : input.description;
+    if (notesInput !== undefined) data.notes = notesInput ? String(notesInput).trim() : null;
     if (input.posX !== undefined) data.posX = typeof input.posX === 'number' ? input.posX : null;
     if (input.posY !== undefined) data.posY = typeof input.posY === 'number' ? input.posY : null;
     if (input.generation !== undefined) {

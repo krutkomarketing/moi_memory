@@ -687,7 +687,7 @@ const currentTreeId = urlParams.get('tree') || 'default';
           GENERATIONS = [];
           CLANS = {};
           console.log('Loaded empty tree from DB.');
-        } else if (clansJson.data.length > 0 && nodesJson.data.length > 0) {
+        } else if (nodesJson.data.length > 0) {
         if (connsJson.ok && Array.isArray(connsJson.data)) {
           // Pre-populate parents and spouse fields from connections for tree rendering to sort correctly
           const parentMap = {};
@@ -728,6 +728,9 @@ const currentTreeId = urlParams.get('tree') || 'default';
             desc: c.description || ''
           };
         });
+        if (!newClans.ivanov) {
+          newClans.ivanov = { name: 'Род', color: '#c8a84b', colorDim: '#6b5a22', icon: '🌳', desc: '' };
+        }
         CLANS = newClans;
 
         // Group nodes by generation

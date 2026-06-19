@@ -1,7 +1,7 @@
 FROM node:24-slim AS base
 
-ENV PRISMA_ENGINES_MIRROR=https://npmmirror.com/mirrors/prisma
 ENV SHARP_DIST_BASE_URL=https://npmmirror.com/mirrors/sharp
+
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \

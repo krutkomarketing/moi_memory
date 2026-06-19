@@ -985,15 +985,17 @@
 }
 
 .bio-block.is-editing-mode {
-  border: 1px solid rgba(200, 168, 75, 0.22);
-  border-radius: 14px;
-  background: rgba(15, 14, 12, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(200, 168, 75, 0.45);
+  border-top-color: rgba(226, 201, 126, 0.7);
+  border-radius: 20px;
+  background: rgba(10, 9, 8, 0.72);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
   position: relative;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
-              inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.9), 
+              0 0 50px rgba(200, 168, 75, 0.04),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
   /* Плавные переходы для масштабирования, теней и границ */
   transition: border-color 200ms ease-out, 
               background-color 200ms ease-out, 
@@ -1009,7 +1011,7 @@
   right: 6px;
   bottom: 6px;
   border: 1px solid rgba(200, 168, 75, 0.08);
-  border-radius: 10px;
+  border-radius: 14px;
   pointer-events: none;
   transition: border-color 200ms ease-out;
 }
@@ -1019,10 +1021,11 @@
 }
 
 .bio-block.is-editing-mode:hover {
-  border-color: rgba(200, 168, 75, 0.45);
-  background: rgba(15, 14, 12, 0.6);
-  box-shadow: 0 20px 40px rgba(200, 168, 75, 0.05), 
-              inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-color: rgba(226, 201, 126, 0.8);
+  background: rgba(10, 9, 8, 0.82);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.95), 
+              0 0 60px rgba(200, 168, 75, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: translateY(-3px); /* Физический подъем */
 }
 
@@ -2194,3 +2197,335 @@ body:has(#p-bio:focus) .bio-blocks {
   }
 }
 
+/* ==========================================================================
+   LIGHT THEME OVERRIDES (.theme-light)
+   ========================================================================== */
+body.theme-light, html.theme-light body {
+  background: #FAF8F5 !important;
+  color: #1a1a1a !important;
+}
+
+/* Base text elements */
+body.theme-light p,
+body.theme-light h1,
+body.theme-light h2,
+body.theme-light h3,
+body.theme-light h4,
+body.theme-light h5,
+body.theme-light h6,
+body.theme-light span,
+body.theme-light a {
+  color: #1a1a1a;
+}
+
+body.theme-light em {
+  color: var(--gold-dim) !important;
+}
+
+/* Page Header & Bio in Light Theme */
+body.theme-light .person-header__eyebrow {
+  color: #666666 !important;
+}
+
+body.theme-light .person-header__name {
+  color: #1a1a1a !important;
+  text-shadow: none !important;
+}
+
+body.theme-light .person-header__dates {
+  color: #444444 !important;
+}
+
+body.theme-light .person-header__city {
+  color: #555555 !important;
+}
+
+body.theme-light .person-bio__text {
+  color: #2b2b2b !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Nav & header integration */
+body.theme-light .nav {
+  background: rgba(250, 248, 245, 0.82) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+body.theme-light .nav__link {
+  color: #333333 !important;
+}
+
+body.theme-light .nav__link:hover,
+body.theme-light .nav__link--active {
+  color: var(--gold-dim) !important;
+}
+
+body.theme-light .nav__logo {
+  color: #1a1a1a !important;
+}
+
+/* Edit Panel */
+body.theme-light .edit-panel {
+  background: rgba(250, 248, 245, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .edit-panel__btn {
+  background: #1a1a1a !important;
+  color: #FAF8F5 !important;
+}
+
+body.theme-light .edit-panel__btn:hover {
+  background: #333333 !important;
+}
+
+/* AI Control Panel - Light Glassmorphism */
+body.theme-light .ai-control-panel {
+  background: rgba(255, 255, 255, 0.65) !important;
+  border-color: rgba(200, 168, 75, 0.5) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08),
+              0 0 30px rgba(200, 168, 75, 0.02),
+              inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+body.theme-light .ai-control-panel::before {
+  border-color: rgba(200, 168, 75, 0.18) !important;
+}
+
+body.theme-light .ai-title {
+  color: #1a1a1a !important;
+}
+
+body.theme-light .ai-subtitle {
+  color: #555555 !important;
+}
+
+/* Input elements inside AI Panel */
+body.theme-light .transcript-box {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(200, 168, 75, 0.25) !important;
+  color: #1a1a1a !important;
+}
+
+body.theme-light .transcript-box:focus {
+  background: #ffffff !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px rgba(200, 168, 75, 0.1) !important;
+}
+
+body.theme-light .transcript-box::placeholder {
+  color: rgba(0, 0, 0, 0.35) !important;
+}
+
+body.theme-light .status-text {
+  color: #444444 !important;
+}
+
+/* Mic controls and wave bars */
+body.theme-light .mic-button {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(200, 168, 75, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .mic-button svg {
+  color: var(--gold-dim) !important;
+}
+
+body.theme-light .mic-button svg path[fill] {
+  fill: rgba(200, 168, 75, 0.05) !important;
+}
+
+body.theme-light .mic-glow {
+  background: radial-gradient(circle, rgba(200, 168, 75, 0.2) 0%, rgba(200, 168, 75, 0) 70%) !important;
+}
+
+body.theme-light .wave-bar {
+  background: var(--gold-dim) !important;
+}
+
+/* Content blocks styling in Light Theme */
+body.theme-light .bio-block {
+  border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .bio-block__title {
+  color: #1a1a1a !important;
+}
+
+body.theme-light .bio-block-text {
+  color: #2b2b2b !important;
+}
+
+body.theme-light .bio-block__drag-handle {
+  color: rgba(0, 0, 0, 0.15) !important;
+}
+
+body.theme-light .bio-block.is-editing-mode {
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 2px solid rgba(200, 168, 75, 0.5) !important;
+  border-top-color: rgba(226, 201, 126, 0.7) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08),
+              0 0 30px rgba(200, 168, 75, 0.02),
+              inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+body.theme-light .bio-block.is-editing-mode:hover {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: var(--gold) !important;
+}
+
+body.theme-light .bio-block.is-editing-mode::before {
+  border-color: rgba(200, 168, 75, 0.18) !important;
+  background: transparent !important;
+}
+
+body.theme-light .bio-block.is-editing-mode:hover::before {
+  border-color: rgba(200, 168, 75, 0.35) !important;
+  background: transparent !important;
+}
+
+body.theme-light .bio-block__photo-placeholder {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #666666 !important;
+}
+
+body.theme-light .bio-block__photo-icon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+body.theme-light .bio-block__photo-hint {
+  color: #666666 !important;
+}
+
+body.theme-light .bio-block.is-editing-mode .bio-block__photo-placeholder:hover {
+  background: rgba(200, 168, 75, 0.04) !important;
+  border-color: var(--gold-dim) !important;
+}
+
+body.theme-light .bio-block.is-editing-mode .bio-block__photo-placeholder:hover .bio-block__photo-icon {
+  color: var(--gold-dim) !important;
+}
+
+/* Skeletons */
+body.theme-light .bio-block.is-generating-skeleton::before {
+  background: linear-gradient(90deg, rgba(0,0,0,0.03) 25%, rgba(0,0,0,0.08) 37%, rgba(0,0,0,0.03) 63%) !important;
+}
+
+body.theme-light .bio-block-text-loading {
+  background: linear-gradient(90deg, #eae5d8 25%, #f2ece0 37%, #eae5d8 63%) !important;
+}
+
+body.theme-light .ambient-glow-aura {
+  background: radial-gradient(circle, rgba(200, 168, 75, 0.12) 0%, rgba(226, 201, 126, 0.03) 50%, transparent 70%) !important;
+}
+
+/* Toggle Switch Styles */
+.theme-toggle-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(10, 9, 8, 0.85);
+  border: 1px solid rgba(200, 168, 75, 0.4);
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.08) translateY(-2px);
+  border-color: var(--gold);
+  background: rgba(200, 168, 75, 0.1);
+  color: var(--white);
+  box-shadow: 0 12px 40px rgba(200, 168, 75, 0.25);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.5s ease-out;
+}
+
+body.theme-light .theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(200, 168, 75, 0.4);
+  color: var(--gold-dim);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+body.theme-light .theme-toggle-btn:hover {
+  background: rgba(200, 168, 75, 0.05);
+  color: #1a1a1a;
+  border-color: var(--gold);
+}
+
+/* Light Theme overrides for onboarding modal */
+body.theme-light .onboarding-modal-window {
+  background: #ffffff !important;
+  border-color: rgba(200, 168, 75, 0.3) !important;
+  color: #1a1a1a !important;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.15), 0 0 50px rgba(200, 168, 75, 0.05) !important;
+}
+body.theme-light .onboarding-modal-frame {
+  border-color: rgba(200, 168, 75, 0.2) !important;
+}
+body.theme-light .onboarding-corner {
+  color: rgba(200, 168, 75, 0.75) !important;
+}
+body.theme-light .onboarding-title {
+  color: var(--gold-dim) !important;
+}
+body.theme-light .onboarding-subtitle {
+  color: #666666 !important;
+}
+body.theme-light .onboarding-step-num {
+  background: rgba(200, 168, 75, 0.05) !important;
+  border-color: rgba(200, 168, 75, 0.5) !important;
+  color: var(--gold-dim) !important;
+}
+body.theme-light .onboarding-step-title {
+  color: var(--gold-dim) !important;
+}
+body.theme-light .onboarding-step-desc {
+  color: #333333 !important;
+}
+body.theme-light .onboarding-btn {
+  background: var(--gold-dim) !important;
+  border-color: var(--gold-dim) !important;
+  color: #ffffff !important;
+}
+body.theme-light .onboarding-btn:hover {
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+  color: #ffffff !important;
+}
+body.theme-light .onboarding-close-btn {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+}
+body.theme-light .onboarding-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+}

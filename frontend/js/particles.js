@@ -28,6 +28,35 @@
   class Ember {
     constructor() { this.reset(true); }
 
+    resetColor(isLight) {
+      this.isLightThemeColor = isLight;
+      if (isLight) {
+        /* Golden/bronze/warm amber colors for white theme */
+        this.color = pick([
+          { r: 197, g: 160, b: 89 },  // rich gold
+          { r: 176, g: 137, b: 63 },  // deep gold
+          { r: 218, g: 180, b: 110 }, // warm gold
+          { r: 140, g: 105, b: 40 },  // dark gold/amber
+          { r: 160, g: 120, b: 50 },  // bronze
+        ]);
+        /* Light theme background is white, so increase opacity/alpha to make particles visible */
+        this.alphaMin = rand(0.08, 0.22);
+        this.alphaMax = this.isBig ? rand(0.6, 0.9) : rand(0.4, 0.75);
+      } else {
+        /* Cosmic white / silver / soft blue for dark theme */
+        this.color = pick([
+          { r: 255, g: 255, b: 255 }, // white
+          { r: 240, g: 245, b: 255 }, // icy blue-white
+          { r: 245, g: 240, b: 235 }, // soft warm white
+          { r: 220, g: 225, b: 235 }, // dim silver
+          { r: 200, g: 210, b: 225 }, // steel blue
+        ]);
+        this.alphaMin = rand(0.02, 0.12);
+        this.alphaMax = this.isBig ? rand(0.45, 0.75) : rand(0.25, 0.6);
+      }
+      this.alpha = rand(this.alphaMin, this.alphaMax);
+    }
+
     reset(initial) {
       this.x = rand(0, W);
       this.y = initial ? rand(0, H) : H + rand(10, 60);
@@ -45,20 +74,16 @@
       this.waveFreq = rand(0.0004, 0.0012);
       this.waveOffset = rand(0, Math.PI * 2);
 
-      /* Alpha breathing */
-      this.alpha = rand(0.05, 0.5);
-      this.alphaSpeed = rand(0.002, 0.008) * (Math.random() < 0.5 ? 1 : -1);
-      this.alphaMin = rand(0.02, 0.12);
-      this.alphaMax = this.isBig ? rand(0.45, 0.75) : rand(0.25, 0.6);
-
       /* Glow radius (shadow blur) */
       this.glowSize = this.isBig ? rand(14, 28) : rand(4, 12);
 
-      this.color = pick(COLORS);
+      const isLight = document.documentElement.classList.contains('theme-light');
+      this.resetColor(isLight);
 
       /* Some embers twinkle rapidly */
       this.twinkle = Math.random() < 0.15;
       this.twinkleSpeed = rand(0.003, 0.007);
+      this.alphaSpeed = rand(0.002, 0.008) * (Math.random() < 0.5 ? 1 : -1);
 
       /* Lifespan — embers fade out near top */
       this.life = 1.0;
@@ -69,6 +94,12 @@
       const wave = Math.sin(Date.now() * this.waveFreq + this.waveOffset) * this.waveAmp;
       this.x += this.vx + wave;
       this.y += this.vy;
+
+      /* Dynamic theme switch response */
+      const isLight = document.documentElement.classList.contains('theme-light');
+      if (this.isLightThemeColor !== isLight) {
+        this.resetColor(isLight);
+      }
 
       /* Alpha breathing */
       if (this.twinkle) {

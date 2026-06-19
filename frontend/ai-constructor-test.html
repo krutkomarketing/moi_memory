@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.add('theme-light');
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
@@ -17,775 +25,12 @@
   <link rel="stylesheet" href="styles/person.css?v=15" />
   <link rel="stylesheet" href="styles/blocks.css?v=14" />
   <link rel="stylesheet" href="styles/gallery.css?v=14" />
+  <link rel="stylesheet" href="styles/ai-constructor.css?v=26" />
 
   <!-- GSAP Core для анимаций переходов -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
   <style>
-    /* ═══════════════════════════════════════════════
-       ГИБРИДНЫЙ ДИЗАЙН:
-       — контент страницы: мемориальная эстетика (родные классы person.css / blocks.css)
-       — ИИ-панель: сдержанный технологичный стиль (Inter, минимум украшений)
-       ═══════════════════════════════════════════════ */
-
-    /* ── Фото в шапке: родная рамка person.css + заполнение картинкой ── */
-    .person-header__photo {
-      overflow: hidden;
-    }
-    .person-header__photo img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      border-radius: 4px;
-    }
-
-    /* ═══════════ ИИ-ПАНЕЛЬ УПРАВЛЕНИЯ ═══════════ */
-    .ai-control-panel {
-      position: relative;
-      background: #0c0b0a;
-      border: 2px solid rgba(200, 168, 75, 0.45);
-      border-radius: 12px;
-      padding: 28px;
-      margin: 20px auto 56px;
-      max-width: 1000px;
-      width: 100%;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-      font-family: var(--font-ui);
-      opacity: 0;
-      height: 0;
-      overflow: hidden;
-      display: none;
-      transform: translateY(-20px);
-      transition: border-color 300ms ease-out, box-shadow 300ms ease-out, transform 350ms cubic-bezier(0.23, 1, 0.32, 1);
-      z-index: 99;
-    }
-
-    .ai-control-panel:hover {
-      transform: translateY(-8px) !important;
-      border-color: rgba(226, 201, 126, 0.75);
-      box-shadow: 0 38px 80px rgba(0, 0, 0, 0.95), 0 0 60px rgba(200, 168, 75, 0.15);
-    }
-
-    .ai-control-header {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      margin-bottom: 22px;
-    }
-
-    .ai-status-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: #10b981;
-      margin-top: 5px;
-      flex-shrink: 0;
-      animation: dotPulse 2.6s infinite;
-    }
-
-    @keyframes dotPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
-      70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    .ai-title {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--cream);
-      margin-bottom: 6px;
-    }
-
-    .ai-subtitle {
-      font-size: 13px;
-      font-weight: 300;
-      color: var(--cream-dim);
-      line-height: 1.55;
-    }
-
-    /* ── Зона диктовки ── */
-    .dictation-wrapper {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 8px;
-      padding: 18px;
-      margin-bottom: 18px;
-    }
-
-    .dictation-controls {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .mic-button-container {
-      position: relative;
-      width: 80px;
-      height: 80px;
-    }
-
-    .mic-button {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      border: 1.5px solid rgba(200, 168, 75, 0.4);
-      background: radial-gradient(circle at center, rgba(200, 168, 75, 0.18) 0%, rgba(20, 18, 16, 0.95) 100%);
-      color: var(--gold-light);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      z-index: 2;
-      transition: transform 0.2s, background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s;
-      outline: none;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 6px rgba(0, 0, 0, 0.6), 0 6px 18px rgba(0, 0, 0, 0.6);
-    }
-
-    .mic-button:hover {
-      border-color: rgba(200, 168, 75, 0.6);
-      color: var(--gold-light);
-    }
-
-    .mic-button.is-recording {
-      background: rgba(239, 68, 68, 0.14);
-      border-color: #ef4444;
-      color: #ef4444;
-    }
-
-    .mic-pulse-ring {
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      border: 2px solid #ef4444;
-      opacity: 0;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .mic-button.is-recording + .mic-pulse-ring {
-      animation: pulseRing 1.5s infinite;
-    }
-
-    @keyframes pulseRing {
-      0%   { transform: scale(1);   opacity: 1; }
-      100% { transform: scale(1.4); opacity: 0; }
-    }
-
-    .mic-status-container {
-      flex: 1;
-      min-width: 200px;
-    }
-
-    .status-text {
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--cream-dim);
-      margin-bottom: 4px;
-      letter-spacing: 0.01em;
-    }
-
-    .status-text.recording {
-      color: #ef4444;
-      font-weight: 500;
-    }
-
-    .waves-container {
-      display: none;
-      align-items: center;
-      gap: 3px;
-      height: 18px;
-      margin-top: 6px;
-    }
-
-    .dictation-controls.is-recording .waves-container {
-      display: flex;
-    }
-
-    .wave-bar {
-      width: 2px;
-      height: 5px;
-      background: #ef4444;
-      border-radius: 2px;
-      animation: waveBounce 1.2s infinite ease-in-out;
-    }
-
-    .wave-bar:nth-child(1) { animation-delay: 0.1s; }
-    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
-    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
-    .wave-bar:nth-child(4) { animation-delay: 0.4s; }
-    .wave-bar:nth-child(5) { animation-delay: 0.5s; }
-
-    @keyframes waveBounce {
-      0%, 100% { height: 5px; }
-      50%      { height: 18px; }
-    }
-
-    /* Текст рассказа — это контент, поэтому серифы */
-    .transcript-box {
-      width: 100%;
-      min-height: 110px;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 6px;
-      padding: 12px 16px;
-      color: var(--cream);
-      font-family: var(--font-body);
-      font-size: 15px;
-      line-height: 1.65;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .transcript-box:focus {
-      border-color: rgba(200, 168, 75, 0.5);
-    }
-
-    .transcript-box::placeholder {
-      color: rgba(245, 239, 224, 0.35);
-      font-style: italic;
-    }
-
-    /* ── Настройки и действия ── */
-    .settings-row {
-      display: flex;
-      gap: 14px 28px;
-      flex-wrap: wrap;
-      align-items: center;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      padding-top: 18px;
-    }
-
-    .ai-switches {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1 1 320px;
-    }
-
-    .ai-switch {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .ai-switch input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .ai-switch__track {
-      position: relative;
-      width: 34px;
-      height: 18px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-      transition: background 0.25s;
-      flex-shrink: 0;
-    }
-
-    .ai-switch__track::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--cream);
-      transition: transform 0.25s;
-    }
-
-    .ai-switch input:checked + .ai-switch__track {
-      background: var(--gold);
-    }
-
-    .ai-switch input:checked + .ai-switch__track::after {
-      transform: translateX(16px);
-      background: #141210;
-    }
-
-    .ai-switch__label {
-      font-size: 12px;
-      font-weight: 300;
-      color: var(--cream-dim);
-      letter-spacing: 0.02em;
-    }
-
-    .action-buttons {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-      margin-left: auto;
-    }
-
-    .btn-ai {
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.04em;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      border: none;
-      transition: all 0.25s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn-ai:active {
-      transform: scale(0.97);
-    }
-
-    .btn-ai:disabled {
-      opacity: 0.55;
-      cursor: default;
-    }
-
-    .btn-ai-primary {
-      background: var(--gold);
-      color: #141210;
-    }
-
-    .btn-ai-primary:hover:not(:disabled) {
-      background: var(--gold-light);
-    }
-
-    .btn-ai-secondary {
-      background: rgba(200, 168, 75, 0.05);
-      border: 1px solid rgba(200, 168, 75, 0.35);
-      color: var(--gold-light);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .btn-ai-secondary:hover {
-      border-color: rgba(226, 201, 126, 0.7);
-      color: var(--white);
-      background: rgba(200, 168, 75, 0.12);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 15px rgba(200, 168, 75, 0.25);
-      transform: translateY(-2px);
-    }
-
-    /* ── Лог команд ── */
-    .ai-log-wrapper {
-      margin-top: 18px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 6px;
-      padding: 12px 14px;
-      display: none;
-    }
-
-    .ai-log-title {
-      font-size: 10px;
-      color: var(--cream-dim);
-      font-weight: 600;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-    }
-
-    .ai-log-list {
-      font-family: monospace;
-      font-size: 12px;
-      list-style-type: none;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      color: var(--cream-dim);
-    }
-
-    .ai-log-item {
-      display: flex;
-      gap: 8px;
-    }
-
-    .log-action.add    { color: #60a5fa; }
-    .log-action.update { color: #fbbf24; }
-    .log-action.delete { color: #f87171; }
-
-    /* ── Точечная подгонка ── */
-    .refinement-container {
-      margin-top: 18px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      padding-top: 16px;
-    }
-
-    .refinement-title {
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--cream-dim);
-      margin-bottom: 12px;
-    }
-
-    .refinement-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .refinement-chunk {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 6px;
-      padding: 10px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .refinement-chunk-text {
-      font-family: var(--font-body);
-      font-size: 14px;
-      color: var(--cream);
-      font-style: italic;
-      line-height: 1.55;
-    }
-
-    .refinement-actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .refinement-btn {
-      font-family: var(--font-ui);
-      font-size: 11px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: transparent;
-      color: var(--cream-dim);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .refinement-btn:hover:not(:disabled) {
-      border-color: var(--gold);
-      color: var(--gold-light);
-    }
-
-    /* ═══════════ РЕЖИМ РЕДАКТИРОВАНИЯ НА БЛОКАХ ═══════════ */
-    .bio-block-key {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      font-family: monospace;
-      font-size: 10px;
-      color: var(--gold-dim);
-      background: rgba(0, 0, 0, 0.6);
-      padding: 2px 7px;
-      border-radius: 3px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-      z-index: 5;
-    }
-
-    .bio-block.is-editing-mode .bio-block-key {
-      opacity: 1;
-    }
-
-    .bio-block {
-      transition: border-color 0.4s, background-color 0.4s;
-    }
-
-    .bio-block.is-editing-mode {
-      border: 1px dashed rgba(200, 168, 75, 0.3);
-      border-radius: 8px;
-      background-color: rgba(255, 255, 255, 0.01);
-      position: relative;
-      padding: 20px;
-    }
-
-    .delete-block-btn {
-      margin-top: 14px;
-      background: transparent;
-      border: none;
-      color: rgba(255, 120, 120, 0.85);
-      font-family: var(--font-ui);
-      font-size: 11px;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.3s;
-      display: none;
-      text-align: left;
-      padding: 0;
-    }
-
-    .bio-block.is-editing-mode .delete-block-btn {
-      display: inline-block;
-    }
-
-    .bio-block.is-editing-mode:hover .delete-block-btn {
-      opacity: 0.8;
-    }
-
-    .delete-block-btn:hover {
-      opacity: 1 !important;
-      text-decoration: underline;
-    }
-
-    /* ── Спиннер отрисовки иллюстрации ── */
-    .ai-spinner {
-      width: 22px;
-      height: 22px;
-      border: 2px solid rgba(200, 168, 75, 0.2);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* ── Плейсхолдер иллюстрации (мемориальный) ──
-       Генерация доступна только в режиме редактирования:
-       вне его — нейтральная заглушка без подсказки и курсора */
-    .bio-block__photo-placeholder {
-      cursor: default;
-      background: rgba(200, 168, 75, 0.03);
-      transition: background 0.3s;
-    }
-
-    .bio-block__photo-hint {
-      display: none;
-    }
-
-    .bio-block.is-editing-mode .bio-block__photo-hint {
-      display: block;
-    }
-
-    .bio-block.is-editing-mode .bio-block__photo-placeholder:hover {
-      background: rgba(200, 168, 75, 0.06);
-    }
-
-    /* Кнопки действий с фото — видны только в режиме редактирования */
-    .photo-actions {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-      margin-top: 4px;
-    }
-
-    .bio-block.is-editing-mode .photo-actions {
-      display: flex;
-    }
-
-    .photo-action-btn {
-      font-family: var(--font-ui);
-      font-size: 12px;
-      letter-spacing: 0.03em;
-      padding: 6px 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(200, 168, 75, 0.35);
-      background: rgba(0, 0, 0, 0.35);
-      color: var(--gold-light);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .photo-action-btn:hover {
-      background: rgba(200, 168, 75, 0.12);
-      border-color: var(--gold);
-    }
-
-    /* ── Тост оповещений ── */
-    .notification-toast {
-      background: var(--gold-dim);
-      border: 1px solid var(--gold);
-      color: var(--cream);
-      font-family: var(--font-body);
-      font-size: 14px;
-      font-style: italic;
-      z-index: 2000;
-    }
-
-    /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
-    /* ── СТИЛИ ДЛЯ ИНЛАЙН-РЕДАКТИРОВАНИЯ И ИИ-ПОМОЩНИКОВ ── */
-    .bio-block-text[contenteditable="true"] {
-      outline: none;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin: 10px 0 0 0;
-      transition: all 0.25s;
-    }
-
-    .bio-block.is-editing-mode .bio-block-text[contenteditable="true"] {
-      border: 1px dashed rgba(200, 168, 75, 0.35);
-      background: rgba(20, 18, 16, 0.45);
-      min-height: 150px;
-      display: block;
-    }
-
-    .bio-block.is-editing-mode .bio-block-text[contenteditable="true"]:focus {
-      border: 1px solid var(--gold);
-      background: rgba(200, 168, 75, 0.06);
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(200, 168, 75, 0.05);
-    }
-
-    .bio-block__title[contenteditable="true"] {
-      outline: none;
-      border-bottom: 1px dashed transparent;
-      transition: border-bottom-color 0.2s;
-    }
-
-    .bio-block.is-editing-mode .bio-block__title[contenteditable="true"] {
-      border-bottom: 1px dashed rgba(200, 168, 75, 0.35);
-    }
-
-    .bio-block.is-editing-mode .bio-block__title[contenteditable="true"]:focus {
-      border-bottom-color: var(--gold);
-    }
-
-    /* AI действия на уровне блока */
-    .ai-block-helper {
-      display: none;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 12px;
-      opacity: 0;
-      transform: translateY(4px);
-      animation: helperFadeIn 0.3s forwards;
-    }
-
-    .bio-block.is-editing-mode .ai-block-helper {
-      display: flex;
-    }
-
-    @keyframes helperFadeIn {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .ai-helper-btn {
-      font-family: var(--font-ui);
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      padding: 4px 10px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      color: var(--cream-dim);
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .ai-helper-btn:hover {
-      border-color: rgba(200, 168, 75, 0.45);
-      color: var(--gold-light);
-      background: rgba(200, 168, 75, 0.06);
-    }
-
-    .ai-helper-btn.loading {
-      opacity: 0.6;
-      cursor: wait;
-    }
-
-    .bio-block-text-loading {
-      opacity: 0.35;
-      pointer-events: none;
-    }
-
-    .bio-block__photo {
-      position: relative;
-    }
-    
-    .bio-block__photo-img-wrap {
-      width: 100%;
-      height: 100%;
-      display: none;
-    }
-    
-    .bio-block__photo-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    
-    .bio-block__photo.has-image .bio-block__photo-img-wrap {
-      display: block;
-    }
-    
-    .bio-block__photo.has-image .bio-block__photo-placeholder {
-      display: none;
-    }
-
-    /* Оверлей управления фото в режиме редактирования */
-    .photo-actions-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(12, 11, 10, 0.75);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-      z-index: 5;
-    }
-
-    /* В режиме редактирования оверлей появляется при ховере на фото */
-    .bio-block.is-editing-mode .bio-block__photo:hover .photo-actions-overlay {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Если фото пустое (плейсхолдер), оверлей виден сразу */
-    .bio-block.is-editing-mode .bio-block__photo-placeholder .photo-actions-overlay {
-      opacity: 1;
-      pointer-events: auto;
-      background: transparent;
-      position: static;
-    }
-
-    /* Спиннер загрузки для контейнера фото */
-    .bio-block__photo.is-loading .bio-block__photo-img-wrap,
-    .bio-block__photo.is-loading .bio-block__photo-placeholder,
-    .bio-block__photo.is-loading .photo-actions-overlay {
-      display: none !important;
-    }
-    
-    .bio-block__photo.is-loading {
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      background: rgba(12, 11, 10, 0.8) !important;
-    }
-    
-    .bio-block__photo.is-loading::after {
-      content: '';
-      width: 28px;
-      height: 28px;
-      border: 2px solid rgba(200, 168, 75, 0.2);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-
     /* ── СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА ── */
     .modal-overlay {
       position: fixed;
@@ -1370,6 +615,24 @@
   </style>
 </head>
 <body>
+
+  <!-- Переключатель тем (светлая/темная) -->
+  <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему" aria-label="Переключить тему">
+    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </button>
 
   <!-- Навигационная панель с оригинального сайта -->
   <nav class="nav">
@@ -2836,6 +2099,38 @@
         if (e.target === onboardingModal) closeOnboardingModal();
       });
     }
+
+    // Инициализация и обработка переключения тем
+    (function initThemeToggle() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const darkIcon = themeToggle?.querySelector('.theme-icon-dark');
+      const lightIcon = themeToggle?.querySelector('.theme-icon-light');
+
+      function applyTheme(theme) {
+        if (theme === 'light') {
+          document.documentElement.classList.add('theme-light');
+          document.body?.classList.add('theme-light');
+          if (darkIcon) darkIcon.style.display = 'none';
+          if (lightIcon) lightIcon.style.display = 'block';
+        } else {
+          document.documentElement.classList.remove('theme-light');
+          document.body?.classList.remove('theme-light');
+          if (darkIcon) darkIcon.style.display = 'block';
+          if (lightIcon) lightIcon.style.display = 'none';
+        }
+      }
+
+      // Загрузка сохранённого значения
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      applyTheme(savedTheme);
+
+      themeToggle?.addEventListener('click', () => {
+        const currentTheme = document.documentElement.classList.contains('theme-light') ? 'light' : 'dark';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+      });
+    })();
 
     // Принудительно показываем инструкцию при загрузке страницы
     document.addEventListener('DOMContentLoaded', () => {

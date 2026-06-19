@@ -1,6 +1,5 @@
 FROM node:24-slim
 
-ENV PRISMA_ENGINES_MIRROR=https://npmmirror.com/mirrors/prisma
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \

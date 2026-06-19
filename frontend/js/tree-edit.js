@@ -444,7 +444,7 @@
   }
 
   /* ── BARYCENTRIC LAYOUT SORTING ── */
-  function sortDynamicGenerations(gens) {
+  function sortDynamicGenerations(gens, manualGens) {
     const sortedGenIndices = Object.keys(gens).map(Number).sort((a,b) => a-b);
     if (sortedGenIndices.length === 0) return;
 
@@ -594,6 +594,8 @@
       // Bottom-up pass
       for (let i = 1; i < sortedGenIndices.length; i++) {
         const g = sortedGenIndices[i];
+        if (manualGens && manualGens.has(g)) continue;
+
         const prevG = sortedGenIndices[i - 1];
         const prevPeople = gens[prevG] || [];
         const prevPeopleIndices = {};
@@ -622,6 +624,8 @@
       // Top-down pass
       for (let i = sortedGenIndices.length - 2; i >= 0; i--) {
         const g = sortedGenIndices[i];
+        if (manualGens && manualGens.has(g)) continue;
+
         const nextG = sortedGenIndices[i + 1];
         const nextPeople = gens[nextG] || [];
         const nextPeopleIndices = {};
@@ -649,7 +653,7 @@
     }
 
     const oldestGen = sortedGenIndices[0];
-    if (oldestGen !== undefined) {
+    if (oldestGen !== undefined && !(manualGens && manualGens.has(oldestGen))) {
       const gen0Units = getGenerationUnitsLocal(gens[oldestGen] || []);
       gen0Units.sort((a, b) => getUnitClanWeight(a) - getUnitClanWeight(b));
       const flat0 = [];
@@ -962,13 +966,16 @@
 
         <div class="ctm-photo-wrap">
           <div class="ctm-photo-preview" id="ctm-photo-preview">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
-              <circle cx="12" cy="7" r="4" fill="currentColor"/>
-              <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="currentColor"/>
-            </svg>
+            <div class="ctm-photo-placeholder-icon" style="transition: opacity 0.4s ease-out; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+                <circle cx="12" cy="7" r="4" fill="currentColor"/>
+                <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" fill="currentColor"/>
+              </svg>
+            </div>
+            <img class="ctm-photo-img" src="" style="display:none;opacity:0;width:100%;height:100%;object-fit:cover;border-radius:50%;transition:opacity 0.4s ease-out;position:absolute;top:0;left:0;">
           </div>
           <label class="ctm-photo-label" for="ctm-photo-input">
-            📷 Прикрепить фото
+            <span class="ctm-photo-text">📷 Прикрепить фото</span>
             <input type="file" id="ctm-photo-input" accept="image/*" style="display:none">
           </label>
         </div>
@@ -1041,20 +1048,78 @@
 
     document.body.appendChild(modal);
 
-    /* Фото превью */
+    /* Фото превью и фоновая загрузка */
     const photoInput   = modal.querySelector('#ctm-photo-input');
     const photoPreview = modal.querySelector('#ctm-photo-preview');
-    photoInput.addEventListener('change', () => {
+    const photoText    = modal.querySelector('.ctm-photo-text');
+    let uploadedPhotoUrl = '';
+
+    photoInput.addEventListener('change', async () => {
       const file = photoInput.files[0];
       if (!file) return;
+
+      // 1. Показываем локальное превью для быстрого отклика
       const reader = new FileReader();
       reader.onload = ev => {
-        photoPreview.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        const img = photoPreview.querySelector('.ctm-photo-img');
+        const placeholder = photoPreview.querySelector('.ctm-photo-placeholder-icon');
+        if (img && placeholder) {
+          img.src = ev.target.result;
+          img.style.display = 'block';
+          img.offsetHeight;
+          img.style.opacity = '0.5'; // полупрозрачный во время загрузки
+          placeholder.style.opacity = '0';
+          setTimeout(() => {
+            placeholder.style.display = 'none';
+          }, 400);
+        }
       };
       reader.readAsDataURL(file);
+
+      // 2. Фоновая отправка на сервер
+      if (photoText) photoText.textContent = '⏳ Загрузка...';
+      const fd = new FormData();
+      fd.append('photo', file);
+
+      try {
+        const r = await fetch(`${BASE}/api/upload-photo`, { method: 'POST', body: fd });
+        const j = await r.json();
+        if (j.ok) {
+          uploadedPhotoUrl = j.url;
+          const img = photoPreview.querySelector('.ctm-photo-img');
+          if (img) img.style.opacity = '1';
+          if (photoText) photoText.textContent = '✅ Фото загружено';
+        } else {
+          alert('Ошибка при загрузке фото: ' + (j.error || 'неизвестная ошибка'));
+          resetPhotoPreview();
+        }
+      } catch (err) {
+        alert('Ошибка соединения при загрузке фото');
+        resetPhotoPreview();
+      }
     });
 
-    const close = () => modal.remove();
+    function resetPhotoPreview() {
+      uploadedPhotoUrl = '';
+      if (photoText) photoText.textContent = '📷 Прикрепить фото';
+      const img = photoPreview.querySelector('.ctm-photo-img');
+      const placeholder = photoPreview.querySelector('.ctm-photo-placeholder-icon');
+      if (img && placeholder) {
+        img.src = '';
+        img.style.display = 'none';
+        img.style.opacity = '0';
+        placeholder.style.display = 'flex';
+        placeholder.style.opacity = '1';
+      }
+      photoInput.value = '';
+    }
+
+    const close = () => {
+      modal.classList.remove('ctm-visible');
+      setTimeout(() => {
+        modal.remove();
+      }, 450);
+    };
     modal.querySelector('.ctm-close').addEventListener('click', close);
     modal.querySelector('.ctm-backdrop').addEventListener('click', close);
     document.addEventListener('keydown', function esc(e) {
@@ -1068,12 +1133,18 @@
       const fd = new FormData(e.target);
       const firstName = fd.get('firstName')?.trim();
       const lastName  = fd.get('lastName')?.trim();
-      if (!firstName || !lastName) return;
+      if (!firstName || !lastName) {
+        alert('Пожалуйста, укажите обязательные поля: Имя и Фамилия');
+        return;
+      }
 
       const treeName = fd.get('treeName')?.trim() || `Род ${lastName}`;
-      const treeId   = treeName.toLowerCase()
-        .replace(/[^a-zа-яё0-9]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
-        || 'tree-' + Date.now();
+      
+      // Make tree ID unique by appending a random suffix to avoid 409 conflict
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const treeIdBase = treeName.toLowerCase()
+        .replace(/[^a-zа-яё0-9]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 25);
+      const treeId = (treeIdBase || 'tree') + '-' + randomSuffix;
 
       const years = fd.get('birthYear')
         ? `${fd.get('birthYear')}–${fd.get('deathYear') || ''}`
@@ -1087,18 +1158,39 @@
       const fullName = `${lastName} ${firstName}${fd.get('middleName') ? ' ' + fd.get('middleName').trim() : ''}`;
 
       const nodeData = {
-        fullName, years, generation: 0, ageClass: 'old', treeId,
+        firstName,
+        lastName,
+        birth: fd.get('birthYear') || '',
+        death: fd.get('deathYear') || '',
+        fullName,
+        years,
+        generation: 0,
+        ageClass: 'old',
+        treeId,
         description: roleLabels[fd.get('role')] || '',
-        photoUrl: photoPreview.querySelector('img')?.src || '',
+        photoUrl: uploadedPhotoUrl,
+        gender: fd.get('gender') || 'male',
       };
+
+      const submitBtn = modal.querySelector('.ctm-submit');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Создание...';
+      }
+
+      let serverSuccess = false;
 
       /* 1. Создаём дерево на сервере */
       try {
-        await fetch(`${BASE}/api/family-trees`, {
+        const treeRes = await fetch(`${BASE}/api/family-trees`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: treeId, name: treeName })
         });
+        const treeJson = await treeRes.json();
+        if (!treeJson.ok) {
+          throw new Error(treeJson.error || 'Ошибка при создании дерева');
+        }
 
         /* 2. Создаём первый узел на сервере */
         const nodeRes = await fetch(`${BASE}/api/family-nodes`, {
@@ -1107,28 +1199,33 @@
           body: JSON.stringify(nodeData)
         });
         const nodeJson = await nodeRes.json();
-        if (nodeJson.ok && nodeJson.data) {
-          /* Сервер вернул узел — сохраняем в localStorage для немедленного отображения */
-          localStorage.setItem(`tree_nodes_${treeId}`, JSON.stringify([nodeJson.data]));
-        } else {
-          /* Если узел не создался на сервере — сохраняем локально */
-          const localNode = { ...nodeData, id: 'local-' + Date.now(), photo_url: nodeData.photoUrl };
-          localStorage.setItem(`tree_nodes_${treeId}`, JSON.stringify([localNode]));
+        if (!nodeJson.ok) {
+          throw new Error(nodeJson.error || 'Ошибка при создании первого узла');
         }
-      } catch (_) {
-        /* Сервер недоступен — fallback на localStorage */
-        const localNode = { ...nodeData, id: 'local-' + Date.now(), photo_url: nodeData.photoUrl };
-        localStorage.setItem(`tree_nodes_${treeId}`, JSON.stringify([localNode]));
+
+        /* Сервер вернул узел — сохраняем в localStorage для немедленного отображения */
+        localStorage.setItem(`tree_nodes_${treeId}`, JSON.stringify([nodeJson.data]));
+        serverSuccess = true;
+      } catch (err) {
+        console.error('Failed to create tree/node on server:', err);
+        alert('Не удалось создать дерево на сервере: ' + err.message);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🌳 Создать древо и перейти';
+        }
+        return; // Stop execution, don't redirect to empty page
       }
 
-      const trees = getAllTrees();
-      if (!trees.includes(treeId)) { trees.push(treeId); saveAllTrees(trees); }
+      if (serverSuccess) {
+        const trees = getAllTrees();
+        if (!trees.includes(treeId)) { trees.push(treeId); saveAllTrees(trees); }
 
-      /* Обновляем легенду линий с новым названием рода */
-      updateLegendWithNewTree(treeName, fd.get('gender') === 'female' ? '#c87e7e' : '#c8a84b');
+        /* Обновляем легенду линий с новым названием рода */
+        updateLegendWithNewTree(treeName, fd.get('gender') === 'female' ? '#c87e7e' : '#c8a84b');
 
-      close();
-      transitionToNewTree(treeId);
+        close();
+        transitionToNewTree(treeId);
+      }
     });
   }
 
@@ -1259,8 +1356,38 @@
       const errEl      = document.getElementById('tbr-error');
       if (!branchName) return;
 
+      const parts = (personName || branchName).split(/\s+/).filter(Boolean);
+      const firstName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
+      const lastName = parts.length > 1 ? parts[0] : '';
+
+      let birth = '';
+      let death = '';
+      if (years) {
+        const yParts = years.split(/[\-\–\—\s]+/).map(x => x.trim()).filter(Boolean);
+        if (yParts.length === 1) {
+          if (years.includes('-') || years.includes('–') || years.includes('—')) {
+            if (years.trim().startsWith('-') || years.trim().startsWith('–') || years.trim().startsWith('—')) {
+              death = yParts[0];
+            } else {
+              birth = yParts[0];
+            }
+          } else {
+            birth = yParts[0];
+          }
+        } else if (yParts.length >= 2) {
+          birth = yParts[0];
+          death = yParts[1];
+        }
+      }
+
       const nodeData = {
-        treeId: currentTreeId, fullName: personName || branchName, years,
+        treeId: currentTreeId,
+        firstName,
+        lastName,
+        birth,
+        death,
+        fullName: personName || branchName,
+        years,
         description: `Ветвь: ${branchName}`, generation: gen, genOrder: 99,
         ageClass: gen <= 1 ? 'old' : 'young', isBranchRoot: true, branchName,
       };
@@ -1644,9 +1771,39 @@
 
   async function saveNodeUpdates(node) {
     const isLocal = node.id && node.id.toString().startsWith('local-');
+    const name = node.full_name || node.fullName || '';
+    const parts = name.split(/\s+/).filter(Boolean);
+    const firstName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
+    const lastName = parts.length > 1 ? parts[0] : '';
+
+    const yearsInput = node.years || '';
+    let birth = '';
+    let death = '';
+    if (yearsInput) {
+      const yParts = yearsInput.split(/[\-\–\—\s]+/).map(x => x.trim()).filter(Boolean);
+      if (yParts.length === 1) {
+        if (yearsInput.includes('-') || yearsInput.includes('–') || yearsInput.includes('—')) {
+          if (yearsInput.trim().startsWith('-') || yearsInput.trim().startsWith('–') || yearsInput.trim().startsWith('—')) {
+            death = yParts[0];
+          } else {
+            birth = yParts[0];
+          }
+        } else {
+          birth = yParts[0];
+        }
+      } else if (yParts.length >= 2) {
+        birth = yParts[0];
+        death = yParts[1];
+      }
+    }
+
     const data = {
-      fullName: node.full_name || node.fullName || '',
-      years: node.years || '',
+      firstName,
+      lastName,
+      birth,
+      death,
+      fullName: name,
+      years: yearsInput,
       clanId: node.clan_id || node.clanId || '',
       ageClass: node.age_class || node.ageClass || 'young',
       generation: node.generation ?? 3,
@@ -1654,7 +1811,9 @@
       parentIds: node.parent_ids || node.parentIds || [],
       linkedProfileId: node.linked_profile_id || node.linkedProfileId || null,
       photoUrl: node.photo_url || node.photoUrl || '',
-      description: node.description || ''
+      description: node.description || '',
+      posX: typeof node.posX === 'number' ? node.posX : (node.posX ?? node.pos_x ?? null),
+      posY: typeof node.posY === 'number' ? node.posY : (node.posY ?? node.pos_y ?? null)
     };
 
     const arr = getLocalNodes();
@@ -2028,7 +2187,7 @@
       try {
         const r = await fetch(`${BASE}/api/family-clans`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, color: document.getElementById('tcm-color').value, icon: document.getElementById('tcm-icon').value || '✦', description: document.getElementById('tcm-desc').value.trim(), treeId: currentTreeId }) });
         const j = await r.json();
-        if (j.ok) { syncTimelineAndStats(); reloadTreeInPlace(); } else alert(j.error || 'Ошибка');
+        if (j.ok) { close(); syncTimelineAndStats(); reloadTreeInPlace(); } else alert(j.error || 'Ошибка');
       } catch (_) { alert('Сервер недоступен'); }
     });
     document.getElementById('tcm-icon-picker')?.addEventListener('click', e => {
@@ -2061,11 +2220,17 @@
     const svg = document.getElementById('tree-threads') || container.querySelector('.tree-dynamic-svg');
     if (svg) svg.innerHTML = '';
 
+    const isCustomTree = currentTreeId && currentTreeId !== 'default';
+    const btnText = isCustomTree ? '➕ Добавить первую карточку' : '🌳 Создать семейное древо';
+    const subtitleText = isCustomTree
+      ? 'Древо пока пустое. Добавьте первую карточку (прародителя рода), чтобы начать родословную.'
+      : 'Оживите историю вашей семьи: добавляйте поколения, указывайте годы жизни и плетите цветные нити родов.';
+
     container.innerHTML = `
       <div class="tree-empty-schematic">
         <div class="schematic-header">
           <h2 class="schematic-title">Создайте своё семейное древо</h2>
-          <p class="schematic-subtitle">Оживите историю вашей семьи: добавляйте поколения, указывайте годы жизни и плетите цветные нити родов.</p>
+          <p class="schematic-subtitle">${subtitleText}</p>
         </div>
 
         <div class="schematic-grid">
@@ -2117,7 +2282,7 @@
             Постройте интерактивную летопись вашего рода. Первая карточка станет началом семейного древа.
           </p>
           <button class="schematic-cta-btn" id="schematic-create-btn">
-            🌳 Создать семейное древо
+            ${btnText}
           </button>
         </div>
       </div>
@@ -2126,11 +2291,14 @@
     const ctaBtn = container.querySelector('#schematic-create-btn');
     if (ctaBtn) {
       ctaBtn.addEventListener('click', () => {
-        if (typeof openCreateTreeModal === 'function') {
-          openCreateTreeModal();
+        if (isCustomTree) {
+          openNodeModal(null, 'stub', 3);
         } else {
-          const editBtn = document.getElementById('tree-edit-btn');
-          if (editBtn) editBtn.click();
+          if (typeof openCreateTreeModal === 'function') {
+            openCreateTreeModal();
+          } else {
+            enterEditMode();
+          }
         }
       });
     }
@@ -2179,7 +2347,36 @@
     if (editBtn) editBtn.style.display = '';
     const gens = {};
     allNodes.forEach(n => { const g = n.generation || 0; if (!gens[g]) gens[g] = []; gens[g].push(n); });
-    sortDynamicGenerations(gens);
+
+    const manualGens = new Set();
+    Object.keys(gens).forEach(g => {
+      const list = gens[g];
+      if (list.some(n => typeof n.posX === 'number' && n.posX !== null)) {
+        manualGens.add(Number(g));
+      }
+    });
+
+    // Pre-sort manual generations by posX so they stay in order before any algorithm steps
+    manualGens.forEach(g => {
+      gens[g].sort((a, b) => {
+        const ax = typeof a.posX === 'number' ? a.posX : 999999;
+        const bx = typeof b.posX === 'number' ? b.posX : 999999;
+        return ax - bx;
+      });
+    });
+
+    sortDynamicGenerations(gens, manualGens);
+
+    // Save fallback positions for auto-sorted generations so they persist on next load or drag
+    Object.keys(gens).forEach(g => {
+      const genNum = Number(g);
+      if (!manualGens.has(genNum)) {
+        gens[g].forEach((n, idx) => {
+          n.posX = idx * 100;
+          saveNodeUpdates(n).catch(() => {});
+        });
+      }
+    });
     const GEN_LABELS = ['Прапрародители','Прародители','Родители','Наше поколение','Дети','Внуки'];
     let sorted = Object.keys(gens).map(Number).sort((a,b) => a-b);
 
@@ -2204,6 +2401,8 @@
 
       // В обычном режиме пропускаем пустые поколения
       if (!isEditMode && !people.length) return;
+
+      html += `<div class="tree-generation-wrap" data-gen="${g}">`;
 
       if (isEditMode) {
         html += `<div class="gen-label gen-label--editable" data-gen="${g}"><span class="gen-label__text">${label}</span><button class="gen-label__edit" data-gen="${g}" title="Переименовать">✏️</button></div>`;
@@ -2256,7 +2455,20 @@
             </div>
           </${tagName}>`;
       });
-      if (isEditMode) html += `<button class="tree-gen-card-add" data-gen="${g}">+ Карточка</button>`;
+      if (isEditMode) {
+        html += `
+          <div class="tree-node tree-node--placeholder" data-gen="${g}" title="Добавить человека в это поколение">
+            <div class="tree-node__frame">
+              <div class="tree-node__avatar">
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="tree-node__info">
+              <div class="tree-node__name">Добавить</div>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
       html += `</div>`;
     });
 
@@ -2271,8 +2483,11 @@
 
     /* Обработчики edit-кнопок */
     if (isEditMode) {
-      container.querySelectorAll('.tree-gen-add-btn, .tree-gen-card-add').forEach(b =>
+      container.querySelectorAll('.tree-gen-add-btn').forEach(b =>
         b.addEventListener('click', () => openCardTypeChooser(parseInt(b.dataset.gen, 10)))
+      );
+      container.querySelectorAll('.tree-node--placeholder').forEach(b =>
+        b.addEventListener('click', () => openNodeModal(null, 'stub', parseInt(b.dataset.gen, 10)))
       );
       container.querySelectorAll('.tree-node-ctrl').forEach(b =>
         b.addEventListener('click', e => {
@@ -2804,30 +3019,93 @@
   }
 
   /* Завершение перетаскивания: обмен / разрыв при выносе / возврат на место */
-  function finishNodeDrag(card, rowEl, px, py) {
-    const prevPE = card.style.pointerEvents;
-    card.style.pointerEvents = 'none';
-    const under = (typeof px === 'number') ? document.elementFromPoint(px, py) : null;
-    card.style.pointerEvents = prevPE;
-    const targetNode = under ? under.closest('.tree-node') : null;
-    const sameRowTarget = targetNode && targetNode !== card && rowEl && rowEl.contains(targetNode);
-
-    let pulledOut = false;
-    if (rowEl && typeof py === 'number') {
-      const rr = rowEl.getBoundingClientRect();
-      const M = 46;
-      if (py < rr.top - M || py > rr.bottom + M) pulledOut = true;
+  /* Завершение перетаскивания: горизонтальная перестановка и перемещение по поколениям с сохранением в БД */
+  async function finishNodeDrag(card, rowEl, px, py) {
+    const cardId = card.dataset.id;
+    if (!cardId) {
+      gsap.to(card, { x: 0, y: 0, scale: 1, duration: 0.34, ease: 'power3.out', onUpdate: _treeRedrawThrottled });
+      return;
     }
 
-    if (sameRowTarget) {
-      _swapWithFlip(card, targetNode);            // меняем местами, линии перестраиваются
-    } else if (pulledOut) {
-      const id = card.dataset.id;
-      if (id) detachNodeAllConnections(id);       // вынос из ряда → связи рвутся
-      if (_treePrefersReducedMotion()) gsap.set(card, { scale: 1 });
-      else gsap.to(card, { scale: 1, duration: 0.24, ease: 'power3.out' });
+    const rows = Array.from(document.querySelectorAll('.gen-row'));
+    let closestRow = null;
+    let minDistanceY = Infinity;
+    
+    rows.forEach(r => {
+      const rect = r.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      const distY = Math.abs(py - centerY);
+      if (distY < minDistanceY) {
+        minDistanceY = distY;
+        closestRow = r;
+      }
+    });
+
+    if (closestRow && minDistanceY <= 200) {
+      const targetGen = parseInt(closestRow.dataset.gen, 10);
+      const nodeObj = allNodes.find(n => n.id == cardId);
+      
+      if (!nodeObj) {
+        gsap.to(card, { x: 0, y: 0, scale: 1, duration: 0.34, ease: 'power3.out', onUpdate: _treeRedrawThrottled });
+        return;
+      }
+
+      // Находим индекс вставки по горизонтали
+      const otherCards = Array.from(closestRow.querySelectorAll(`.tree-node:not(.tree-node--dragging):not(.tree-node--placeholder)[data-id]`))
+        .filter(c => c.dataset.id != cardId);
+
+      let insertIndex = 0;
+      for (let i = 0; i < otherCards.length; i++) {
+        const rRect = otherCards[i].getBoundingClientRect();
+        const cardCenterX = rRect.left + rRect.width / 2;
+        if (px > cardCenterX) {
+          insertIndex = i + 1;
+        } else {
+          break;
+        }
+      }
+
+      // Получаем список узлов целевого поколения
+      const targetGenNodes = allNodes.filter(n => n.generation == targetGen && n.id != cardId);
+      targetGenNodes.sort((a, b) => {
+        const ax = typeof a.posX === 'number' ? a.posX : 999999;
+        const bx = typeof b.posX === 'number' ? b.posX : 999999;
+        return ax - bx;
+      });
+
+      // Переставляем
+      nodeObj.generation = targetGen;
+      targetGenNodes.splice(insertIndex, 0, nodeObj);
+
+      const updatePromises = [];
+      targetGenNodes.forEach((n, idx) => {
+        n.posX = idx * 100;
+        updatePromises.push(saveNodeUpdates(n));
+      });
+
+      const originalGen = nodeObj._originalGen !== undefined ? nodeObj._originalGen : nodeObj.generation;
+      if (originalGen !== targetGen) {
+        const sourceGenNodes = allNodes.filter(n => n.generation == originalGen && n.id != cardId);
+        sourceGenNodes.sort((a, b) => {
+          const ax = typeof a.posX === 'number' ? a.posX : 999999;
+          const bx = typeof b.posX === 'number' ? b.posX : 999999;
+          return ax - bx;
+        });
+        sourceGenNodes.forEach((n, idx) => {
+          n.posX = idx * 100;
+          updatePromises.push(saveNodeUpdates(n));
+        });
+      }
+
+      try {
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.error("Error saving positions:", err);
+      }
+
+      reloadTreeInPlace();
     } else {
-      gsap.to(card, { x: 0, y: 0, scale: 1, duration: 0.34, ease: 'power3.out' }); // вернуть «в рамки»
+      gsap.to(card, { x: 0, y: 0, scale: 1, duration: 0.34, ease: 'power3.out', onUpdate: _treeRedrawThrottled });
     }
   }
 
@@ -2836,7 +3114,7 @@
     if (!container || !isEditMode) return;
     if (typeof gsap === 'undefined' || typeof Draggable === 'undefined') return;
 
-    container.querySelectorAll('.tree-node').forEach(nodeEl => {
+    container.querySelectorAll('.tree-node:not(.tree-node--placeholder)').forEach(nodeEl => {
       if (nodeEl._dragBound) return;
       nodeEl._dragBound = true;
       nodeEl.classList.add('tree-node--draggable');
@@ -2847,12 +3125,19 @@
         dragClickables: false,      // не таскать при нажатии на кнопки-контролы
         minimumMovement: 6,
         zIndexBoost: false,
-        onPress: function () { rowEl = nodeEl.closest('.gen-row'); },
+        onPress: function () {
+          rowEl = nodeEl.closest('.gen-row');
+          const nodeObj = allNodes.find(n => n.id == nodeEl.dataset.id);
+          if (nodeObj) {
+            nodeObj._originalGen = nodeObj.generation || 0;
+          }
+        },
         onDragStart: function () {
           _nodeDragJustHappened = true;
           nodeEl.classList.add('tree-node--dragging');
           if (!_treePrefersReducedMotion()) gsap.to(nodeEl, { scale: 1.05, duration: 0.16, ease: 'power2.out' });
         },
+        onDrag: _treeRedrawThrottled,
         onDragEnd: function () {
           nodeEl.classList.remove('tree-node--dragging');
           finishNodeDrag(nodeEl, rowEl, this.pointerX, this.pointerY);
@@ -2877,6 +3162,17 @@
     if (currentTreeId !== 'default') {
       const dc = document.getElementById('tree-dynamic');
       if (dc) renderDynamicTree(dc);
+
+      const ts = document.querySelector('.tree-section');
+      if (ts && !document.getElementById('tree-add-panel')) {
+        const ap = document.createElement('div'); ap.className = 'tree-add-panel'; ap.id = 'tree-add-panel';
+        ap.innerHTML = `<button class="tree-add-btn tree-add-btn--linked" id="tree-add-linked">+ Привязать страницу памяти</button><button class="tree-add-btn" id="tree-add-stub">+ Карточка родственника</button>`;
+        ts.appendChild(ap);
+        document.getElementById('tree-add-stub')?.addEventListener('click', () => openNodeModal(null,'stub'));
+        document.getElementById('tree-add-linked')?.addEventListener('click', () => openNodeModal(null,'linked'));
+      }
+
+      document.addEventListener('click', handleEditClick);
       return;
     }
 
@@ -3012,7 +3308,8 @@
       }
       const j = await r.json();
       if (j.ok) {
-        allNodes = j.data;
+        const localOnly = getLocalNodes().filter(n => String(n.id).startsWith('local-'));
+        allNodes = [...j.data, ...localOnly];
         saveLocalNodes(allNodes);
         return allNodes;
       }
@@ -3160,10 +3457,39 @@
       const err = document.getElementById('tm-error'); err.style.display = 'none';
       const name = document.getElementById('tm-name').value.trim();
       if (!name) { err.textContent = 'Укажите ФИО'; err.style.display = 'block'; return; }
+      const parts = name.split(/\s+/).filter(Boolean);
+      const firstName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
+      const lastName = parts.length > 1 ? parts[0] : '';
+
+      const yearsInput = document.getElementById('tm-years').value.trim();
+      let birth = '';
+      let death = '';
+      if (yearsInput) {
+        const yParts = yearsInput.split(/[\-\–\—\s]+/).map(x => x.trim()).filter(Boolean);
+        if (yParts.length === 1) {
+          if (yearsInput.includes('-') || yearsInput.includes('–') || yearsInput.includes('—')) {
+            if (yearsInput.trim().startsWith('-') || yearsInput.trim().startsWith('–') || yearsInput.trim().startsWith('—')) {
+              death = yParts[0];
+            } else {
+              birth = yParts[0];
+            }
+          } else {
+            birth = yParts[0];
+          }
+        } else if (yParts.length >= 2) {
+          birth = yParts[0];
+          death = yParts[1];
+        }
+      }
+
       const data = {
         treeId: currentTreeId,
+        firstName,
+        lastName,
+        birth,
+        death,
         fullName: name,
-        years:       document.getElementById('tm-years').value.trim(),
+        years:       yearsInput,
         description: document.getElementById('tm-desc').value.trim(),
         clanId:      document.getElementById('tm-clan').value,
         generation:  parseInt(document.getElementById('tm-gen').value, 10),
@@ -3257,7 +3583,22 @@
       item.addEventListener('click', async () => {
         const p = profiles.find(x => x.id === item.dataset.id);
         if (!p) return;
-        const data = { treeId: currentTreeId, fullName: p.name||'', years:(p.born||'')+(p.died?' — '+p.died:''), linkedProfileId: p.id, generation: presetGen??3, ageClass:(presetGen??3)<=1?'old':'young', photoUrl: p.photo||'' };
+        const parts = (p.name || '').split(/\s+/).filter(Boolean);
+        const firstName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
+        const lastName = parts.length > 1 ? parts[0] : '';
+        const data = {
+          treeId: currentTreeId,
+          firstName,
+          lastName,
+          birth: p.born || '',
+          death: p.died || '',
+          fullName: p.name||'',
+          years:(p.born||'')+(p.died?' — '+p.died:''),
+          linkedProfileId: p.id,
+          generation: presetGen??3,
+          ageClass:(presetGen??3)<=1?'old':'young',
+          photoUrl: p.photo||''
+        };
         try {
           const r = await fetch(`${BASE}/api/family-nodes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
           const j = await r.json();

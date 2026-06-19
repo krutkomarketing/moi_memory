@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.add('theme-light');
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-site-verification" content="XZ1l0f_nu02uk7tS2ID2xVgUC91dXNQa16LdUJihGEM" />
@@ -27,7 +35,7 @@
   <!-- GSAP Core для анимаций переходов -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
-  <link rel="stylesheet" href="styles/ai-constructor.css?v=5" />
+  <link rel="stylesheet" href="styles/ai-constructor.css?v=26" />
   <style>
     /* ── ПОП-АП С ИНСТРУКЦИЕЙ ДЛЯ ПОЖИЛЫХ (ONBOARDING) ── */
     .onboarding-modal-overlay {
@@ -299,6 +307,24 @@
   </style>
 </head>
 <body>
+
+  <!-- Переключатель тем (светлая/темная) -->
+  <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему" aria-label="Переключить тему">
+    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </button>
 
   <!-- Навигационная панель с оригинального сайта -->
   <div id="site-header"></div>
@@ -2408,6 +2434,39 @@
         }, 1500);
       }
     }
+
+    // Инициализация и обработка переключения тем
+    (function initThemeToggle() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const darkIcon = themeToggle?.querySelector('.theme-icon-dark');
+      const lightIcon = themeToggle?.querySelector('.theme-icon-light');
+
+      function applyTheme(theme) {
+        if (theme === 'light') {
+          document.documentElement.classList.add('theme-light');
+          document.body?.classList.add('theme-light');
+          if (darkIcon) darkIcon.style.display = 'none';
+          if (lightIcon) lightIcon.style.display = 'block';
+        } else {
+          document.documentElement.classList.remove('theme-light');
+          document.body?.classList.remove('theme-light');
+          if (darkIcon) darkIcon.style.display = 'block';
+          if (lightIcon) lightIcon.style.display = 'none';
+        }
+      }
+
+      // Загрузка сохранённого значения
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      applyTheme(savedTheme);
+
+      themeToggle?.addEventListener('click', () => {
+        const currentTheme = document.documentElement.classList.contains('theme-light') ? 'light' : 'dark';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+      });
+    })();
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', startEditorImmediately, { once: true });
     } else {
