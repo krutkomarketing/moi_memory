@@ -1664,7 +1664,7 @@ section { position: relative; z-index: 1; }
 .nav__burger--open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); background: var(--gold); }
 
 @media (max-width: 768px) {
-  .nav__burger { display: flex; }
+  .nav__burger { display: flex; margin-left: auto; }
 
   .nav__links {
     display: none;

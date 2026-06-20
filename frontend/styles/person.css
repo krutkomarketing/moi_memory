@@ -5,7 +5,7 @@
 .person-page {
   position: relative;
   z-index: 2;
-  padding: calc(var(--nav-h) + 50px) 32px 80px;
+  padding: 28px 32px 80px;
   max-width: 1000px;
   margin: 0 auto;
 }
@@ -36,9 +36,13 @@
 }
 
 @media (max-width: 720px) {
+  .person-page { padding: 16px 20px 64px; }
+  .person-back { margin-bottom: 22px; }
   .person-header {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 24px;
+    margin-bottom: 40px;
   }
   .person-header__photo { margin: 0 auto; }
 }

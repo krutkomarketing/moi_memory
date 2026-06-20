@@ -313,12 +313,19 @@
   }, { threshold: 0.25 });
 
   document.querySelectorAll('video.bg').forEach(video => {
-    video.loop = false;
-    video.removeAttribute('loop');
+    const hasLoop = video.hasAttribute('loop');
+    if (!hasLoop) {
+      video.loop = false;
+      video.removeAttribute('loop');
+    } else {
+      video.loop = true;
+    }
 
     if (isDesktop) {
-      video.removeAttribute('autoplay');
-      video.pause();
+      if (!hasLoop) {
+        video.removeAttribute('autoplay');
+        video.pause();
+      }
 
       // Триггер — весь блок (текст + превью), а не только само видео.
       const hoverTarget = video.closest('.showcase__item') || video;
