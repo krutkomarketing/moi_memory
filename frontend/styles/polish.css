@@ -341,3 +341,95 @@ button:focus-visible,
   .hero__actions{ flex-direction:column; }
   .hero__actions .btn{ width:100%; }
 }
+
+/* ═══════════════════════════════════════════════
+   VIDEO LIGHTBOX — полноэкранный просмотр видео
+   ═══════════════════════════════════════════════ */
+
+/* Курсор-подсказка на превью: «можно кликнуть» */
+.feature-image-container{ cursor:pointer; }
+
+/* Затемнённый оверлей */
+.video-lightbox{
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.88);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .35s cubic-bezier(.4,0,.2,1),
+             visibility .35s;
+}
+.video-lightbox.is-open{
+  opacity:1;
+  visibility:visible;
+}
+
+/* Видео внутри оверлея */
+.video-lightbox__video{
+  max-width:92vw;
+  max-height:88vh;
+  border-radius:14px;
+  box-shadow:0 40px 100px rgba(0,0,0,.7),
+             0 0 0 1px rgba(200,168,75,.15);
+  transform:scale(.88);
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+  object-fit:contain;
+}
+.video-lightbox.is-open .video-lightbox__video{
+  transform:scale(1);
+}
+
+/* Крестик закрытия */
+.video-lightbox__close{
+  position:absolute;
+  top:20px; right:24px;
+  width:48px; height:48px;
+  border:none;
+  background:rgba(255,255,255,.08);
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background .25s, transform .25s;
+  z-index:1;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+}
+.video-lightbox__close:hover{
+  background:rgba(255,255,255,.18);
+  transform:scale(1.08);
+}
+.video-lightbox__close:active{
+  transform:scale(.95);
+}
+/* Иконка × из двух линий */
+.video-lightbox__close::before,
+.video-lightbox__close::after{
+  content:'';
+  position:absolute;
+  width:20px; height:2px;
+  background:#fff;
+  border-radius:2px;
+}
+.video-lightbox__close::before{ transform:rotate(45deg); }
+.video-lightbox__close::after{ transform:rotate(-45deg); }
+
+@media (max-width:768px){
+  .video-lightbox__video{
+    max-width:98vw;
+    max-height:80vh;
+    border-radius:10px;
+  }
+  .video-lightbox__close{
+    top:12px; right:14px;
+    width:42px; height:42px;
+  }
+}

@@ -359,6 +359,85 @@
 })();
 
 /* ═══════════════════════════════════════════════
+   VIDEO LIGHTBOX — клик по превью → полноэкранное видео
+   Работает для всех .feature-image-container (showcase),
+   не затрагивает hero-qr-video.
+   ═══════════════════════════════════════════════ */
+(function () {
+  /* Создаём DOM-оверлей один раз */
+  const overlay = document.createElement('div');
+  overlay.className = 'video-lightbox';
+  overlay.innerHTML =
+    '<button class="video-lightbox__close" aria-label="Закрыть"></button>' +
+    '<video class="video-lightbox__video" autoplay playsinline controls></video>';
+  document.body.appendChild(overlay);
+
+  const closeBtn  = overlay.querySelector('.video-lightbox__close');
+  const lbVideo   = overlay.querySelector('.video-lightbox__video');
+
+  function openLightbox(sourceVideo) {
+    /* Копируем <source> из оригинала */
+    lbVideo.innerHTML = '';
+    const sources = sourceVideo.querySelectorAll('source');
+    sources.forEach(function (src) {
+      const clone = document.createElement('source');
+      clone.src  = src.src.split('#')[0];   // убираем #t=0.001 если есть
+      clone.type = src.type;
+      lbVideo.appendChild(clone);
+    });
+    lbVideo.poster = sourceVideo.poster || '';
+    lbVideo.load();
+    lbVideo.currentTime = 0;
+
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+
+    lbVideo.play().catch(function () {});
+  }
+
+  function closeLightbox() {
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+    lbVideo.pause();
+    /* Через время анимации — очищаем, чтобы не грузило */
+    setTimeout(function () {
+      if (!overlay.classList.contains('is-open')) {
+        lbVideo.removeAttribute('src');
+        lbVideo.innerHTML = '';
+        lbVideo.load();
+      }
+    }, 400);
+  }
+
+  /* Закрытие: кнопка × */
+  closeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeLightbox();
+  });
+
+  /* Закрытие: клик по тёмному фону (но не по видео) */
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) closeLightbox();
+  });
+
+  /* Закрытие: Escape */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeLightbox();
+  });
+
+  /* Навешиваем клик на каждый .feature-image-container */
+  document.querySelectorAll('.feature-image-container').forEach(function (container) {
+    container.addEventListener('click', function (e) {
+      const video = container.querySelector('video');
+      if (!video) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openLightbox(video);
+    });
+  });
+})();
+
+/* ═══════════════════════════════════════════════
    Image error fallback delegation (заменяет inline onerror)
    ═══════════════════════════════════════════════ */
 (function () {
