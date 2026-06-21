@@ -22,6 +22,98 @@
     { key: 'legacy',    title: 'Наследие'              },
   ];
 
+  function extractYear(block) {
+    const yearRegex = /\b(18\d{2}|19\d{2}|20\d{2})\b/;
+    
+    // Check title first
+    if (block.title) {
+      const match = block.title.match(yearRegex);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+    
+    // Check text/body
+    if (block.text) {
+      const match = block.text.match(yearRegex);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+    
+    return null;
+  }
+
+  function getDefaultAge(block) {
+    const key = block.key || '';
+    const title = (block.title || '').toLowerCase();
+    const text = (block.text || '').toLowerCase();
+
+    if (key === 'childhood' || title.includes('детство') || title.includes('юность') || title.includes('родил')) return 5;
+    if (key === 'education' || title.includes('учеб') || title.includes('образов') || title.includes('школ') || title.includes('институт') || title.includes('универ')) return 15;
+    if (key === 'career' || title.includes('работ') || title.includes('карьер') || title.includes('служб') || title.includes('професси')) return 25;
+    if (key === 'family' || title.includes('семь') || title.includes('жен') || title.includes('муж') || title.includes('дет') || title.includes('брак')) return 35;
+    if (key === 'hobbies' || title.includes('хобб') || title.includes('увлеч') || title.includes('любил')) return 45;
+    if (key === 'legacy' || title.includes('наслед') || title.includes('память') || title.includes('смерт') || title.includes('умер')) return 75;
+
+    // Check text contents
+    if (text.includes('детство') || text.includes('родился') || text.includes('родилась')) return 5;
+    if (text.includes('школа') || text.includes('учился') || text.includes('училась') || text.includes('образование')) return 15;
+    if (text.includes('работал') || text.includes('работала') || text.includes('служба') || text.includes('карьера')) return 25;
+    if (text.includes('женился') || text.includes('вышла замуж') || text.includes('дети') || text.includes('семья')) return 35;
+    if (text.includes('увлекался') || text.includes('увлекалась') || text.includes('хобби')) return 45;
+    if (text.includes('умер') || text.includes('скончался') || text.includes('похоронен')) return 75;
+
+    const ages = {
+      childhood: 5,
+      education: 15,
+      career: 25,
+      family: 35,
+      hobbies: 45,
+      legacy: 75
+    };
+    if (ages[key] !== undefined) return ages[key];
+
+    return 40;
+  }
+
+  function sortBlocksChronologically(blocksArray) {
+    let birthYearSum = 0;
+    let birthYearCount = 0;
+
+    blocksArray.forEach(b => {
+      const y = extractYear(b);
+      if (y !== null) {
+        birthYearSum += (y - getDefaultAge(b));
+        birthYearCount++;
+      }
+    });
+
+    const birthYear = birthYearCount > 0 ? Math.round(birthYearSum / birthYearCount) : 1900;
+
+    const blockMeta = blocksArray.map((block, index) => {
+      const explicitYear = extractYear(block);
+      const year = explicitYear !== null ? explicitYear : (birthYear + getDefaultAge(block));
+      return {
+        block,
+        year,
+        originalIndex: index
+      };
+    });
+
+    blockMeta.sort((a, b) => {
+      if (a.year !== b.year) {
+        return a.year - b.year;
+      }
+      return a.originalIndex - b.originalIndex;
+    });
+
+    // Write back sorted blocks
+    for (let i = 0; i < blocksArray.length; i++) {
+      blocksArray[i] = blockMeta[i].block;
+    }
+  }
+
   /**
    * @param {HTMLElement} container - куда вставить блоки
    * @param {Object} data - { sections: { childhood, education, career, family, hobbies, legacy }, quotes?: [{text, after?}] }
@@ -79,6 +171,10 @@
     }
 
     if (!blocks.length) return;
+
+    if (!isEditMode) {
+      sortBlocksChronologically(blocks);
+    }
 
     // Цитаты: массив {text, after}
     const quotes = Array.isArray(data?.quotes) ? data.quotes : [];
